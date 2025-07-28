@@ -26,9 +26,32 @@ function AppContent() {
     }
   }, [isAuthenticated, currentPage, user]);
 
+  // Handle window resize to keep sidebar open on desktop
+  useEffect(() => {
+    const handleResize = () => {
+      // If window is resized to desktop size and sidebar is closed, open it
+      if (window.innerWidth >= 1024 && !sidebarOpen) {
+        setSidebarOpen(true);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [sidebarOpen]);
+
+  // Ensure sidebar is open when user becomes authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      setSidebarOpen(true);
+    }
+  }, [isAuthenticated]);
+
   const handleNavigation = (page: string) => {
     setCurrentPage(page as any);
-    setSidebarOpen(false); // Close sidebar on mobile after navigation
+    // Only close sidebar on mobile devices after navigation
+    if (window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
   };
 
   const toggleSidebar = () => {

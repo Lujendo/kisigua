@@ -7,7 +7,7 @@ INSERT OR IGNORE INTO users (
 ) VALUES (
     'admin-001',
     'admin@kisigua.com',
-    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- password: admin123
+    '$2b$10$edbL0BW.Z3drKGE.bUfAK.EodZ.Bcj84PLy5GhKp90Sj5PwfoIysO', -- password: admin123
     'admin',
     'Admin',
     'User',

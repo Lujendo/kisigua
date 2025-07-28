@@ -47,6 +47,7 @@ function AppContent() {
     return <Dashboard
       onNavigateToSearch={() => setCurrentPage('search')}
       onNavigateToSubscription={() => setCurrentPage('subscription')}
+      onNavigateToLanding={() => setCurrentPage('landing')}
     />;
   }
 

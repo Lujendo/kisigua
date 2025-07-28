@@ -23,7 +23,7 @@ INSERT OR IGNORE INTO users (
 (
     'user-001',
     'user@test.com',
-    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- password: test123
+    '$2b$10$F8fGsKJYVEWnD3CQ309MAeH22Pmh9v.rLPxlbw85RzQ1f/Rv36HDi', -- password: test123
     'user',
     'Test',
     'User',
@@ -34,7 +34,7 @@ INSERT OR IGNORE INTO users (
 (
     'premium-001',
     'premium@test.com',
-    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- password: test123
+    '$2b$10$ZJCGABZG9kICMNpMIekg.eDlwmec.1DIpcEtOL7W1tdsfJb54aOKi', -- password: premium123
     'premium',
     'Premium',
     'User',
@@ -45,7 +45,7 @@ INSERT OR IGNORE INTO users (
 (
     'supporter-001',
     'supporter@test.com',
-    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- password: test123
+    '$2b$10$44khnqMAk8ZE8ip5yw4dEeY/iNNhReGW/psA1YDtjrB27ydwxfWeS', -- password: supporter123
     'supporter',
     'Supporter',
     'User',

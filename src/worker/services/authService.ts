@@ -130,9 +130,18 @@ export class AuthService {
       }
 
       // Verify password
+      console.log('Password verification:', {
+        email: user.email,
+        providedPassword: credentials.password,
+        storedHash: user.password,
+        hashLength: user.password?.length
+      });
+
       const isPasswordValid = bcrypt.compareSync(credentials.password, user.password);
+      console.log('Password verification result:', isPasswordValid);
 
       if (!isPasswordValid) {
+        console.log('Password verification failed for user:', user.email);
         return {
           success: false,
           message: 'Invalid email or password'

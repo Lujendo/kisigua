@@ -31,12 +31,18 @@ const app = new Hono<{ Bindings: Env }>();
 
 // Initialize services (will be done per request to access bindings)
 function initializeServices(env: Env) {
+  console.log('=== INITIALIZING SERVICES ===');
   const databaseService = new DatabaseService(env.DB);
   const storageService = new StorageService(env.FILES, env.R2_BUCKET_NAME, env.R2_PUBLIC_URL);
   const analyticsService = new AnalyticsService(env.ANALYTICS, env.DB);
+
+  console.log('Creating AuthService with JWT_SECRET:', env.JWT_SECRET ? 'SET' : 'USING FALLBACK');
   const authService = new AuthService(env.JWT_SECRET || 'your-secret-key-change-in-production', databaseService);
+  console.log('AuthService created successfully');
+
   const listingsService = new ListingsService();
   const subscriptionService = new SubscriptionService(env.STRIPE_SECRET_KEY || 'sk_test_your_stripe_secret_key');
+  console.log('=== SERVICES INITIALIZED ===');
 
   return {
     databaseService,
@@ -96,10 +102,15 @@ app.get("/api/", (c) => c.json({
 }));
 
 // Health check endpoint
-app.get("/api/health", (c) => c.json({
-  status: "healthy",
-  timestamp: new Date().toISOString()
-}));
+app.get("/api/health", (c) => {
+  const services = c.get('services');
+  return c.json({
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+    servicesInitialized: !!services,
+    authServiceAvailable: !!services?.authService
+  });
+});
 
 // API info endpoint
 app.get("/api/info", (c) => c.json({

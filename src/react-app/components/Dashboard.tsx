@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AdminPanel from './admin/AdminPanel';
 import LocationDetail from './locations/LocationDetail';
+import Map from './Map';
 
 interface Location {
   id: string;
@@ -54,6 +55,13 @@ const Dashboard = ({}: DashboardProps) => {
   const [recentlyViewed, setRecentlyViewed] = useState<Location[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Sorting State
+  const [sortBy, setSortBy] = useState<'relevance' | 'rating' | 'price' | 'distance' | 'newest' | 'popular'>('relevance');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  // View Mode State
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
 
   // Mock data initialization
   useEffect(() => {
@@ -185,7 +193,19 @@ const Dashboard = ({}: DashboardProps) => {
     ];
 
     setLocations(mockLocations);
-    setFilteredLocations(mockLocations);
+
+    // Apply default sorting (relevance)
+    const sortedLocations = mockLocations.sort((a, b) => {
+      if (a.isFeatured !== b.isFeatured) {
+        return b.isFeatured ? 1 : -1;
+      }
+      if (a.rating !== b.rating) {
+        return b.rating - a.rating;
+      }
+      return b.views - a.views;
+    });
+
+    setFilteredLocations(sortedLocations);
     setSearchHistory(mockSearchHistory);
 
     // Set suggestions based on user preferences and popular items
@@ -238,6 +258,57 @@ const Dashboard = ({}: DashboardProps) => {
 
   const permissions = getRolePermissions();
 
+  // Sorting functionality
+  const applySorting = (locationsToSort: Location[]) => {
+    const sorted = [...locationsToSort].sort((a, b) => {
+      let aValue: any, bValue: any;
+
+      switch (sortBy) {
+        case 'rating':
+          aValue = a.rating;
+          bValue = b.rating;
+          break;
+        case 'price':
+          aValue = a.price || 0;
+          bValue = b.price || 0;
+          break;
+        case 'distance':
+          // Mock distance calculation - in real app, calculate from user location
+          aValue = Math.random() * 50; // Random distance for demo
+          bValue = Math.random() * 50;
+          break;
+        case 'newest':
+          aValue = new Date(a.createdAt).getTime();
+          bValue = new Date(b.createdAt).getTime();
+          break;
+        case 'popular':
+          aValue = a.views + (a.reviews * 2); // Popularity score
+          bValue = b.views + (b.reviews * 2);
+          break;
+        case 'relevance':
+        default:
+          // Relevance: featured first, then by rating, then by views
+          if (a.isFeatured !== b.isFeatured) {
+            return b.isFeatured ? 1 : -1;
+          }
+          if (a.rating !== b.rating) {
+            return b.rating - a.rating;
+          }
+          aValue = a.views;
+          bValue = b.views;
+          break;
+      }
+
+      if (sortBy === 'relevance') {
+        return bValue - aValue; // Always desc for relevance
+      }
+
+      return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
+    });
+
+    return sorted;
+  };
+
   // Search functionality
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -245,30 +316,45 @@ const Dashboard = ({}: DashboardProps) => {
 
     // Simulate API call delay
     setTimeout(() => {
+      let filtered: Location[];
+
       if (!query.trim()) {
-        setFilteredLocations(locations);
+        filtered = locations;
       } else {
-        const filtered = locations.filter(location =>
+        filtered = locations.filter(location =>
           location.title.toLowerCase().includes(query.toLowerCase()) ||
           location.description.toLowerCase().includes(query.toLowerCase()) ||
           location.tags.some(tag => tag.toLowerCase().includes(query.toLowerCase())) ||
           location.location.city.toLowerCase().includes(query.toLowerCase())
         );
-        setFilteredLocations(filtered);
 
         // Add to search history
-        if (query.trim()) {
-          const newHistoryItem: SearchHistory = {
-            id: Date.now().toString(),
-            query: query.trim(),
-            timestamp: new Date().toISOString(),
-            results: filtered.length
-          };
-          setSearchHistory(prev => [newHistoryItem, ...prev.slice(0, 4)]);
-        }
+        const newHistoryItem: SearchHistory = {
+          id: Date.now().toString(),
+          query: query.trim(),
+          timestamp: new Date().toISOString(),
+          results: filtered.length
+        };
+        setSearchHistory(prev => [newHistoryItem, ...prev.slice(0, 4)]);
       }
+
+      // Apply sorting
+      const sortedFiltered = applySorting(filtered);
+      setFilteredLocations(sortedFiltered);
       setLoading(false);
     }, 300);
+  };
+
+  // Handle sorting change
+  const handleSortChange = (newSortBy: typeof sortBy, newSortOrder?: 'asc' | 'desc') => {
+    setSortBy(newSortBy);
+    if (newSortOrder) {
+      setSortOrder(newSortOrder);
+    }
+
+    // Re-apply sorting to current results
+    const sortedLocations = applySorting(filteredLocations);
+    setFilteredLocations(sortedLocations);
   };
 
   const handleLocationClick = (locationId: string) => {
@@ -347,7 +433,7 @@ const Dashboard = ({}: DashboardProps) => {
             </div>
 
             {/* Search Bar */}
-            <div className="relative">
+            <div className="relative mb-4">
               <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
@@ -365,6 +451,81 @@ const Dashboard = ({}: DashboardProps) => {
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
                 </div>
+              )}
+            </div>
+
+            {/* Sorting Controls */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                {/* View Mode Toggle */}
+                <div className="flex bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`p-2 rounded ${viewMode === 'list' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'}`}
+                    title="List view"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setViewMode('map')}
+                    className={`p-2 rounded ${viewMode === 'map' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'}`}
+                    title="Map view"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                    </svg>
+                  </button>
+                </div>
+
+                <span className="text-sm font-medium text-gray-700">Sort by:</span>
+
+                {/* Sort Options */}
+                <div className="flex items-center space-x-2">
+                  {[
+                    { key: 'relevance', label: 'Relevance', icon: '⭐' },
+                    { key: 'rating', label: 'Rating', icon: '⭐' },
+                    { key: 'price', label: 'Price', icon: '💰' },
+                    { key: 'distance', label: 'Distance', icon: '📍' },
+                    { key: 'newest', label: 'Newest', icon: '🆕' },
+                    { key: 'popular', label: 'Popular', icon: '🔥' }
+                  ].map((option) => (
+                    <button
+                      key={option.key}
+                      onClick={() => handleSortChange(option.key as typeof sortBy)}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                        sortBy === option.key
+                          ? 'bg-green-100 text-green-700 border border-green-200'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-transparent'
+                      }`}
+                    >
+                      <span className="mr-1">{option.icon}</span>
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sort Order Toggle */}
+              {sortBy !== 'relevance' && (
+                <button
+                  onClick={() => handleSortChange(sortBy, sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="flex items-center space-x-1 px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                  title={`Sort ${sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+                >
+                  <svg
+                    className={`w-4 h-4 text-gray-600 transition-transform ${sortOrder === 'desc' ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
+                  </svg>
+                  <span className="text-sm text-gray-600">
+                    {sortOrder === 'asc' ? 'Low to High' : 'High to Low'}
+                  </span>
+                </button>
               )}
             </div>
           </div>
@@ -471,13 +632,35 @@ const Dashboard = ({}: DashboardProps) => {
           {(searchQuery || filteredLocations.length > 0) && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               <div className="p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {searchQuery ? `Search Results for "${searchQuery}"` : 'All Locations'}
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {searchQuery ? `Search Results for "${searchQuery}"` : 'All Locations'}
+                  </h3>
+
+                  {/* Sort Status Indicator */}
+                  <div className="flex items-center space-x-2 text-sm text-gray-500">
+                    <span>Sorted by:</span>
+                    <span className="font-medium text-gray-700 capitalize">
+                      {sortBy === 'relevance' ? 'Relevance' :
+                       sortBy === 'rating' ? 'Rating' :
+                       sortBy === 'price' ? 'Price' :
+                       sortBy === 'distance' ? 'Distance' :
+                       sortBy === 'newest' ? 'Newest First' :
+                       sortBy === 'popular' ? 'Most Popular' : sortBy}
+                    </span>
+                    {sortBy !== 'relevance' && (
+                      <span className="text-xs">
+                        ({sortOrder === 'asc' ? '↑' : '↓'})
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              <div className="divide-y divide-gray-200">
-                {filteredLocations.map((location) => (
+              {/* List View */}
+              {viewMode === 'list' && (
+                <div className="divide-y divide-gray-200">
+                  {filteredLocations.map((location) => (
                   <button
                     key={location.id}
                     onClick={() => handleLocationClick(location.id)}
@@ -567,10 +750,49 @@ const Dashboard = ({}: DashboardProps) => {
                       </div>
                     </div>
                   </button>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
 
-              {filteredLocations.length === 0 && searchQuery && (
+              {/* Map View */}
+              {viewMode === 'map' && (
+                <div className="p-6">
+                  {filteredLocations.length > 0 ? (
+                    <Map
+                      center={[52.5200, 13.4050]} // Default center (Berlin)
+                      zoom={10}
+                      height="500px"
+                      markers={filteredLocations.map(location => ({
+                        position: [location.location.coordinates.lat, location.location.coordinates.lng],
+                        title: location.title,
+                        description: `${location.location.city} • ${location.priceType === 'paid' && location.price ? `€${location.price}` : location.priceType === 'free' ? 'Free' : 'Donation'}`,
+                        isMain: location.isFeatured
+                      }))}
+                      onMarkerClick={(marker) => {
+                        const location = filteredLocations.find(loc =>
+                          loc.location.coordinates.lat === marker.position[0] &&
+                          loc.location.coordinates.lng === marker.position[1]
+                        );
+                        if (location) {
+                          handleLocationClick(location.id);
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div className="h-96 flex items-center justify-center bg-gray-50 rounded-lg">
+                      <div className="text-center">
+                        <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                        </svg>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No locations to display</h3>
+                        <p className="text-gray-600">Try adjusting your search terms to see locations on the map.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {filteredLocations.length === 0 && searchQuery && viewMode === 'list' && (
                 <div className="p-12 text-center">
                   <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />

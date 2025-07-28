@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Map from '../Map';
 
 interface LocationDetailProps {
   locationId: string;
@@ -340,20 +341,51 @@ const LocationDetail: React.FC<LocationDetailProps> = ({ locationId, onClose }) 
               </div>
             </div>
 
-            {/* Map */}
+            {/* Interactive Map */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Location</h3>
-              <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center mb-4">
-                <div className="text-center">
-                  <svg className="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                  </svg>
-                  <p className="text-gray-600">Interactive map coming soon</p>
-                </div>
-              </div>
+
+              <Map
+                center={[location.location.coordinates.lat, location.location.coordinates.lng]}
+                zoom={15}
+                height="300px"
+                markers={[
+                  {
+                    position: [location.location.coordinates.lat, location.location.coordinates.lng],
+                    title: location.title,
+                    description: location.location.address,
+                    isMain: true
+                  }
+                ]}
+                className="mb-4"
+              />
+
               <div className="text-sm text-gray-600">
-                <p>{location.location.address}</p>
-                <p>{location.location.city}, {location.location.country}</p>
+                <div className="flex items-center space-x-2 mb-1">
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span>{location.location.address}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9c0 5-4 9-9 9m0 0c-5 0-9-4-9-9m9 9V3m0 0C7.02 3 3 7.02 3 12s4.02 9 9 9m0 0v9" />
+                  </svg>
+                  <span>{location.location.city}, {location.location.country}</span>
+                </div>
+
+                {/* Coordinates for developers/advanced users */}
+                <div className="mt-2 pt-2 border-t border-gray-100">
+                  <div className="flex items-center space-x-2 text-xs text-gray-500">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                    </svg>
+                    <span>
+                      {location.location.coordinates.lat.toFixed(6)}, {location.location.coordinates.lng.toFixed(6)}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { FavoritesProvider } from './contexts/FavoritesContext';
 import LandingPage from './components/LandingPage';
 import AuthPage from './components/auth/AuthPage';
 import Dashboard from './components/Dashboard';
@@ -8,10 +9,11 @@ import SubscriptionPage from './components/subscription/SubscriptionPage';
 import Sidebar from './components/Sidebar';
 import EnhancedSearchPage from './components/search/EnhancedSearchPage';
 import MyListingsPage from './components/listings/MyListingsPage';
+import FavoritesPage from './components/favorites/FavoritesPage';
 
 function AppContent() {
   const { isAuthenticated, isLoading, user } = useAuth();
-  const [currentPage, setCurrentPage] = useState<'landing' | 'auth' | 'app' | 'search' | 'subscription' | 'dashboard' | 'listings' | 'profile' | 'messages' | 'admin' | 'users' | 'analytics'>('landing');
+  const [currentPage, setCurrentPage] = useState<'landing' | 'auth' | 'app' | 'search' | 'subscription' | 'dashboard' | 'listings' | 'favorites' | 'profile' | 'messages' | 'admin' | 'users' | 'analytics'>('landing');
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Auto-navigate after successful login
@@ -129,6 +131,7 @@ function AppContent() {
                     {currentPage === 'dashboard' ? 'Dashboard' :
                      currentPage === 'search' ? 'Search Resources' :
                      currentPage === 'listings' ? 'My Listings' :
+                     currentPage === 'favorites' ? 'My Favorites' :
                      currentPage === 'profile' ? 'My Profile' :
                      currentPage === 'messages' ? 'Messages' :
                      currentPage === 'admin' ? 'Admin Panel' :
@@ -162,6 +165,8 @@ function AppContent() {
           {currentPage === 'search' && <EnhancedSearchPage />}
 
           {currentPage === 'listings' && <MyListingsPage />}
+
+          {currentPage === 'favorites' && <FavoritesPage />}
 
           {currentPage === 'profile' && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -208,7 +213,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <FavoritesProvider>
+        <AppContent />
+      </FavoritesProvider>
     </AuthProvider>
   );
 }

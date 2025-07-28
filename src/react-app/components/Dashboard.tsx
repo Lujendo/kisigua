@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useFavorites } from '../contexts/FavoritesContext';
 import AdminPanel from './admin/AdminPanel';
 import LocationDetail from './locations/LocationDetail';
 import Map from './Map';
@@ -44,6 +45,7 @@ interface DashboardProps {
 
 const Dashboard = ({}: DashboardProps) => {
   const { user } = useAuth();
+  const { toggleFavorite, isFavorite } = useFavorites();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'admin'>('dashboard');
 
   // Search Engine State
@@ -598,31 +600,50 @@ const Dashboard = ({}: DashboardProps) => {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Suggested for You</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {suggestions.map((location) => (
-                  <button
-                    key={location.id}
-                    onClick={() => handleLocationClick(location.id)}
-                    className="text-left p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
-                  >
-                    <img
-                      src={location.thumbnail}
-                      alt={location.title}
-                      className="w-full h-32 object-cover rounded-lg mb-3"
-                    />
-                    <h4 className="font-medium text-gray-900 mb-1">{location.title}</h4>
-                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">{location.description}</p>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        {renderStars(location.rating)}
-                        <span className="text-xs text-gray-500 ml-1">({location.reviews})</span>
+                  <div key={location.id} className="relative">
+                    <button
+                      onClick={() => handleLocationClick(location.id)}
+                      className="w-full text-left p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
+                    >
+                      <img
+                        src={location.thumbnail}
+                        alt={location.title}
+                        className="w-full h-32 object-cover rounded-lg mb-3"
+                      />
+                      <h4 className="font-medium text-gray-900 mb-1">{location.title}</h4>
+                      <p className="text-sm text-gray-600 mb-2 line-clamp-2">{location.description}</p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          {renderStars(location.rating)}
+                          <span className="text-xs text-gray-500 ml-1">({location.reviews})</span>
+                        </div>
+                        {location.priceType === 'paid' && location.price && (
+                          <span className="text-sm font-semibold text-green-600">€{location.price}</span>
+                        )}
+                        {location.priceType === 'free' && (
+                          <span className="text-sm font-semibold text-green-600">Free</span>
+                        )}
                       </div>
-                      {location.priceType === 'paid' && location.price && (
-                        <span className="text-sm font-semibold text-green-600">€{location.price}</span>
-                      )}
-                      {location.priceType === 'free' && (
-                        <span className="text-sm font-semibold text-green-600">Free</span>
-                      )}
-                    </div>
-                  </button>
+                    </button>
+
+                    {/* Favorite Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite(location.id);
+                      }}
+                      className={`absolute top-2 right-2 p-1.5 rounded-full transition-colors ${
+                        isFavorite(location.id)
+                          ? 'text-red-500 hover:text-red-600 bg-white shadow-sm'
+                          : 'text-gray-400 hover:text-red-500 bg-white shadow-sm'
+                      }`}
+                      title={isFavorite(location.id) ? 'Remove from favorites' : 'Add to favorites'}
+                    >
+                      <svg className="w-4 h-4" fill={isFavorite(location.id) ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                      </svg>
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
@@ -733,16 +754,36 @@ const Dashboard = ({}: DashboardProps) => {
                                 </div>
                               </div>
 
-                              <div className="text-right">
-                                {location.priceType === 'paid' && location.price && (
-                                  <div className="text-lg font-semibold text-green-600">€{location.price}</div>
-                                )}
-                                {location.priceType === 'free' && (
-                                  <div className="text-lg font-semibold text-green-600">Free</div>
-                                )}
-                                {location.priceType === 'donation' && (
-                                  <div className="text-lg font-semibold text-blue-600">Donation</div>
-                                )}
+                              <div className="flex items-center space-x-3">
+                                <div className="text-right">
+                                  {location.priceType === 'paid' && location.price && (
+                                    <div className="text-lg font-semibold text-green-600">€{location.price}</div>
+                                  )}
+                                  {location.priceType === 'free' && (
+                                    <div className="text-lg font-semibold text-green-600">Free</div>
+                                  )}
+                                  {location.priceType === 'donation' && (
+                                    <div className="text-lg font-semibold text-blue-600">Donation</div>
+                                  )}
+                                </div>
+
+                                {/* Favorite Button */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleFavorite(location.id);
+                                  }}
+                                  className={`p-2 rounded-full transition-colors ${
+                                    isFavorite(location.id)
+                                      ? 'text-red-500 hover:text-red-600 bg-red-50'
+                                      : 'text-gray-400 hover:text-red-500 hover:bg-red-50'
+                                  }`}
+                                  title={isFavorite(location.id) ? 'Remove from favorites' : 'Add to favorites'}
+                                >
+                                  <svg className="w-5 h-5" fill={isFavorite(location.id) ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                  </svg>
+                                </button>
                               </div>
                             </div>
                           </div>

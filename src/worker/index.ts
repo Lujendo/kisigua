@@ -1059,7 +1059,7 @@ app.get("/api/debug/fresh-db-check", async (c) => {
 
     // Direct database query
     const stmt = services.databaseService.db.prepare(`
-      SELECT id, email, password_hash, role, isActive, updatedAt
+      SELECT id, email, password_hash, role, is_active, updated_at
       FROM users
       WHERE email IN ('user@test.com', 'admin@kisigua.com')
       ORDER BY email
@@ -1077,8 +1077,8 @@ app.get("/api/debug/fresh-db-check", async (c) => {
         email: user.email,
         password_hash: user.password_hash?.substring(0, 20) + '...',
         role: user.role,
-        isActive: user.isActive,
-        updatedAt: user.updatedAt
+        is_active: user.is_active,
+        updated_at: user.updated_at
       })) || []
     });
   } catch (error) {

@@ -483,29 +483,27 @@ const Dashboard = ({}: DashboardProps) => {
 
                 <span className="text-sm font-medium text-gray-700">Sort by:</span>
 
-                {/* Sort Options */}
-                <div className="flex items-center space-x-2">
-                  {[
-                    { key: 'relevance', label: 'Relevance', icon: '⭐' },
-                    { key: 'rating', label: 'Rating', icon: '⭐' },
-                    { key: 'price', label: 'Price', icon: '💰' },
-                    { key: 'distance', label: 'Distance', icon: '📍' },
-                    { key: 'newest', label: 'Newest', icon: '🆕' },
-                    { key: 'popular', label: 'Popular', icon: '🔥' }
-                  ].map((option) => (
-                    <button
-                      key={option.key}
-                      onClick={() => handleSortChange(option.key as typeof sortBy)}
-                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                        sortBy === option.key
-                          ? 'bg-green-100 text-green-700 border border-green-200'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-transparent'
-                      }`}
-                    >
-                      <span className="mr-1">{option.icon}</span>
-                      {option.label}
-                    </button>
-                  ))}
+                {/* Sort Dropdown */}
+                <div className="relative">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => handleSortChange(e.target.value as typeof sortBy)}
+                    className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm font-medium text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent cursor-pointer"
+                  >
+                    <option value="relevance">Relevance</option>
+                    <option value="rating">Rating</option>
+                    <option value="price">Price</option>
+                    <option value="distance">Distance</option>
+                    <option value="newest">Newest</option>
+                    <option value="popular">Popular</option>
+                  </select>
+
+                  {/* Custom dropdown arrow */}
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
                 </div>
               </div>
 
@@ -671,7 +669,7 @@ const Dashboard = ({}: DashboardProps) => {
                     </span>
                     {sortBy !== 'relevance' && (
                       <span className="text-xs">
-                        ({sortOrder === 'asc' ? '↑' : '↓'})
+                        ({sortOrder === 'asc' ? 'Low to High' : 'High to Low'})
                       </span>
                     )}
                   </div>

@@ -1015,6 +1015,36 @@ app.post("/api/debug/fix-passwords", async (c) => {
   }
 });
 
+// Debug endpoint to check actual database content
+app.get("/api/debug/check-db-users", async (c) => {
+  try {
+    const services = c.get('services');
+
+    // Get all users from database
+    const allUsers = await services.databaseService.getAllUsers();
+
+    const userInfo = allUsers.map((user: any) => ({
+      id: user.id,
+      email: user.email,
+      password_hash: user.password_hash?.substring(0, 20) + '...',
+      role: user.role,
+      isActive: user.isActive,
+      updatedAt: user.updatedAt
+    }));
+
+    return c.json({
+      success: true,
+      totalUsers: allUsers.length,
+      users: userInfo
+    });
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }, 500);
+  }
+});
+
 // Serve static files for non-API routes
 app.get("*", async (c) => {
   const url = new URL(c.req.url);

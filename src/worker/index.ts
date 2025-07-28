@@ -955,6 +955,67 @@ app.get("/api/admin/analytics/realtime", authMiddleware, roleMiddleware(['admin'
   }
 });
 
+// Fix database user passwords (temporary endpoint)
+app.post("/api/debug/fix-passwords", async (c) => {
+  try {
+    const services = c.get('services');
+    const bcrypt = await import('bcryptjs');
+
+    // Update database users with correct passwords
+    const users = [
+      { email: 'user@test.com', password: 'test123' },
+      { email: 'premium@test.com', password: 'test123' },
+      { email: 'supporter@test.com', password: 'test123' },
+      { email: 'admin@kisigua.com', password: 'admin123' }
+    ];
+
+    const results = [];
+
+    for (const userData of users) {
+      try {
+        const hashedPassword = bcrypt.hashSync(userData.password, 10);
+        const dbUser = await services.databaseService.getUserByEmail(userData.email);
+
+        if (dbUser) {
+          await services.databaseService.updateUser(dbUser.id, {
+            password_hash: hashedPassword,
+            updatedAt: new Date().toISOString()
+          });
+
+          results.push({
+            email: userData.email,
+            status: 'updated',
+            oldHash: dbUser.password_hash?.substring(0, 20) + '...',
+            newHash: hashedPassword.substring(0, 20) + '...'
+          });
+        } else {
+          results.push({
+            email: userData.email,
+            status: 'not_found'
+          });
+        }
+      } catch (error) {
+        results.push({
+          email: userData.email,
+          status: 'error',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    return c.json({
+      success: true,
+      message: 'Password update completed',
+      results
+    });
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }, 500);
+  }
+});
+
 // Serve static files for non-API routes
 app.get("*", async (c) => {
   const url = new URL(c.req.url);

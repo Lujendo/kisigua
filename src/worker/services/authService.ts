@@ -360,6 +360,11 @@ export class AuthService {
     return user ? this.toUserProfile(user) : null;
   }
 
+  async getUserByEmail(email: string): Promise<UserProfile | null> {
+    const user = Array.from(this.users.values()).find(u => u.email === email);
+    return user ? this.toUserProfile(user) : null;
+  }
+
   async updateUserRole(userId: string, newRole: UserRole): Promise<boolean> {
     const user = this.users.get(userId);
     if (!user) {

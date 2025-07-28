@@ -242,6 +242,10 @@ app.get("/api/debug/users", async (c) => {
   const services = c.get('services');
   services.authService.listAllUsers();
 
+  // Also try to get the actual user data
+  const testUser = await services.authService.getUserByEmail('user@test.com');
+  const adminUser = await services.authService.getUserByEmail('admin@kisigua.com');
+
   return c.json({
     message: "User list logged to console. Check server logs.",
     availableAccounts: [
@@ -249,8 +253,64 @@ app.get("/api/debug/users", async (c) => {
       "user@test.com / test123 (user)",
       "premium@test.com / test123 (premium)",
       "supporter@test.com / test123 (supporter)"
-    ]
+    ],
+    userLookupTest: {
+      testUser: testUser ? { email: testUser.email, role: testUser.role, isActive: testUser.isActive } : null,
+      adminUser: adminUser ? { email: adminUser.email, role: adminUser.role, isActive: adminUser.isActive } : null
+    }
   });
+});
+
+// Test login endpoint for debugging
+app.post("/api/debug/test-login", async (c) => {
+  const services = c.get('services');
+
+  // Test with known credentials
+  const testResult = await services.authService.login({
+    email: 'user@test.com',
+    password: 'test123'
+  });
+
+  const adminResult = await services.authService.login({
+    email: 'admin@kisigua.com',
+    password: 'admin123'
+  });
+
+  return c.json({
+    testUserLogin: {
+      success: testResult.success,
+      message: testResult.message,
+      hasUser: !!testResult.user
+    },
+    adminUserLogin: {
+      success: adminResult.success,
+      message: adminResult.message,
+      hasUser: !!adminResult.user
+    }
+  });
+});
+
+// Test bcrypt functionality
+app.get("/api/debug/bcrypt-test", async (c) => {
+  try {
+    const bcrypt = await import('bcryptjs');
+    const testPassword = 'test123';
+    const hash = bcrypt.hashSync(testPassword, 10);
+    const isValid = bcrypt.compareSync(testPassword, hash);
+
+    return c.json({
+      bcryptWorking: true,
+      testPassword,
+      hashLength: hash.length,
+      passwordVerification: isValid,
+      hash: hash.substring(0, 20) + '...' // Show partial hash for security
+    });
+  } catch (error) {
+    return c.json({
+      bcryptWorking: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 });
 
 // Protected route - get current user profile

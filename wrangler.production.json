@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "kisigua-production",
+  "name": "kisigua",
   "main": "./src/worker/index.ts",
   "compatibility_date": "2025-04-01",
   "compatibility_flags": ["nodejs_compat"],
@@ -12,27 +12,18 @@
     "directory": "./dist/client",
     "not_found_handling": "single-page-application"
   },
-  "routes": [
-    {
-      "pattern": "kisura.com/*",
-      "custom_domain": true
-    },
-    {
-      "pattern": "www.kisura.com/*",
-      "custom_domain": true
-    }
-  ],
+
   "vars": {
     "ENVIRONMENT": "production",
-    "APP_URL": "https://kisura.com",
+    "APP_URL": "https://kisigua.com",
     "R2_BUCKET_NAME": "kisigua-files",
-    "R2_PUBLIC_URL": "https://files.kisura.com"
+    "R2_PUBLIC_URL": "https://files.kisigua.com"
   },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "kisigua-production",
-      "database_id": "your-d1-database-id"
+      "database_id": "784f55b4-c35e-4e2a-bc38-0645b0e129cd"
     }
   ],
   "r2_buckets": [
@@ -50,8 +41,8 @@
   "kv_namespaces": [
     {
       "binding": "CACHE",
-      "id": "your-kv-namespace-id",
-      "preview_id": "your-kv-preview-id"
+      "id": "f8a818ef62ac49829fec3d96cf35cea8",
+      "preview_id": "f8a818ef62ac49829fec3d96cf35cea8"
     }
   ],
   "limits": {

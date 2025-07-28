@@ -22,7 +22,7 @@
     {
       "binding": "DB",
       "database_name": "kisigua-dev",
-      "database_id": "your-d1-dev-database-id"
+      "database_id": "f352f829-e080-4fe1-b97a-4a1eb0d26662"
     }
   ],
   "r2_buckets": [
@@ -40,8 +40,8 @@
   "kv_namespaces": [
     {
       "binding": "CACHE",
-      "id": "your-kv-dev-namespace-id",
-      "preview_id": "your-kv-dev-preview-id"
+      "id": "f8a818ef62ac49829fec3d96cf35cea8",
+      "preview_id": "f8a818ef62ac49829fec3d96cf35cea8"
     }
   ]
 }

@@ -1,23 +1,15 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AdminPanel from './admin/AdminPanel';
-import Sidebar from './Sidebar';
-import EnhancedSearchPage from './search/EnhancedSearchPage';
-import MyListingsPage from './listings/MyListingsPage';
 
 interface DashboardProps {
   onNavigateToSearch: () => void;
   onNavigateToSubscription: () => void;
-  onNavigateToLanding: () => void;
 }
 
-const Dashboard = ({ onNavigateToSearch, onNavigateToSubscription, onNavigateToLanding }: DashboardProps) => {
+const Dashboard = ({ onNavigateToSearch, onNavigateToSubscription }: DashboardProps) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'admin'>('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [currentPage, setCurrentPage] = useState(
-    user?.role === 'user' ? 'search' : 'dashboard'
-  );
 
   if (!user) {
     return null;
@@ -62,129 +54,43 @@ const Dashboard = ({ onNavigateToSearch, onNavigateToSubscription, onNavigateToL
 
   const permissions = getRolePermissions();
 
-  const handleNavigation = (page: string) => {
-    setCurrentPage(page);
-    setSidebarOpen(false); // Close sidebar on mobile after navigation
-    
-    switch (page) {
-      case 'search':
-        onNavigateToSearch();
-        break;
-      case 'subscription':
-        onNavigateToSubscription();
-        break;
-      case 'landing':
-        onNavigateToLanding();
-        break;
-      case 'admin':
-        setActiveTab('admin');
-        break;
-      default:
-        setActiveTab('dashboard');
-        break;
-    }
-  };
-
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Sidebar */}
-      <Sidebar
-        isOpen={sidebarOpen}
-        onToggle={toggleSidebar}
-        currentPage={currentPage}
-        onNavigate={handleNavigation}
-      />
-
-      {/* Main Content */}
-      <div className={`transition-all duration-300 ${sidebarOpen ? 'lg:ml-72' : 'ml-0'}`}>
-        {/* Header */}
-        <header className="bg-white shadow-sm border-b border-gray-200">
-          <div className="px-4 py-4">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center space-x-3">
-                {/* Mobile menu button */}
-                <button
-                  onClick={toggleSidebar}
-                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors lg:hidden"
-                >
-                  <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                </button>
-                
-                {/* Desktop menu button */}
-                <button
-                  onClick={toggleSidebar}
-                  className="hidden lg:block p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                </button>
-
-                <div>
-                  <h1 className="text-xl font-semibold text-gray-900">
-                    {currentPage === 'dashboard' ? 'Dashboard' : 
-                     currentPage === 'admin' ? 'Admin Panel' :
-                     currentPage.charAt(0).toUpperCase() + currentPage.slice(1)}
-                  </h1>
-                  <p className="text-sm text-gray-500">Welcome back, {user.firstName}!</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-4">
-                <div className="text-right hidden sm:block">
-                  <p className="text-sm font-medium text-gray-900">{user.firstName} {user.lastName}</p>
-                  <p className="text-xs text-gray-500 capitalize">{user.role} Account</p>
-                </div>
-              </div>
-            </div>
+    <div className="space-y-6">
+      {/* Navigation Tabs for Admin */}
+      {permissions.canAccessAdminDashboard && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="px-6">
+            <nav className="flex space-x-8">
+              <button
+                onClick={() => setActiveTab('dashboard')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'dashboard'
+                    ? 'border-green-500 text-green-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Dashboard
+              </button>
+              <button
+                onClick={() => setActiveTab('admin')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'admin'
+                    ? 'border-green-500 text-green-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Admin Panel
+              </button>
+            </nav>
           </div>
-        </header>
+        </div>
+      )}
 
-        {/* Main Content Area */}
-        <main className="p-6">
-          {/* Navigation Tabs for Admin */}
-          {permissions.canAccessAdminDashboard && currentPage === 'dashboard' && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-              <div className="px-6">
-                <nav className="flex space-x-8">
-                  <button
-                    onClick={() => setActiveTab('dashboard')}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                      activeTab === 'dashboard'
-                        ? 'border-green-500 text-green-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    Dashboard
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('admin')}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                      activeTab === 'admin'
-                        ? 'border-green-500 text-green-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    Admin Panel
-                  </button>
-                </nav>
-              </div>
-            </div>
-          )}
-
-          {/* Content based on current page */}
-          {currentPage === 'dashboard' && (
-            <>
-              {activeTab === 'admin' && permissions.canAccessAdminDashboard ? (
-                <AdminPanel />
-              ) : (
-                <div className="space-y-6">
+      {/* Content based on active tab */}
+      {activeTab === 'admin' && permissions.canAccessAdminDashboard ? (
+        <AdminPanel />
+      ) : (
+        <div className="space-y-6">
                   {/* Welcome Section */}
                   <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -266,47 +172,8 @@ const Dashboard = ({ onNavigateToSearch, onNavigateToSubscription, onNavigateToL
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Search Page */}
-          {currentPage === 'search' && <EnhancedSearchPage />}
-
-          {/* My Listings Page */}
-          {currentPage === 'listings' && <MyListingsPage />}
-
-          {/* Other pages */}
-          {currentPage === 'profile' && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">My Profile</h2>
-              <p className="text-gray-600">Profile management coming soon...</p>
-            </div>
-          )}
-
-          {currentPage === 'messages' && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Messages</h2>
-              <p className="text-gray-600">Messaging system coming soon...</p>
-            </div>
-          )}
-
-          {currentPage === 'users' && permissions.canManageUsers && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">User Management</h2>
-              <p className="text-gray-600">User management coming soon...</p>
-            </div>
-          )}
-
-          {currentPage === 'analytics' && permissions.canAccessAdminDashboard && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Analytics</h2>
-              <p className="text-gray-600">Analytics dashboard coming soon...</p>
-            </div>
-          )}
-        </main>
-      </div>
+        </div>
+      )}
     </div>
   );
 };

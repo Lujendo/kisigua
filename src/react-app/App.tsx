@@ -3,19 +3,37 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LandingPage from './components/LandingPage';
 import AuthPage from './components/auth/AuthPage';
 import Dashboard from './components/Dashboard';
-import SearchPage from './components/search/SearchPage';
+
 import SubscriptionPage from './components/subscription/SubscriptionPage';
+import Sidebar from './components/Sidebar';
+import EnhancedSearchPage from './components/search/EnhancedSearchPage';
+import MyListingsPage from './components/listings/MyListingsPage';
 
 function AppContent() {
-  const { isAuthenticated, isLoading } = useAuth();
-  const [currentPage, setCurrentPage] = useState<'landing' | 'auth' | 'app' | 'search' | 'subscription'>('landing');
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const [currentPage, setCurrentPage] = useState<'landing' | 'auth' | 'app' | 'search' | 'subscription' | 'dashboard' | 'listings' | 'profile' | 'messages' | 'admin' | 'users' | 'analytics'>('landing');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // Auto-navigate to dashboard after successful login
+  // Auto-navigate after successful login
   useEffect(() => {
     if (isAuthenticated && currentPage === 'auth') {
-      setCurrentPage('app');
+      // Set default page based on user role
+      if (user?.role === 'user') {
+        setCurrentPage('search');
+      } else {
+        setCurrentPage('dashboard');
+      }
     }
-  }, [isAuthenticated, currentPage]);
+  }, [isAuthenticated, currentPage, user]);
+
+  const handleNavigation = (page: string) => {
+    setCurrentPage(page as any);
+    setSidebarOpen(false); // Close sidebar on mobile after navigation
+  };
+
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
 
   if (isLoading) {
     return (
@@ -31,32 +49,136 @@ function AppContent() {
     );
   }
 
-  if (currentPage === 'auth') {
-    return <AuthPage />;
+  // Unauthenticated pages (no sidebar)
+  if (!isAuthenticated) {
+    if (currentPage === 'auth') {
+      return <AuthPage />;
+    }
+    return (
+      <LandingPage
+        onNavigateToAuth={() => setCurrentPage('auth')}
+        onNavigateToApp={() => setCurrentPage('app')}
+        onNavigateToSearch={() => setCurrentPage('search')}
+      />
+    );
   }
 
-  if (currentPage === 'search') {
-    return <SearchPage />;
-  }
-
-  if (currentPage === 'subscription') {
-    return <SubscriptionPage />;
-  }
-
-  if (isAuthenticated && currentPage === 'app') {
-    return <Dashboard
-      onNavigateToSearch={() => setCurrentPage('search')}
-      onNavigateToSubscription={() => setCurrentPage('subscription')}
-      onNavigateToLanding={() => setCurrentPage('landing')}
-    />;
-  }
-
+  // Authenticated pages with global sidebar
   return (
-    <LandingPage
-      onNavigateToAuth={() => setCurrentPage('auth')}
-      onNavigateToApp={() => setCurrentPage('app')}
-      onNavigateToSearch={() => setCurrentPage('search')}
-    />
+    <div className="min-h-screen bg-gray-50">
+      {/* Global Sidebar */}
+      <Sidebar
+        isOpen={sidebarOpen}
+        onToggle={toggleSidebar}
+        currentPage={currentPage}
+        onNavigate={handleNavigation}
+      />
+
+      {/* Main Content with sidebar offset */}
+      <div className={`transition-all duration-300 ${sidebarOpen ? 'lg:ml-72' : 'ml-0'}`}>
+        {/* Global Header */}
+        <header className="bg-white shadow-sm border-b border-gray-200">
+          <div className="px-4 py-4">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-3">
+                {/* Mobile menu button */}
+                <button
+                  onClick={toggleSidebar}
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors lg:hidden"
+                >
+                  <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+
+                {/* Desktop menu button */}
+                <button
+                  onClick={toggleSidebar}
+                  className="hidden lg:block p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+
+                <div>
+                  <h1 className="text-xl font-semibold text-gray-900">
+                    {currentPage === 'dashboard' ? 'Dashboard' :
+                     currentPage === 'search' ? 'Search Resources' :
+                     currentPage === 'listings' ? 'My Listings' :
+                     currentPage === 'profile' ? 'My Profile' :
+                     currentPage === 'messages' ? 'Messages' :
+                     currentPage === 'admin' ? 'Admin Panel' :
+                     currentPage === 'users' ? 'User Management' :
+                     currentPage === 'analytics' ? 'Analytics' :
+                     currentPage.charAt(0).toUpperCase() + currentPage.slice(1)}
+                  </h1>
+                  <p className="text-sm text-gray-500">Welcome back, {user?.firstName}!</p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-4">
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-medium text-gray-900">{user?.firstName} {user?.lastName}</p>
+                  <p className="text-xs text-gray-500 capitalize">{user?.role} Account</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <main className="p-6">
+          {currentPage === 'dashboard' && (
+            <Dashboard
+              onNavigateToSearch={() => setCurrentPage('search')}
+              onNavigateToSubscription={() => setCurrentPage('subscription')}
+            />
+          )}
+
+          {currentPage === 'search' && <EnhancedSearchPage />}
+
+          {currentPage === 'listings' && <MyListingsPage />}
+
+          {currentPage === 'profile' && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">My Profile</h2>
+              <p className="text-gray-600">Profile management coming soon...</p>
+            </div>
+          )}
+
+          {currentPage === 'messages' && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Messages</h2>
+              <p className="text-gray-600">Messaging system coming soon...</p>
+            </div>
+          )}
+
+          {currentPage === 'admin' && user?.role === 'admin' && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Admin Panel</h2>
+              <p className="text-gray-600">Admin panel coming soon...</p>
+            </div>
+          )}
+
+          {currentPage === 'users' && user?.role === 'admin' && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">User Management</h2>
+              <p className="text-gray-600">User management coming soon...</p>
+            </div>
+          )}
+
+          {currentPage === 'analytics' && user?.role === 'admin' && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Analytics</h2>
+              <p className="text-gray-600">Analytics dashboard coming soon...</p>
+            </div>
+          )}
+
+          {currentPage === 'subscription' && <SubscriptionPage />}
+        </main>
+      </div>
+    </div>
   );
 }
 

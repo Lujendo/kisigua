@@ -978,8 +978,7 @@ app.post("/api/debug/fix-passwords", async (c) => {
 
         if (dbUser) {
           await services.databaseService.updateUser(dbUser.id, {
-            password_hash: hashedPassword,
-            updatedAt: new Date().toISOString()
+            password_hash: hashedPassword
           });
 
           results.push({

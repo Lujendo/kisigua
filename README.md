@@ -1,75 +1,114 @@
-# React + Vite + Hono + Cloudflare Workers
+# Kisigua - Connecting Communities with Local Resources
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/vite-react-template)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Lujendo/kisigua)
 
-This template provides a minimal setup for building a React application with TypeScript and Vite, designed to run on Cloudflare Workers. It features hot module replacement, ESLint integration, and the flexibility of Workers deployments.
+Kisigua is a multilingual web application serving as a search engine for essential goods, organic farms, local products, and potable water sources. Built with React, Vite, Hono, and deployed on Cloudflare Workers.
 
-![React + TypeScript + Vite + Cloudflare Workers](https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/fc7b4b62-442b-4769-641b-ad4422d74300/public)
+🌱 **Mission**: Supporting local producers and promoting sustainable living through community connections.
 
 <!-- dash-content-start -->
 
-🚀 Supercharge your web development with this powerful stack:
+## 🌍 Features
 
-- [**React**](https://react.dev/) - A modern UI library for building interactive interfaces
+- **Multilingual Support**: Available in German, English, Italian, Spanish, and French
+- **Local Resource Discovery**: Find organic farms, local products, and sustainable goods
+- **Water Source Locator**: Discover potable water sources and vending machines
+- **Community Focus**: Non-profit initiative supporting local producers
+- **Modern Tech Stack**: Built with React, Vite, Hono, and Tailwind CSS
+- **Edge Deployment**: Powered by Cloudflare Workers for global performance
+
+### 🛠️ Tech Stack
+
+- [**React 19**](https://react.dev/) - Modern UI library with latest features
 - [**Vite**](https://vite.dev/) - Lightning-fast build tooling and development server
 - [**Hono**](https://hono.dev/) - Ultralight, modern backend framework
-- [**Cloudflare Workers**](https://developers.cloudflare.com/workers/) - Edge computing platform for global deployment
+- [**Tailwind CSS**](https://tailwindcss.com/) - Utility-first CSS framework
+- [**TypeScript**](https://www.typescriptlang.org/) - Type-safe development
+- [**Cloudflare Workers**](https://developers.cloudflare.com/workers/) - Edge computing platform
 
-### ✨ Key Features
+### ✨ Current Implementation
 
-- 🔥 Hot Module Replacement (HMR) for rapid development
-- 📦 TypeScript support out of the box
-- 🛠️ ESLint configuration included
-- ⚡ Zero-config deployment to Cloudflare's global network
-- 🎯 API routes with Hono's elegant routing
-- 🔄 Full-stack development setup
-
-Get started in minutes with local development or deploy directly via the Cloudflare dashboard. Perfect for building modern, performant web applications at the edge.
+- 🎨 Clean, responsive landing page with multilingual support
+- 🔄 Interactive components with smooth transitions
+- 🌐 Language switcher for 5 supported languages
+- 📱 Mobile-first responsive design
+- ⚡ Optimized for Cloudflare Workers deployment
 
 <!-- dash-content-end -->
 
-## Getting Started
+## 🚀 Getting Started
 
-To start a new project with this template, run:
+### Prerequisites
+
+- Node.js 18+ and npm
+- Cloudflare account (for deployment)
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/Lujendo/kisigua.git
+   cd kisigua
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Start development server**
+   ```bash
+   npm run dev
+   ```
+
+4. **Open your browser**
+   Navigate to `http://localhost:5173`
+
+### Development Commands
 
 ```bash
-npm create cloudflare@latest -- --template=cloudflare/templates/vite-react-template
+npm run dev                # Start development server
+npm run build             # Build for production
+npm run preview           # Preview production build
+npm run check             # Type check and dry-run deployment
+npm run deploy            # Deploy to Cloudflare Workers (development)
+npm run deploy:production # Deploy to production (kisura.com)
+npm run deploy:staging    # Deploy to staging environment
+npm run logs              # View real-time logs
+npm run logs:production   # View production logs
 ```
 
-A live deployment of this template is available at:
-[https://react-vite-template.templates.workers.dev](https://react-vite-template.templates.workers.dev)
+## 🌐 Deployment
 
-## Development
+### Quick Deploy to Cloudflare Workers
 
-Install dependencies:
+1. **Authenticate with Cloudflare**
+   ```bash
+   npx wrangler auth login
+   ```
 
-```bash
-npm install
-```
+2. **Deploy to development**
+   ```bash
+   npm run deploy
+   ```
 
-Start the development server with:
+3. **Deploy to production (kisura.com)**
+   ```bash
+   npm run deploy:production
+   ```
 
-```bash
-npm run dev
-```
+### Custom Domain Setup
 
-Your application will be available at [http://localhost:5173](http://localhost:5173).
+For production deployment at **kisura.com**:
+
+1. Configure your domain in Cloudflare
+2. Update DNS settings
+3. Deploy with production configuration
+4. Verify SSL certificate
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions.
 
 ## Production
-
-Build your project for production:
-
-```bash
-npm run build
-```
-
-Preview your build locally:
-
-```bash
-npm run preview
-```
-
-Deploy your project to Cloudflare Workers:
 
 ```bash
 npm run build && npm run deploy

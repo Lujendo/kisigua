@@ -1,0 +1,214 @@
+name: Performance Monitoring
+
+on:
+  schedule:
+    # Run every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+  deployment_status:
+
+jobs:
+  lighthouse:
+    name: Lighthouse Performance Audit
+    runs-on: ubuntu-latest
+    if: github.event_name == 'deployment_status' && github.event.deployment_status.state == 'success'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli@0.12.x
+
+      - name: Run Lighthouse CI
+        run: lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+      - name: Upload Lighthouse results
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-results
+          path: .lighthouseci/
+
+  web-vitals:
+    name: Web Vitals Monitoring
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Web Vitals test
+        run: |
+          npx web-vitals-cli https://kisura.com --output json > web-vitals.json
+        continue-on-error: true
+
+      - name: Upload Web Vitals results
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-vitals-results
+          path: web-vitals.json
+
+  uptime-check:
+    name: Uptime and Health Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check Production Health
+        run: |
+          echo "Checking production health..."
+          
+          # Health check endpoint
+          if ! curl -f -s https://kisura.com/health; then
+            echo "❌ Health check failed"
+            exit 1
+          fi
+          
+          # Check main pages
+          if ! curl -f -s https://kisura.com/ > /dev/null; then
+            echo "❌ Homepage check failed"
+            exit 1
+          fi
+          
+          # Check API endpoints
+          if ! curl -f -s https://kisura.com/api/subscriptions/plans > /dev/null; then
+            echo "❌ API check failed"
+            exit 1
+          fi
+          
+          echo "✅ All health checks passed"
+
+      - name: Notify on failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: '🚨 Production health check failed! https://kisura.com may be down.'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  performance-budget:
+    name: Performance Budget Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Check bundle size
+        run: |
+          echo "Checking bundle sizes..."
+          
+          # Check JavaScript bundle size (should be < 300KB)
+          JS_SIZE=$(stat -c%s dist/client/assets/*.js | head -1)
+          JS_SIZE_KB=$((JS_SIZE / 1024))
+          
+          echo "JavaScript bundle size: ${JS_SIZE_KB}KB"
+          
+          if [ $JS_SIZE_KB -gt 300 ]; then
+            echo "❌ JavaScript bundle too large: ${JS_SIZE_KB}KB (limit: 300KB)"
+            exit 1
+          fi
+          
+          # Check CSS bundle size (should be < 50KB)
+          CSS_SIZE=$(stat -c%s dist/client/assets/*.css | head -1)
+          CSS_SIZE_KB=$((CSS_SIZE / 1024))
+          
+          echo "CSS bundle size: ${CSS_SIZE_KB}KB"
+          
+          if [ $CSS_SIZE_KB -gt 50 ]; then
+            echo "❌ CSS bundle too large: ${CSS_SIZE_KB}KB (limit: 50KB)"
+            exit 1
+          fi
+          
+          echo "✅ Bundle sizes within limits"
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Get bundle sizes
+            const jsFiles = fs.readdirSync('dist/client/assets/').filter(f => f.endsWith('.js'));
+            const cssFiles = fs.readdirSync('dist/client/assets/').filter(f => f.endsWith('.css'));
+            
+            const jsSize = fs.statSync(path.join('dist/client/assets/', jsFiles[0])).size;
+            const cssSize = fs.statSync(path.join('dist/client/assets/', cssFiles[0])).size;
+            
+            const comment = `## 📊 Bundle Size Report
+            
+            | Asset | Size | Gzipped | Status |
+            |-------|------|---------|--------|
+            | JavaScript | ${(jsSize / 1024).toFixed(1)}KB | ~${(jsSize / 1024 / 3).toFixed(1)}KB | ${jsSize / 1024 < 300 ? '✅' : '❌'} |
+            | CSS | ${(cssSize / 1024).toFixed(1)}KB | ~${(cssSize / 1024 / 5).toFixed(1)}KB | ${cssSize / 1024 < 50 ? '✅' : '❌'} |
+            
+            **Limits:** JavaScript < 300KB, CSS < 50KB`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  database-health:
+    name: Database Health Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check database health
+        run: |
+          echo "Checking database health..."
+          
+          # Check D1 database status
+          npx wrangler d1 info kisigua-production
+          
+          # Run a simple query to test connectivity
+          npx wrangler d1 execute kisigua-production --command "SELECT COUNT(*) as user_count FROM users;"
+          
+          echo "✅ Database health check passed"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

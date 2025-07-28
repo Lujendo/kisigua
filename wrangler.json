@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "kisigua",
+  "name": "kisigua-dev",
   "main": "./src/worker/index.ts",
   "compatibility_date": "2025-04-01",
   "compatibility_flags": ["nodejs_compat"],
@@ -11,5 +11,37 @@
   "assets": {
     "directory": "./dist/client",
     "not_found_handling": "single-page-application"
-  }
+  },
+  "vars": {
+    "ENVIRONMENT": "development",
+    "APP_URL": "http://localhost:8787",
+    "R2_BUCKET_NAME": "kisigua-files-dev",
+    "R2_PUBLIC_URL": "http://localhost:8787/files"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "kisigua-dev",
+      "database_id": "your-d1-dev-database-id"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "FILES",
+      "bucket_name": "kisigua-files-dev"
+    }
+  ],
+  "analytics_engine_datasets": [
+    {
+      "binding": "ANALYTICS",
+      "dataset": "kisigua_analytics_dev"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "CACHE",
+      "id": "your-kv-dev-namespace-id",
+      "preview_id": "your-kv-dev-preview-id"
+    }
+  ]
 }

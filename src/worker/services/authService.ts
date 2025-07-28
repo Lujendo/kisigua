@@ -165,13 +165,13 @@ export class AuthService {
       user.lastLoginAt = now;
       user.updatedAt = now;
 
-      // Generate JWT token
+      // Generate JWT token with longer expiration
       const payload: JWTPayload = {
         sub: user.id,
         email: user.email,
         role: user.role,
         iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours
+        exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 7 days
       };
 
       const token = await sign(payload, this.jwtSecret);
@@ -221,13 +221,13 @@ export class AuthService {
 
       this.users.set(userId, newUser);
 
-      // Generate JWT token
+      // Generate JWT token with longer expiration
       const payload: JWTPayload = {
         sub: newUser.id,
         email: newUser.email,
         role: newUser.role,
         iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours
+        exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 7 days
       };
 
       const token = await sign(payload, this.jwtSecret);
@@ -250,17 +250,71 @@ export class AuthService {
   async verifyToken(token: string): Promise<JWTPayload | null> {
     try {
       const payload = await verify(token, this.jwtSecret) as unknown as JWTPayload;
-      
-      // Check if user still exists and is active
-      const user = this.users.get(payload.sub);
-      if (!user || !user.isActive) {
+
+      // Check if token is expired
+      const currentTime = Math.floor(Date.now() / 1000);
+      if (payload.exp && payload.exp < currentTime) {
+        console.log('Token expired:', { exp: payload.exp, current: currentTime });
         return null;
       }
 
+      // Check if user still exists and is active
+      const user = this.users.get(payload.sub);
+      if (!user || !user.isActive) {
+        console.log('User not found or inactive:', { userId: payload.sub, userExists: !!user, isActive: user?.isActive });
+        return null;
+      }
+
+      console.log('Token verified successfully:', { userId: payload.sub, email: payload.email });
       return payload;
     } catch (error) {
       console.error('Token verification error:', error);
       return null;
+    }
+  }
+
+  async refreshToken(oldToken: string): Promise<AuthResponse> {
+    try {
+      const payload = await this.verifyToken(oldToken);
+
+      if (!payload) {
+        return {
+          success: false,
+          message: 'Invalid or expired token'
+        };
+      }
+
+      const user = this.users.get(payload.sub);
+      if (!user || !user.isActive) {
+        return {
+          success: false,
+          message: 'User not found or inactive'
+        };
+      }
+
+      // Generate new JWT token
+      const newPayload: JWTPayload = {
+        sub: user.id,
+        email: user.email,
+        role: user.role,
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 7 days
+      };
+
+      const newToken = await sign(newPayload, this.jwtSecret);
+
+      return {
+        success: true,
+        token: newToken,
+        user: this.toUserProfile(user),
+        message: 'Token refreshed successfully'
+      };
+    } catch (error) {
+      console.error('Token refresh error:', error);
+      return {
+        success: false,
+        message: 'Token refresh failed'
+      };
     }
   }
 

@@ -164,6 +164,79 @@ app.post("/api/auth/register", async (c) => {
   }
 });
 
+// Token verification endpoint
+app.post("/api/auth/verify", async (c) => {
+  try {
+    const services = c.get('services');
+    const authHeader = c.req.header('Authorization');
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return c.json({
+        success: false,
+        message: "Missing or invalid authorization header"
+      }, 401);
+    }
+
+    const token = authHeader.substring(7);
+    const payload = await services.authService.verifyToken(token);
+
+    if (!payload) {
+      return c.json({
+        success: false,
+        message: "Invalid or expired token"
+      }, 401);
+    }
+
+    const user = await services.authService.getUserById(payload.sub);
+
+    if (!user) {
+      return c.json({
+        success: false,
+        message: "User not found"
+      }, 404);
+    }
+
+    return c.json({
+      success: true,
+      user,
+      token: token // Return the same token if it's valid
+    });
+  } catch (error) {
+    console.error('Token verification error:', error);
+    return c.json({
+      success: false,
+      message: "Token verification failed"
+    }, 401);
+  }
+});
+
+// Token refresh endpoint
+app.post("/api/auth/refresh", async (c) => {
+  try {
+    const services = c.get('services');
+    const authHeader = c.req.header('Authorization');
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return c.json({
+        success: false,
+        message: "Missing or invalid authorization header"
+      }, 401);
+    }
+
+    const token = authHeader.substring(7);
+    const result = await services.authService.refreshToken(token);
+
+    const statusCode = result.success ? 200 : 401;
+    return c.json(result, statusCode);
+  } catch (error) {
+    console.error('Token refresh endpoint error:', error);
+    return c.json({
+      success: false,
+      message: "Token refresh failed"
+    }, 401);
+  }
+});
+
 // Protected route - get current user profile
 app.get("/api/auth/me", authMiddleware, async (c) => {
   const services = c.get('services');

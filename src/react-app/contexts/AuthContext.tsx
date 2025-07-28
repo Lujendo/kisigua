@@ -61,19 +61,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const verifyToken = async (tokenToVerify: string) => {
     try {
-      const response = await fetch('/api/auth/me', {
+      console.log('Verifying token...');
+      const response = await fetch('/api/auth/verify', {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${tokenToVerify}`,
           'Content-Type': 'application/json',
         },
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        console.log('Token verification successful');
         setUser(data.user);
         setToken(tokenToVerify);
       } else {
-        // Token is invalid, remove it
+        console.log('Token verification failed:', data.message);
+        // Token is invalid or expired, remove it
         localStorage.removeItem('kisigua_token');
         setToken(null);
         setUser(null);
@@ -93,6 +98,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
 
     try {
+      console.log('Attempting login for:', email);
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -102,12 +108,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       const data = await response.json();
+      console.log('Login response:', { success: data.success, hasToken: !!data.token, hasUser: !!data.user });
 
       if (data.success && data.token && data.user) {
         setToken(data.token);
         setUser(data.user);
         localStorage.setItem('kisigua_token', data.token);
+        console.log('Login successful, token stored');
       } else {
+        console.log('Login failed:', data.message);
         setError(data.message || 'Login failed');
       }
     } catch (error) {
@@ -149,10 +158,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
+    console.log('Logging out user');
     setUser(null);
     setToken(null);
     localStorage.removeItem('kisigua_token');
     setError(null);
+
+    // Clear any other stored data
+    localStorage.removeItem('kisigua_favorites');
+
+    console.log('Logout complete');
   };
 
   const clearError = () => {

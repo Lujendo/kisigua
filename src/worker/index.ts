@@ -34,7 +34,7 @@ function initializeServices(env: Env) {
   const databaseService = new DatabaseService(env.DB);
   const storageService = new StorageService(env.FILES, env.R2_BUCKET_NAME, env.R2_PUBLIC_URL);
   const analyticsService = new AnalyticsService(env.ANALYTICS, env.DB);
-  const authService = new AuthService(env.JWT_SECRET || 'your-secret-key-change-in-production');
+  const authService = new AuthService(env.JWT_SECRET || 'your-secret-key-change-in-production', databaseService);
   const listingsService = new ListingsService();
   const subscriptionService = new SubscriptionService(env.STRIPE_SECRET_KEY || 'sk_test_your_stripe_secret_key');
 

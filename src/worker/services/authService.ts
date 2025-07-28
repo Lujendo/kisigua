@@ -1,21 +1,24 @@
 import { sign, verify } from 'hono/jwt';
 import * as bcrypt from 'bcryptjs';
-import { 
-  User, 
-  UserProfile, 
-  JWTPayload, 
-  LoginRequest, 
-  RegisterRequest, 
+import {
+  User,
+  UserProfile,
+  JWTPayload,
+  LoginRequest,
+  RegisterRequest,
   AuthResponse,
-  UserRole 
+  UserRole
 } from '../types/auth';
+import { DatabaseService } from './databaseService';
 
 export class AuthService {
   private jwtSecret: string;
-  private users: Map<string, User> = new Map(); // In-memory storage for now
+  private databaseService: DatabaseService;
+  private users: Map<string, User> = new Map(); // Fallback for test users
 
-  constructor(jwtSecret: string) {
+  constructor(jwtSecret: string, databaseService: DatabaseService) {
     this.jwtSecret = jwtSecret;
+    this.databaseService = databaseService;
     this.initializeDefaultUsers();
   }
 
@@ -74,9 +77,34 @@ export class AuthService {
 
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     try {
-      // Find user by email
-      const user = Array.from(this.users.values()).find(u => u.email === credentials.email);
-      
+      // First try to find user in database
+      let user: User | null = null;
+
+      try {
+        const dbUser = await this.databaseService.getUserByEmail(credentials.email);
+        if (dbUser) {
+          user = {
+            id: dbUser.id,
+            email: dbUser.email,
+            password: dbUser.password_hash,
+            role: dbUser.role as UserRole,
+            firstName: dbUser.firstName,
+            lastName: dbUser.lastName,
+            isActive: dbUser.isActive,
+            createdAt: dbUser.createdAt,
+            updatedAt: dbUser.updatedAt,
+            lastLoginAt: dbUser.lastLoginAt
+          };
+        }
+      } catch (dbError) {
+        console.warn('Database lookup failed, falling back to in-memory users:', dbError);
+      }
+
+      // Fallback to in-memory users (for test accounts)
+      if (!user) {
+        user = Array.from(this.users.values()).find(u => u.email === credentials.email) || null;
+      }
+
       if (!user) {
         return {
           success: false,
@@ -93,7 +121,7 @@ export class AuthService {
 
       // Verify password
       const isPasswordValid = bcrypt.compareSync(credentials.password, user.password);
-      
+
       if (!isPasswordValid) {
         return {
           success: false,
@@ -101,9 +129,22 @@ export class AuthService {
         };
       }
 
-      // Update last login
-      user.lastLoginAt = new Date().toISOString();
-      user.updatedAt = new Date().toISOString();
+      // Update last login in database if user came from database
+      const now = new Date().toISOString();
+      try {
+        if (await this.databaseService.getUserByEmail(credentials.email)) {
+          await this.databaseService.updateUser(user.id, {
+            lastLoginAt: now,
+            updatedAt: now
+          });
+        }
+      } catch (dbError) {
+        console.warn('Failed to update last login in database:', dbError);
+      }
+
+      // Update in-memory user as well
+      user.lastLoginAt = now;
+      user.updatedAt = now;
 
       // Generate JWT token
       const payload: JWTPayload = {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LandingPage from './components/LandingPage';
 import AuthPage from './components/auth/AuthPage';
@@ -9,6 +9,13 @@ import SubscriptionPage from './components/subscription/SubscriptionPage';
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
   const [currentPage, setCurrentPage] = useState<'landing' | 'auth' | 'app' | 'search' | 'subscription'>('landing');
+
+  // Auto-navigate to dashboard after successful login
+  useEffect(() => {
+    if (isAuthenticated && currentPage === 'auth') {
+      setCurrentPage('app');
+    }
+  }, [isAuthenticated, currentPage]);
 
   if (isLoading) {
     return (

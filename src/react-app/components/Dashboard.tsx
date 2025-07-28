@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AdminPanel from './admin/AdminPanel';
 import Sidebar from './Sidebar';
+import EnhancedSearchPage from './search/EnhancedSearchPage';
+import MyListingsPage from './listings/MyListingsPage';
 
 interface DashboardProps {
   onNavigateToSearch: () => void;
@@ -12,8 +14,10 @@ interface DashboardProps {
 const Dashboard = ({ onNavigateToSearch, onNavigateToSubscription, onNavigateToLanding }: DashboardProps) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'admin'>('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [currentPage, setCurrentPage] = useState(
+    user?.role === 'user' ? 'search' : 'dashboard'
+  );
 
   if (!user) {
     return null;
@@ -267,18 +271,17 @@ const Dashboard = ({ onNavigateToSearch, onNavigateToSubscription, onNavigateToL
             </>
           )}
 
+          {/* Search Page */}
+          {currentPage === 'search' && <EnhancedSearchPage />}
+
+          {/* My Listings Page */}
+          {currentPage === 'listings' && <MyListingsPage />}
+
           {/* Other pages */}
           {currentPage === 'profile' && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">My Profile</h2>
               <p className="text-gray-600">Profile management coming soon...</p>
-            </div>
-          )}
-
-          {currentPage === 'listings' && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">My Listings</h2>
-              <p className="text-gray-600">Listings management coming soon...</p>
             </div>
           )}
 

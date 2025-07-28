@@ -24,6 +24,9 @@ const LandingPage = ({ onNavigateToAuth, onNavigateToApp, onNavigateToSearch }: 
       ],
       cta: "Explore Local Resources",
       secondaryCta: "Learn More",
+      signIn: "Sign In",
+      getStarted: "Get Started",
+      dashboard: "Dashboard",
       languages: {
         en: "English",
         de: "Deutsch",
@@ -44,6 +47,9 @@ const LandingPage = ({ onNavigateToAuth, onNavigateToApp, onNavigateToSearch }: 
       ],
       cta: "Lokale Ressourcen erkunden",
       secondaryCta: "Mehr erfahren",
+      signIn: "Anmelden",
+      getStarted: "Loslegen",
+      dashboard: "Dashboard",
       languages: {
         en: "English",
         de: "Deutsch",
@@ -64,6 +70,9 @@ const LandingPage = ({ onNavigateToAuth, onNavigateToApp, onNavigateToSearch }: 
       ],
       cta: "Esplora Risorse Locali",
       secondaryCta: "Scopri di più",
+      signIn: "Accedi",
+      getStarted: "Inizia",
+      dashboard: "Dashboard",
       languages: {
         en: "English",
         de: "Deutsch",
@@ -84,6 +93,9 @@ const LandingPage = ({ onNavigateToAuth, onNavigateToApp, onNavigateToSearch }: 
       ],
       cta: "Explorar Recursos Locales",
       secondaryCta: "Saber más",
+      signIn: "Iniciar Sesión",
+      getStarted: "Comenzar",
+      dashboard: "Panel",
       languages: {
         en: "English",
         de: "Deutsch",
@@ -104,6 +116,9 @@ const LandingPage = ({ onNavigateToAuth, onNavigateToApp, onNavigateToSearch }: 
       ],
       cta: "Explorer les Ressources Locales",
       secondaryCta: "En savoir plus",
+      signIn: "Se Connecter",
+      getStarted: "Commencer",
+      dashboard: "Tableau de Bord",
       languages: {
         en: "English",
         de: "Deutsch",
@@ -141,8 +156,8 @@ const LandingPage = ({ onNavigateToAuth, onNavigateToApp, onNavigateToSearch }: 
           </div>
 
           <div className="flex items-center space-x-4">
-            {/* User Info */}
-            {isAuthenticated && user && (
+            {/* Authentication Section */}
+            {isAuthenticated && user ? (
               <div className="flex items-center space-x-3">
                 <div className="text-right">
                   <p className="text-sm font-medium text-gray-900">{user.firstName} {user.lastName}</p>
@@ -153,6 +168,27 @@ const LandingPage = ({ onNavigateToAuth, onNavigateToApp, onNavigateToSearch }: 
                     {user.firstName.charAt(0)}{user.lastName.charAt(0)}
                   </span>
                 </div>
+                <button
+                  onClick={onNavigateToApp}
+                  className="ml-3 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  {currentContent.dashboard}
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={onNavigateToAuth}
+                  className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium transition-colors"
+                >
+                  {currentContent.signIn}
+                </button>
+                <button
+                  onClick={onNavigateToAuth}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  {currentContent.getStarted}
+                </button>
               </div>
             )}
 

@@ -23,12 +23,17 @@ export class AuthService {
   }
 
   private initializeDefaultUsers() {
+    console.log('Initializing default users...');
+
     // Create default admin user
     const adminId = 'admin-001';
+    const adminPassword = 'admin123';
+    const hashedPassword = bcrypt.hashSync(adminPassword, 10);
+
     const adminUser: User = {
       id: adminId,
       email: 'admin@kisigua.com',
-      password: bcrypt.hashSync('admin123', 10),
+      password: hashedPassword,
       role: 'admin',
       firstName: 'Admin',
       lastName: 'User',
@@ -36,7 +41,13 @@ export class AuthService {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
     this.users.set(adminId, adminUser);
+    console.log('Created admin user:', {
+      email: adminUser.email,
+      passwordLength: hashedPassword.length,
+      isActive: adminUser.isActive
+    });
 
     // Create default test users for each role
     const testUsers = [
@@ -64,19 +75,45 @@ export class AuthService {
     ];
 
     testUsers.forEach(userData => {
+      const hashedPassword = bcrypt.hashSync('test123', 10);
       const user: User = {
         ...userData,
-        password: bcrypt.hashSync('test123', 10),
+        password: hashedPassword,
         isActive: true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
       this.users.set(userData.id, user);
+      console.log('Created test user:', {
+        email: user.email,
+        role: user.role,
+        passwordLength: hashedPassword.length,
+        isActive: user.isActive
+      });
     });
+
+    console.log('Total in-memory users created:', this.users.size);
+    console.log('Available test accounts:');
+    console.log('- admin@kisigua.com / admin123 (admin)');
+    console.log('- user@test.com / test123 (user)');
+    console.log('- premium@test.com / test123 (premium)');
+    console.log('- supporter@test.com / test123 (supporter)');
+  }
+
+  // Debug method to list all users
+  listAllUsers() {
+    console.log('=== ALL AVAILABLE USERS ===');
+    console.log('In-memory users:', this.users.size);
+    this.users.forEach((user) => {
+      console.log(`- ${user.email} (${user.role}) - Active: ${user.isActive}`);
+    });
+    console.log('===========================');
   }
 
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     try {
+      console.log('Login attempt for:', credentials.email);
+      this.listAllUsers(); // Debug: show all available users
       // First try to find user in database
       let user: User | null = null;
 

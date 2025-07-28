@@ -237,6 +237,22 @@ app.post("/api/auth/refresh", async (c) => {
   }
 });
 
+// Debug endpoint to list all users (remove in production)
+app.get("/api/debug/users", async (c) => {
+  const services = c.get('services');
+  services.authService.listAllUsers();
+
+  return c.json({
+    message: "User list logged to console. Check server logs.",
+    availableAccounts: [
+      "admin@kisigua.com / admin123 (admin)",
+      "user@test.com / test123 (user)",
+      "premium@test.com / test123 (premium)",
+      "supporter@test.com / test123 (supporter)"
+    ]
+  });
+});
+
 // Protected route - get current user profile
 app.get("/api/auth/me", authMiddleware, async (c) => {
   const services = c.get('services');

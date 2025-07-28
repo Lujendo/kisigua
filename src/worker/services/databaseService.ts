@@ -81,6 +81,7 @@ export class DatabaseService {
   }
 
   async getUserByEmail(email: string): Promise<DatabaseUser | null> {
+    console.log(`getUserByEmail called for: ${email}`);
     const stmt = this.db.prepare(`
       SELECT
         id,
@@ -98,6 +99,13 @@ export class DatabaseService {
       WHERE email = ?
     `);
     const result = await stmt.bind(email).first();
+    console.log(`getUserByEmail result for ${email}:`, {
+      found: !!result,
+      id: result?.id,
+      email: result?.email,
+      password_hash: typeof result?.password_hash === 'string' ? result.password_hash.substring(0, 20) + '...' : result?.password_hash,
+      updated_at: result?.updatedAt
+    });
     return result as DatabaseUser | null;
   }
 

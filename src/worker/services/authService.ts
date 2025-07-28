@@ -82,7 +82,12 @@ export class AuthService {
 
       try {
         const dbUser = await this.databaseService.getUserByEmail(credentials.email);
+        console.log('Database user lookup result:', dbUser);
         if (dbUser) {
+          // Convert SQLite boolean (0/1) to JavaScript boolean
+          const isActive = Boolean(dbUser.isActive);
+          console.log('User isActive status:', dbUser.isActive, 'converted to:', isActive);
+
           user = {
             id: dbUser.id,
             email: dbUser.email,
@@ -90,7 +95,7 @@ export class AuthService {
             role: dbUser.role as UserRole,
             firstName: dbUser.firstName,
             lastName: dbUser.lastName,
-            isActive: dbUser.isActive,
+            isActive: isActive,
             createdAt: dbUser.createdAt,
             updatedAt: dbUser.updatedAt,
             lastLoginAt: dbUser.lastLoginAt
@@ -103,16 +108,21 @@ export class AuthService {
       // Fallback to in-memory users (for test accounts)
       if (!user) {
         user = Array.from(this.users.values()).find(u => u.email === credentials.email) || null;
+        console.log('Fallback to in-memory user:', user ? 'found' : 'not found');
       }
 
       if (!user) {
+        console.log('No user found for email:', credentials.email);
         return {
           success: false,
           message: 'Invalid email or password'
         };
       }
 
+      console.log('User found:', { email: user.email, isActive: user.isActive, role: user.role });
+
       if (!user.isActive) {
+        console.log('User account is deactivated:', user.email);
         return {
           success: false,
           message: 'Account is deactivated'

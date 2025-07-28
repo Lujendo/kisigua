@@ -738,6 +738,32 @@ app.get("/health", async (c) => {
   }
 });
 
+// Debug endpoint to check admin user (remove in production)
+app.get("/debug/admin", async (c) => {
+  const services = c.get('services');
+
+  try {
+    const adminUser = await services.databaseService.getUserByEmail('admin@kisigua.com');
+    return c.json({
+      found: !!adminUser,
+      user: adminUser ? {
+        id: adminUser.id,
+        email: adminUser.email,
+        role: adminUser.role,
+        firstName: adminUser.firstName,
+        lastName: adminUser.lastName,
+        isActive: adminUser.isActive,
+        isActiveType: typeof adminUser.isActive,
+        createdAt: adminUser.createdAt
+      } : null
+    });
+  } catch (error) {
+    return c.json({
+      error: error instanceof Error ? error.message : "Unknown error"
+    }, 500);
+  }
+});
+
 // Analytics routes
 
 // Get analytics stats (admin only)

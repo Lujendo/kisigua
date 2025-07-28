@@ -15,20 +15,20 @@
   "vars": {
     "ENVIRONMENT": "development",
     "APP_URL": "http://localhost:8787",
-    "R2_BUCKET_NAME": "kisigua-files-dev",
-    "R2_PUBLIC_URL": "http://localhost:8787/files"
+    "R2_BUCKET_NAME": "kisigua-files",
+    "R2_PUBLIC_URL": "https://files.kisigua.com"
   },
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "kisigua-dev",
-      "database_id": "f352f829-e080-4fe1-b97a-4a1eb0d26662"
+      "database_name": "kisigua-production",
+      "database_id": "784f55b4-c35e-4e2a-bc38-0645b0e129cd"
     }
   ],
   "r2_buckets": [
     {
       "binding": "FILES",
-      "bucket_name": "kisigua-files-dev"
+      "bucket_name": "kisigua-files"
     }
   ],
   "analytics_engine_datasets": [

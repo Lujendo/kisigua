@@ -977,9 +977,12 @@ app.post("/api/debug/fix-passwords", async (c) => {
         const dbUser = await services.databaseService.getUserByEmail(userData.email);
 
         if (dbUser) {
-          await services.databaseService.updateUser(dbUser.id, {
-            password_hash: hashedPassword
-          });
+          // Direct database update instead of using updateUser method
+          const stmt = services.databaseService.db.prepare(`
+            UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+          `);
+          await stmt.bind(hashedPassword, dbUser.id).run();
 
           results.push({
             email: userData.email,

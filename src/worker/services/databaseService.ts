@@ -60,13 +60,43 @@ export class DatabaseService {
   }
 
   async getUserById(userId: string): Promise<DatabaseUser | null> {
-    const stmt = this.db.prepare('SELECT * FROM users WHERE id = ?');
+    const stmt = this.db.prepare(`
+      SELECT
+        id,
+        email,
+        password_hash,
+        role,
+        first_name as firstName,
+        last_name as lastName,
+        is_active as isActive,
+        profile_image_url as profileImageUrl,
+        created_at as createdAt,
+        updated_at as updatedAt,
+        last_login_at as lastLoginAt
+      FROM users
+      WHERE id = ?
+    `);
     const result = await stmt.bind(userId).first();
     return result as DatabaseUser | null;
   }
 
   async getUserByEmail(email: string): Promise<DatabaseUser | null> {
-    const stmt = this.db.prepare('SELECT * FROM users WHERE email = ?');
+    const stmt = this.db.prepare(`
+      SELECT
+        id,
+        email,
+        password_hash,
+        role,
+        first_name as firstName,
+        last_name as lastName,
+        is_active as isActive,
+        profile_image_url as profileImageUrl,
+        created_at as createdAt,
+        updated_at as updatedAt,
+        last_login_at as lastLoginAt
+      FROM users
+      WHERE email = ?
+    `);
     const result = await stmt.bind(email).first();
     return result as DatabaseUser | null;
   }

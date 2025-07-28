@@ -1048,6 +1048,48 @@ app.get("/api/debug/check-db-users", async (c) => {
   }
 });
 
+// Force fresh database query (bypass any caching)
+app.get("/api/debug/fresh-db-check", async (c) => {
+  try {
+    const services = c.get('services');
+
+    // Force fresh query with timestamp
+    const timestamp = Date.now();
+    console.log(`Fresh DB query at ${timestamp}`);
+
+    // Direct database query
+    const stmt = services.databaseService.db.prepare(`
+      SELECT id, email, password_hash, role, isActive, updatedAt
+      FROM users
+      WHERE email IN ('user@test.com', 'admin@kisigua.com')
+      ORDER BY email
+    `);
+    const users = await stmt.all();
+
+    console.log('Fresh database results:', users);
+
+    return c.json({
+      success: true,
+      timestamp,
+      query: 'Fresh database query executed',
+      users: users.results?.map((user: any) => ({
+        id: user.id,
+        email: user.email,
+        password_hash: user.password_hash?.substring(0, 20) + '...',
+        role: user.role,
+        isActive: user.isActive,
+        updatedAt: user.updatedAt
+      })) || []
+    });
+  } catch (error) {
+    console.error('Fresh DB query error:', error);
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }, 500);
+  }
+});
+
 // Serve static files for non-API routes
 app.get("*", async (c) => {
   const url = new URL(c.req.url);

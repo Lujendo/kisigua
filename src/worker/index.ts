@@ -955,4 +955,63 @@ app.get("/api/admin/analytics/realtime", authMiddleware, roleMiddleware(['admin'
   }
 });
 
+// Serve static files for non-API routes
+app.get("*", async (c) => {
+  const url = new URL(c.req.url);
+  const path = url.pathname;
+
+  // If it's an API route that wasn't matched, return 404
+  if (path.startsWith('/api/')) {
+    return c.json({ error: 'API endpoint not found' }, 404);
+  }
+
+  // For all other routes, serve the React app
+  try {
+    // Try to get the specific file first
+    let assetPath = path === '/' ? '/index.html' : path;
+
+    // If the path doesn't have an extension, serve index.html (SPA routing)
+    if (!assetPath.includes('.')) {
+      assetPath = '/index.html';
+    }
+
+    const response = await c.env.FILES.get(`client${assetPath}`);
+
+    if (!response) {
+      // If file not found, serve index.html for SPA routing
+      const indexResponse = await c.env.FILES.get('client/index.html');
+      if (!indexResponse) {
+        return c.text('Application not found', 404);
+      }
+
+      return new Response(indexResponse.body, {
+        headers: {
+          'Content-Type': 'text/html',
+          'Cache-Control': 'no-cache'
+        }
+      });
+    }
+
+    // Determine content type
+    let contentType = 'text/plain';
+    if (assetPath.endsWith('.html')) contentType = 'text/html';
+    else if (assetPath.endsWith('.js')) contentType = 'application/javascript';
+    else if (assetPath.endsWith('.css')) contentType = 'text/css';
+    else if (assetPath.endsWith('.png')) contentType = 'image/png';
+    else if (assetPath.endsWith('.jpg') || assetPath.endsWith('.jpeg')) contentType = 'image/jpeg';
+    else if (assetPath.endsWith('.svg')) contentType = 'image/svg+xml';
+    else if (assetPath.endsWith('.ico')) contentType = 'image/x-icon';
+
+    return new Response(response.body, {
+      headers: {
+        'Content-Type': contentType,
+        'Cache-Control': assetPath.endsWith('.html') ? 'no-cache' : 'public, max-age=31536000'
+      }
+    });
+  } catch (error) {
+    console.error('Static file serving error:', error);
+    return c.text('Internal Server Error', 500);
+  }
+});
+
 export default app;

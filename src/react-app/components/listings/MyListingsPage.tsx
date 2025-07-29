@@ -80,370 +80,56 @@ const MyListingsPage: React.FC = () => {
         const data = await response.json();
 
         // Transform API data to match component interface
-        const transformedListings: Listing[] = data.listings.map((listing: any) => ({
-          id: listing.id,
-          title: listing.title,
-          description: listing.description,
-          category: listing.category,
-          location: {
-            street: listing.location.address?.split(' ')[1] || '',
-            houseNumber: listing.location.address?.split(' ')[0] || '',
-            city: listing.location.city,
-            region: listing.location.region,
-            country: listing.location.country,
-            coordinates: {
-              lat: listing.location.latitude,
-              lng: listing.location.longitude
-            }
-          },
-          contact: {
-            phone: listing.contactInfo?.phone,
-            email: listing.contactInfo?.email,
-            website: listing.contactInfo?.website,
-            socials: {}
-          },
-          images: listing.images || [],
-          thumbnail: listing.images?.[0] || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300&h=200&fit=crop',
-          price: listing.priceRange === 'low' ? 10 : listing.priceRange === 'medium' ? 25 : listing.priceRange === 'high' ? 50 : undefined,
-          priceType: listing.priceRange ? 'paid' : 'free',
-          tags: listing.tags || [],
-          status: 'published', // Default status
-          isVerified: listing.isCertified || false,
-          createdAt: listing.createdAt,
-          updatedAt: listing.updatedAt,
-          views: listing.views || 0,
-          inquiries: 0 // Default value
-        }));
+        const transformedListings: Listing[] = data.listings.map((listing: any) => {
+          // Parse address safely
+          const addressParts = listing.location?.address?.split(' ') || [];
+          const houseNumber = addressParts[0] || '';
+          const street = addressParts.slice(1).join(' ') || '';
+
+          return {
+            id: listing.id,
+            title: listing.title,
+            description: listing.description,
+            category: listing.category,
+            location: {
+              street: street,
+              houseNumber: houseNumber,
+              city: listing.location?.city || '',
+              region: listing.location?.region || '',
+              country: listing.location?.country || '',
+              coordinates: {
+                lat: listing.location?.latitude || 0,
+                lng: listing.location?.longitude || 0
+              }
+            },
+            contact: {
+              phone: listing.contactInfo?.phone || '',
+              mobile: '', // Not available in API
+              email: listing.contactInfo?.email || '',
+              website: listing.contactInfo?.website || '',
+              socials: {}
+            },
+            images: listing.images || [],
+            thumbnail: listing.images?.[0] || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300&h=200&fit=crop',
+            price: listing.priceRange === 'low' ? 10 : listing.priceRange === 'medium' ? 25 : listing.priceRange === 'high' ? 50 : undefined,
+            priceType: listing.priceRange ? 'paid' : 'free',
+            tags: listing.tags || [],
+            status: 'published', // Default status
+            isVerified: listing.isCertified || false,
+            createdAt: listing.createdAt,
+            updatedAt: listing.updatedAt,
+            views: listing.views || 0,
+            inquiries: 0 // Default value
+          };
+        });
 
         setListings(transformedListings);
         setError(null);
       } catch (error) {
         console.error('Error fetching user listings:', error);
         setError('Failed to load your listings. Please try again.');
+        setListings([]); // Set empty array instead of mock data
 
-        // Fallback to mock data for development
-        const mockListings: Listing[] = [
-      {
-        id: '1',
-        title: 'Green Valley Organic Farm',
-        description: 'Family-owned organic farm specializing in seasonal vegetables, herbs, and fruits. We use sustainable farming practices and offer fresh produce year-round. Visit our farm shop and enjoy guided tours every weekend.',
-        category: 'organic_farm',
-        location: {
-          street: 'Hauptstraße',
-          houseNumber: '123',
-          city: 'Berlin',
-          region: 'Brandenburg',
-          country: 'Germany',
-          coordinates: { lat: 52.5200, lng: 13.4050 }
-        },
-        contact: {
-          phone: '+49 30 12345678',
-          mobile: '+49 170 1234567',
-          email: 'info@greenvalley.de',
-          website: 'https://greenvalley.de',
-          socials: {
-            facebook: 'https://facebook.com/greenvalley',
-            instagram: 'https://instagram.com/greenvalley'
-          }
-        },
-        images: ['https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=400&h=300&fit=crop', 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=300&fit=crop'],
-        thumbnail: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=300&h=200&fit=crop',
-        priceType: 'free',
-        tags: ['organic', 'vegetables', 'sustainable', 'family-owned'],
-        status: 'published',
-        isVerified: true,
-        createdAt: '2024-01-15',
-        updatedAt: '2024-01-15',
-        views: 245,
-        inquiries: 12
-      },
-      {
-        id: '2',
-        title: 'Fresh Mountain Spring Water',
-        description: 'Natural spring water source accessible to the public. Clean, tested water available 24/7. Perfect for filling bottles and containers. Located in a beautiful mountain setting.',
-        category: 'water_source',
-        location: {
-          street: 'Bergweg',
-          houseNumber: '45',
-          city: 'Munich',
-          region: 'Bavaria',
-          country: 'Germany',
-          coordinates: { lat: 48.1351, lng: 11.5820 }
-        },
-        contact: {
-          email: 'water@munich.de',
-          website: 'https://munich-water.de',
-          socials: {}
-        },
-        images: ['https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&h=300&fit=crop'],
-        thumbnail: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=300&h=200&fit=crop',
-        priceType: 'free',
-        tags: ['water', 'natural', 'mountain', 'clean'],
-        status: 'published',
-        isVerified: true,
-        createdAt: '2024-01-20',
-        updatedAt: '2024-01-20',
-        views: 156,
-        inquiries: 8
-      },
-      {
-        id: '3',
-        title: 'Local Honey & Bee Products',
-        description: 'Artisanal honey, beeswax candles, and bee pollen from local beekeepers. Supporting local bee populations and sustainable practices. Visit our shop for fresh honey and handmade products.',
-        category: 'local_product',
-        location: {
-          street: 'Marktplatz',
-          houseNumber: '7',
-          city: 'Hamburg',
-          region: 'Hamburg',
-          country: 'Germany',
-          coordinates: { lat: 53.5511, lng: 9.9937 }
-        },
-        contact: {
-          phone: '+49 40 87654321',
-          email: 'honey@localbeekeepers.de',
-          socials: {
-            instagram: 'https://instagram.com/localbeekeepers'
-          }
-        },
-        images: ['https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=400&h=300&fit=crop', 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=400&h=300&fit=crop'],
-        thumbnail: 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=300&h=200&fit=crop',
-        price: 12,
-        priceType: 'paid',
-        tags: ['honey', 'local', 'beeswax', 'artisanal'],
-        status: 'published',
-        isVerified: true,
-        createdAt: '2024-01-10',
-        updatedAt: '2024-01-10',
-        views: 89,
-        inquiries: 15
-      },
-      {
-        id: '4',
-        title: 'Healthy Snack Vending Machine',
-        description: 'Automated vending machine offering organic snacks, fresh fruits, and healthy beverages. Available 24/7 with contactless payment options. Perfect for quick, nutritious meals on the go.',
-        category: 'vending_machine',
-        location: {
-          street: 'Universitätsstraße',
-          houseNumber: '12',
-          city: 'Frankfurt',
-          region: 'Hesse',
-          country: 'Germany',
-          coordinates: { lat: 50.1109, lng: 8.6821 }
-        },
-        contact: {
-          email: 'support@healthysnacks.de',
-          website: 'https://healthysnacks.de',
-          socials: {}
-        },
-        images: ['https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop'],
-        thumbnail: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop',
-        price: 3,
-        priceType: 'paid',
-        tags: ['healthy', 'snacks', 'automated', '24/7'],
-        status: 'published',
-        isVerified: true,
-        createdAt: '2024-01-25',
-        updatedAt: '2024-01-25',
-        views: 67,
-        inquiries: 3
-      },
-      {
-        id: '5',
-        title: 'Handcrafted Wooden Furniture',
-        description: 'Sustainable wooden furniture made from locally sourced timber. Custom designs available. Each piece is handcrafted with attention to detail and environmental responsibility.',
-        category: 'craft',
-        location: {
-          street: 'Werkstattstraße',
-          houseNumber: '34',
-          city: 'Dresden',
-          region: 'Saxony',
-          country: 'Germany',
-          coordinates: { lat: 51.0504, lng: 13.7373 }
-        },
-        contact: {
-          phone: '+49 351 9876543',
-          email: 'craft@woodworks.de',
-          website: 'https://woodworks.de',
-          socials: {
-            facebook: 'https://facebook.com/woodworks',
-            instagram: 'https://instagram.com/woodworks'
-          }
-        },
-        images: ['https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=300&fit=crop', 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400&h=300&fit=crop'],
-        thumbnail: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=300&h=200&fit=crop',
-        price: 150,
-        priceType: 'paid',
-        tags: ['handcrafted', 'wood', 'furniture', 'sustainable'],
-        status: 'published',
-        isVerified: true,
-        createdAt: '2024-01-05',
-        updatedAt: '2024-01-05',
-        views: 134,
-        inquiries: 18
-      },
-      {
-        id: '6',
-        title: 'Eco-Friendly Cleaning Products',
-        description: 'Biodegradable cleaning products made from natural ingredients. Safe for families and the environment. Our products are certified organic and come in refillable containers.',
-        category: 'sustainable_good',
-        location: {
-          street: 'Ökostraße',
-          houseNumber: '33',
-          city: 'Stuttgart',
-          region: 'Baden-Württemberg',
-          country: 'Germany',
-          coordinates: { lat: 48.7758, lng: 9.1829 }
-        },
-        contact: {
-          phone: '+49 711 11223344',
-          email: 'info@ecoclean.de',
-          website: 'https://ecoclean.de',
-          socials: {
-            instagram: 'https://instagram.com/ecoclean'
-          }
-        },
-        images: ['https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=300&fit=crop'],
-        thumbnail: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=300&h=200&fit=crop',
-        price: 8,
-        priceType: 'paid',
-        tags: ['eco-friendly', 'cleaning', 'biodegradable', 'organic'],
-        status: 'published',
-        isVerified: true,
-        createdAt: '2024-01-02',
-        updatedAt: '2024-01-02',
-        views: 98,
-        inquiries: 21
-      },
-      {
-        id: '7',
-        title: 'Community Garden Fresh Produce',
-        description: 'Fresh vegetables and herbs grown by our community garden members. Seasonal produce available for pickup. Join our community and learn sustainable gardening practices.',
-        category: 'organic_farm',
-        location: {
-          street: 'Gartenweg',
-          houseNumber: '88',
-          city: 'Cologne',
-          region: 'North Rhine-Westphalia',
-          country: 'Germany',
-          coordinates: { lat: 50.9375, lng: 6.9603 }
-        },
-        contact: {
-          email: 'community@gardencoop.de',
-          website: 'https://gardencoop.de',
-          socials: {
-            facebook: 'https://facebook.com/gardencoop'
-          }
-        },
-        images: ['https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=300&fit=crop', 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400&h=300&fit=crop'],
-        thumbnail: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=300&h=200&fit=crop',
-        priceType: 'donation',
-        tags: ['community', 'vegetables', 'seasonal', 'cooperative'],
-        status: 'published',
-        isVerified: true,
-        createdAt: '2024-01-18',
-        updatedAt: '2024-01-18',
-        views: 76,
-        inquiries: 9
-      },
-      {
-        id: '8',
-        title: 'Natural Spring Water Station',
-        description: 'Public water station with filtered natural spring water. Free access for everyone. Bring your own containers. Water quality tested weekly and results posted on-site.',
-        category: 'water_source',
-        location: {
-          street: 'Parkstraße',
-          houseNumber: '15',
-          city: 'Nuremberg',
-          region: 'Bavaria',
-          country: 'Germany',
-          coordinates: { lat: 49.4521, lng: 11.0767 }
-        },
-        contact: {
-          email: 'water@nuremberg.de',
-          socials: {}
-        },
-        images: ['https://images.unsplash.com/photo-1523362628745-0c100150b504?w=400&h=300&fit=crop'],
-        thumbnail: 'https://images.unsplash.com/photo-1523362628745-0c100150b504?w=300&h=200&fit=crop',
-        priceType: 'free',
-        tags: ['water', 'filtered', 'public', 'tested'],
-        status: 'published',
-        isVerified: true,
-        createdAt: '2024-01-22',
-        updatedAt: '2024-01-22',
-        views: 112,
-        inquiries: 5
-      },
-      {
-        id: '9',
-        title: 'Artisan Bread & Pastries',
-        description: 'Traditional German bread and pastries made with organic flour and natural ingredients. Fresh daily baking using time-honored recipes. Special orders available for events.',
-        category: 'local_product',
-        location: {
-          street: 'Bäckerstraße',
-          houseNumber: '42',
-          city: 'Leipzig',
-          region: 'Saxony',
-          country: 'Germany',
-          coordinates: { lat: 51.3397, lng: 12.3731 }
-        },
-        contact: {
-          phone: '+49 341 5566778',
-          email: 'orders@traditionalbakery.de',
-          website: 'https://traditionalbakery.de',
-          socials: {
-            facebook: 'https://facebook.com/traditionalbakery',
-            instagram: 'https://instagram.com/traditionalbakery'
-          }
-        },
-        images: ['https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=300&fit=crop', 'https://images.unsplash.com/photo-1555507036-ab794f4afe5b?w=400&h=300&fit=crop'],
-        thumbnail: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=300&h=200&fit=crop',
-        price: 4,
-        priceType: 'paid',
-        tags: ['bread', 'artisan', 'traditional', 'organic'],
-        status: 'published',
-        isVerified: true,
-        createdAt: '2024-01-08',
-        updatedAt: '2024-01-08',
-        views: 203,
-        inquiries: 27
-      },
-      {
-        id: '10',
-        title: 'Handmade Pottery & Ceramics',
-        description: 'Beautiful handmade pottery and ceramic pieces created by local artisans. Each piece is unique and made with sustainable practices. Custom orders welcome for special occasions.',
-        category: 'craft',
-        location: {
-          street: 'Töpferstraße',
-          houseNumber: '19',
-          city: 'Heidelberg',
-          region: 'Baden-Württemberg',
-          country: 'Germany',
-          coordinates: { lat: 49.3988, lng: 8.6724 }
-        },
-        contact: {
-          phone: '+49 6221 334455',
-          email: 'studio@ceramicart.de',
-          website: 'https://ceramicart.de',
-          socials: {
-            instagram: 'https://instagram.com/ceramicart',
-            twitter: 'https://twitter.com/ceramicart'
-          }
-        },
-        images: ['https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop', 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=400&h=300&fit=crop'],
-        thumbnail: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=200&fit=crop',
-        price: 25,
-        priceType: 'paid',
-        tags: ['pottery', 'ceramics', 'handmade', 'artisan'],
-        status: 'draft',
-        isVerified: false,
-        createdAt: '2024-01-28',
-        updatedAt: '2024-01-29',
-        views: 45,
-        inquiries: 6
-      }
-        ];
-        setListings(mockListings);
       } finally {
         setLoading(false);
       }

@@ -740,10 +740,33 @@ app.post("/api/upload/:fileId", authMiddleware, async (c) => {
     const services = c.get('services');
     const auth = c.get('auth');
     const fileId = c.req.param('fileId');
-    const contentType = c.req.header('content-type') || 'application/octet-stream';
-    const fileName = c.req.header('x-file-name') || 'unknown';
 
-    const fileData = await c.req.arrayBuffer();
+    let fileData: ArrayBuffer;
+    let fileName: string;
+    let contentType: string;
+
+    // Handle both form data and direct binary uploads
+    const requestContentType = c.req.header('content-type') || '';
+
+    if (requestContentType.includes('multipart/form-data')) {
+      // Handle form data upload
+      const formData = await c.req.formData();
+      const file = formData.get('file') as File;
+
+      if (!file) {
+        return c.json({ error: "No file provided" }, 400);
+      }
+
+      fileData = await file.arrayBuffer();
+      fileName = file.name;
+      contentType = file.type || 'application/octet-stream';
+    } else {
+      // Handle direct binary upload
+      fileData = await c.req.arrayBuffer();
+      fileName = c.req.header('x-file-name') || 'unknown';
+      contentType = requestContentType || 'application/octet-stream';
+    }
+
     const r2Key = `uploads/${auth.userId}/${fileId}`;
 
     // Track upload start

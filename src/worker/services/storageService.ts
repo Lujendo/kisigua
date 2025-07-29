@@ -61,7 +61,7 @@ export class StorageService {
 
     // For R2, we'll use a presigned URL approach
     // Note: This is a simplified implementation. In production, you'd use R2's presigned URL API
-    // Use current domain instead of non-existent files.kisigua.com
+    // Upload goes to worker endpoint, not directly to R2
     const uploadUrl = `/api/upload/${fileId}`;
 
     return {
@@ -206,8 +206,8 @@ export class StorageService {
 
   // Generate public URL for file
   getPublicUrl(r2Key: string): string {
-    // In production, this would be your R2 custom domain or public URL
-    return `${this.baseUrl}/files/${r2Key}`;
+    // R2 public URL structure: https://pub-xxx.r2.dev/{r2Key}
+    return `${this.baseUrl}/${r2Key}`;
   }
 
   // Upload profile image

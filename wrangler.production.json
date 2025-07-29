@@ -17,7 +17,7 @@
     "ENVIRONMENT": "production",
     "APP_URL": "https://kisigua.com",
     "R2_BUCKET_NAME": "kisigua-files",
-    "R2_PUBLIC_URL": "https://files.kisigua.com"
+    "R2_PUBLIC_URL": "https://pub-49c315845edf402b9841432c6b1083f1.r2.dev"
   },
   "d1_databases": [
     {

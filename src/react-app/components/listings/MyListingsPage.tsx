@@ -694,9 +694,7 @@ const MyListingsPage: React.FC = () => {
       loadCategories();
     }, []);
 
-    const handleImagesChange = (newImages: string[]) => {
-      setImages(newImages);
-    };
+
 
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();

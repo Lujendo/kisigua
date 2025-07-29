@@ -665,27 +665,72 @@ const Dashboard = ({}: DashboardProps) => {
           {(searchQuery || filteredLocations.length > 0) && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               <div className="p-6 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {searchQuery ? `Search Results for "${searchQuery}"` : 'All Locations'}
-                  </h3>
-
-                  {/* Sort Status Indicator */}
-                  <div className="flex items-center space-x-2 text-sm text-gray-500">
-                    <span>Sorted by:</span>
-                    <span className="font-medium text-gray-700 capitalize">
-                      {sortBy === 'relevance' ? 'Relevance' :
-                       sortBy === 'rating' ? 'Rating' :
-                       sortBy === 'price' ? 'Price' :
-                       sortBy === 'distance' ? 'Distance' :
-                       sortBy === 'newest' ? 'Newest First' :
-                       sortBy === 'popular' ? 'Most Popular' : sortBy}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {searchQuery ? `Search Results for "${searchQuery}"` : 'All Locations'}
+                    </h3>
+                    <span className="text-sm text-gray-500 ml-4">
+                      {filteredLocations.length} {filteredLocations.length === 1 ? 'location' : 'locations'}
                     </span>
-                    {sortBy !== 'relevance' && (
-                      <span className="text-xs">
-                        ({sortOrder === 'asc' ? 'Low to High' : 'High to Low'})
-                      </span>
-                    )}
+                  </div>
+
+                  {/* Controls */}
+                  <div className="flex items-center space-x-4">
+                    {/* Sort Dropdown */}
+                    <div className="relative">
+                      <select
+                        value={`${sortBy}-${sortOrder}`}
+                        onChange={(e) => {
+                          const [newSortBy, newSortOrder] = e.target.value.split('-') as [typeof sortBy, 'asc' | 'desc'];
+                          handleSortChange(newSortBy, newSortOrder);
+                        }}
+                        className="appearance-none bg-white border border-gray-300 rounded-md px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      >
+                        <option value="relevance-desc">Relevance</option>
+                        <option value="rating-desc">Rating (High to Low)</option>
+                        <option value="rating-asc">Rating (Low to High)</option>
+                        <option value="newest-desc">Newest First</option>
+                        <option value="popular-desc">Most Popular</option>
+                        <option value="price-asc">Price (Low to High)</option>
+                        <option value="price-desc">Price (High to Low)</option>
+                      </select>
+                      <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
+
+                    {/* View Mode Toggle */}
+                    <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                      <button
+                        onClick={() => setViewMode('list')}
+                        className={`p-2 rounded-md transition-colors ${
+                          viewMode === 'list'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                        title="List View"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => setViewMode('map')}
+                        className={`p-2 rounded-md transition-colors ${
+                          viewMode === 'map'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                        title="Map View"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

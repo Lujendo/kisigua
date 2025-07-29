@@ -11,6 +11,7 @@ export interface DatabaseListing extends Omit<Listing, 'location' | 'contactInfo
   longitude: number;
   address: string;
   city: string;
+  region?: string;
   country: string;
   postal_code?: string;
   contact_email?: string;
@@ -141,10 +142,10 @@ export class DatabaseService {
     const stmt = this.db.prepare(`
       INSERT INTO listings (
         id, user_id, title, description, category, latitude, longitude,
-        address, city, country, postal_code, contact_email, contact_phone,
+        address, city, region, country, postal_code, contact_email, contact_phone,
         contact_website, is_organic, is_certified, certification_details,
         price_range, operating_hours
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     await stmt.bind(
@@ -157,6 +158,7 @@ export class DatabaseService {
       listingData.location.longitude,
       listingData.location.address,
       listingData.location.city,
+      listingData.location.region || null,
       listingData.location.country,
       listingData.location.postalCode || null,
       listingData.contactInfo.email || null,
@@ -496,6 +498,7 @@ export class DatabaseService {
         longitude: dbListing.longitude,
         address: dbListing.address,
         city: dbListing.city,
+        region: dbListing.region || undefined,
         country: dbListing.country,
         postalCode: dbListing.postal_code || undefined
       },

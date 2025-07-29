@@ -85,10 +85,10 @@ INSERT OR IGNORE INTO subscriptions (
 -- Insert sample listings
 INSERT OR IGNORE INTO listings (
     id, user_id, title, description, category, status, latitude, longitude,
-    address, city, country, postal_code, contact_email, contact_phone,
+    address, city, region, country, postal_code, contact_email, contact_phone,
     contact_website, is_organic, is_certified, certification_details,
     price_range, views, favorites, created_at, updated_at
-) VALUES 
+) VALUES
 (
     'listing-001',
     'user-001',
@@ -100,6 +100,7 @@ INSERT OR IGNORE INTO listings (
     13.4050,
     'Hauptstraße 123',
     'Berlin',
+    'Brandenburg',
     'Germany',
     '10115',
     'info@greenvalley.de',
@@ -125,6 +126,7 @@ INSERT OR IGNORE INTO listings (
     13.3900,
     'Parkweg 45',
     'Berlin',
+    'Brandenburg',
     'Germany',
     '10117',
     'water@berlin.de',
@@ -150,6 +152,7 @@ INSERT OR IGNORE INTO listings (
     13.4200,
     'Marktplatz 7',
     'Berlin',
+    'Brandenburg',
     'Germany',
     '10119',
     'honey@localbeekeepers.de',
@@ -175,6 +178,7 @@ INSERT OR IGNORE INTO listings (
     13.3700,
     'Werkstattstraße 12',
     'Berlin',
+    'Brandenburg',
     'Germany',
     '10115',
     'craft@woodworks.de',
@@ -200,6 +204,7 @@ INSERT OR IGNORE INTO listings (
     13.4100,
     'Ökostraße 33',
     'Berlin',
+    'Brandenburg',
     'Germany',
     '10118',
     'info@ecoclean.de',

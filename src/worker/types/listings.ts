@@ -7,6 +7,7 @@ export interface Location {
   longitude: number;
   address: string;
   city: string;
+  region?: string;
   country: string;
   postalCode?: string;
 }
@@ -51,6 +52,7 @@ export interface SearchFilters {
   priceRange?: ('free' | 'low' | 'medium' | 'high')[];
   tags?: string[];
   city?: string;
+  region?: string;
   country?: string;
 }
 

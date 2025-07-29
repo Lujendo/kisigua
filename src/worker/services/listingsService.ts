@@ -26,6 +26,7 @@ export class ListingsService {
           longitude: 13.4050,
           address: 'Hauptstraße 123',
           city: 'Berlin',
+          region: 'Brandenburg',
           country: 'Germany',
           postalCode: '10115'
         },
@@ -66,6 +67,7 @@ export class ListingsService {
           longitude: 13.3900,
           address: 'Parkweg 45',
           city: 'Berlin',
+          region: 'Brandenburg',
           country: 'Germany',
           postalCode: '10117'
         },
@@ -95,6 +97,7 @@ export class ListingsService {
           longitude: 13.4200,
           address: 'Marktplatz 7',
           city: 'Berlin',
+          region: 'Brandenburg',
           country: 'Germany',
           postalCode: '10119'
         },

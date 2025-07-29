@@ -10,6 +10,7 @@ interface Listing {
     street: string;
     houseNumber: string;
     city: string;
+    region?: string;
     country: string;
     coordinates: {
       lat: number;
@@ -239,6 +240,7 @@ const MyListingsPage: React.FC = () => {
       street: '',
       houseNumber: '',
       city: '',
+      region: '',
       country: '',
       phone: '',
       mobile: '',
@@ -272,7 +274,7 @@ const MyListingsPage: React.FC = () => {
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg w-[900px] h-[700px] overflow-hidden">
+        <div className="bg-white rounded-lg w-[900px] h-[850px] overflow-hidden">
           <div className="flex flex-col h-full">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -453,16 +455,27 @@ const MyListingsPage: React.FC = () => {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Country *</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Region/State</label>
                           <input
                             type="text"
-                            value={formData.country}
-                            onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                            value={formData.region}
+                            onChange={(e) => setFormData({ ...formData, region: e.target.value })}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            placeholder="Country name"
-                            required
+                            placeholder="State, province, or region"
                           />
                         </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Country *</label>
+                        <input
+                          type="text"
+                          value={formData.country}
+                          onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                          placeholder="Country name"
+                          required
+                        />
                       </div>
 
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

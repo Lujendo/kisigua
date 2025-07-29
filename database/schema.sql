@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS listings (
     longitude REAL NOT NULL,
     address TEXT NOT NULL,
     city TEXT NOT NULL,
+    region TEXT,
     country TEXT NOT NULL,
     postal_code TEXT,
     

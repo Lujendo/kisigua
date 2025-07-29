@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import ListingImageUpload from './ListingImageUpload';
 
 interface Listing {
@@ -232,7 +233,9 @@ const MyListingsPage: React.FC = () => {
   );
 
   const CreateListingForm: React.FC = () => {
+    const { token } = useAuth();
     const [activeTab, setActiveTab] = useState<'basic' | 'location' | 'contact' | 'media' | 'pricing'>('basic');
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState({
       title: '',
       description: '',
@@ -257,12 +260,12 @@ const MyListingsPage: React.FC = () => {
     const [images, setImages] = useState<string[]>([]);
 
     const categories = [
-      { id: 'nature', label: 'Nature & Parks' },
-      { id: 'culture', label: 'Cultural Sites' },
-      { id: 'food', label: 'Local Food' },
-      { id: 'accommodation', label: 'Accommodation' },
-      { id: 'activities', label: 'Activities' },
-      { id: 'services', label: 'Local Services' }
+      { id: 'organic_farm', label: 'Organic Farm' },
+      { id: 'local_product', label: 'Local Product' },
+      { id: 'water_source', label: 'Water Source' },
+      { id: 'vending_machine', label: 'Vending Machine' },
+      { id: 'craft', label: 'Craft & Handmade' },
+      { id: 'sustainable_good', label: 'Sustainable Good' }
     ];
 
     const countries = [
@@ -288,11 +291,72 @@ const MyListingsPage: React.FC = () => {
       'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe'
     ];
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      // Handle form submission
-      console.log('Form submitted:', formData, images);
-      setShowCreateForm(false);
+
+      if (!token) {
+        alert('You must be logged in to create a listing');
+        return;
+      }
+
+      setIsSubmitting(true);
+
+      try {
+        // Prepare the listing data according to the API format
+        const listingData = {
+          title: formData.title,
+          description: formData.description,
+          category: formData.category,
+          location: {
+            latitude: 52.5200, // Default coordinates - in a real app, you'd geocode the address
+            longitude: 13.4050,
+            address: `${formData.street} ${formData.houseNumber}`,
+            city: formData.city,
+            region: formData.region || undefined,
+            country: formData.country,
+            postalCode: undefined // Could be added as a form field later
+          },
+          contactInfo: {
+            email: formData.email || undefined,
+            phone: formData.phone || formData.mobile || undefined,
+            website: formData.website || undefined
+          },
+          images: images,
+          tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : [],
+          isOrganic: false, // Could be added as a form field
+          isCertified: false, // Could be added as a form field
+          priceRange: formData.priceType === 'free' ? 'free' :
+                     formData.priceType === 'paid' ? 'medium' : 'low'
+        };
+
+        console.log('Submitting listing data:', listingData);
+
+        const response = await fetch('/api/listings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(listingData)
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log('Listing created successfully:', result);
+          alert('Listing created successfully!');
+          setShowCreateForm(false);
+          // Optionally refresh the listings
+        } else {
+          const error = await response.json();
+          console.error('Failed to create listing:', error);
+          alert(`Failed to create listing: ${error.error || 'Unknown error'}`);
+        }
+      } catch (error) {
+        console.error('Error creating listing:', error);
+        alert('An error occurred while creating the listing. Please try again.');
+      } finally {
+        setIsSubmitting(false);
+      }
     };
 
     return (
@@ -810,9 +874,16 @@ const MyListingsPage: React.FC = () => {
                       ) : (
                         <button
                           type="submit"
-                          className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+                          disabled={isSubmitting}
+                          className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center space-x-2"
                         >
-                          Create Listing
+                          {isSubmitting && (
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          )}
+                          <span>{isSubmitting ? 'Creating...' : 'Create Listing'}</span>
                         </button>
                       )}
 

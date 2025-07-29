@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import ListingImageUpload from './ListingImageUpload';
 import RichTextEditor from '../RichTextEditor';
+import ListingDetail from './ListingDetail';
 
 interface Listing {
   id: string;
@@ -49,6 +50,8 @@ const MyListingsPage: React.FC = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
+  const [showDropdownId, setShowDropdownId] = useState<string | null>(null);
 
   // Mock data for demonstration
   useEffect(() => {
@@ -382,6 +385,62 @@ const MyListingsPage: React.FC = () => {
     return listing.status === filterStatus;
   });
 
+  // Handler functions for listing actions
+  const handleViewListing = (listingId: string) => {
+    setSelectedListingId(listingId);
+  };
+
+  const handleEditListing = (listingId: string) => {
+    setShowCreateForm(true);
+    // Load listing data into form
+    const listing = listings.find(l => l.id === listingId);
+    if (listing) {
+      // This would populate the form with existing data
+      console.log('Editing listing:', listing);
+    }
+  };
+
+  const handleDeleteListing = async (listingId: string) => {
+    if (window.confirm('Are you sure you want to delete this listing? This action cannot be undone.')) {
+      try {
+        // In real app, make API call to delete
+        setListings(prev => prev.filter(l => l.id !== listingId));
+        console.log('Deleted listing:', listingId);
+      } catch (error) {
+        console.error('Error deleting listing:', error);
+        alert('Failed to delete listing. Please try again.');
+      }
+    }
+  };
+
+  const handleDuplicateListing = (listingId: string) => {
+    const listing = listings.find(l => l.id === listingId);
+    if (listing) {
+      const duplicatedListing = {
+        ...listing,
+        id: `${Date.now()}`,
+        title: `${listing.title} (Copy)`,
+        status: 'draft' as const,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        views: 0,
+        inquiries: 0
+      };
+      setListings(prev => [duplicatedListing, ...prev]);
+      console.log('Duplicated listing:', duplicatedListing);
+    }
+  };
+
+  const handleToggleStatus = (listingId: string) => {
+    setListings(prev => prev.map(listing => {
+      if (listing.id === listingId) {
+        const newStatus = listing.status === 'published' ? 'draft' : 'published';
+        return { ...listing, status: newStatus, updatedAt: new Date().toISOString() };
+      }
+      return listing;
+    }));
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'published': return 'bg-green-100 text-green-800';
@@ -468,19 +527,71 @@ const MyListingsPage: React.FC = () => {
 
         <div className="flex space-x-2">
           <button
-            onClick={() => console.log('Edit listing:', listing.id)}
+            onClick={() => handleEditListing(listing.id)}
             className="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors"
           >
             Edit
           </button>
-          <button className="px-3 py-2 border border-gray-300 rounded text-sm font-medium hover:bg-gray-50 transition-colors">
+          <button
+            onClick={() => handleViewListing(listing.id)}
+            className="px-3 py-2 border border-gray-300 rounded text-sm font-medium hover:bg-gray-50 transition-colors"
+          >
             View
           </button>
-          <button className="px-3 py-2 border border-gray-300 rounded text-sm font-medium hover:bg-gray-50 transition-colors">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-            </svg>
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowDropdownId(showDropdownId === listing.id ? null : listing.id)}
+              className="px-3 py-2 border border-gray-300 rounded text-sm font-medium hover:bg-gray-50 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+              </svg>
+            </button>
+
+            {/* Dropdown Menu */}
+            {showDropdownId === listing.id && (
+              <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                <div className="py-1">
+                  <button
+                    onClick={() => {
+                      handleToggleStatus(listing.id);
+                      setShowDropdownId(null);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>
+                    {listing.status === 'published' ? 'Unpublish' : 'Publish'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleDuplicateListing(listing.id);
+                      setShowDropdownId(null);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Duplicate
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleDeleteListing(listing.id);
+                      setShowDropdownId(null);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -1273,12 +1384,15 @@ const MyListingsPage: React.FC = () => {
                     </div>
                     <div className="flex items-center space-x-2">
                       <button
-                        onClick={() => console.log('Edit listing:', listing.id)}
+                        onClick={() => handleEditListing(listing.id)}
                         className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
                       >
                         Edit
                       </button>
-                      <button className="px-3 py-1 border border-gray-300 rounded text-sm font-medium hover:bg-gray-50 transition-colors">
+                      <button
+                        onClick={() => handleViewListing(listing.id)}
+                        className="px-3 py-1 border border-gray-300 rounded text-sm font-medium hover:bg-gray-50 transition-colors"
+                      >
                         View
                       </button>
                     </div>
@@ -1308,6 +1422,26 @@ const MyListingsPage: React.FC = () => {
 
       {/* Create/Edit Form Modal */}
       {showCreateForm && <CreateListingForm />}
+
+      {/* Listing Detail Modal */}
+      {selectedListingId && (
+        <ListingDetail
+          listingId={selectedListingId}
+          onClose={() => setSelectedListingId(null)}
+          onEdit={(listingId) => {
+            setSelectedListingId(null);
+            handleEditListing(listingId);
+          }}
+        />
+      )}
+
+      {/* Click outside to close dropdown */}
+      {showDropdownId && (
+        <div
+          className="fixed inset-0 z-0"
+          onClick={() => setShowDropdownId(null)}
+        />
+      )}
     </div>
   );
 };

@@ -79,13 +79,16 @@ const ListingImageUpload: React.FC<ListingImageUploadProps> = ({
           const { uploadUrl, r2Key } = await signedUrlResponse.json();
 
           // Step 2: Upload file to R2
+          const formData = new FormData();
+          formData.append('file', file);
+
           const uploadResponse = await fetch(uploadUrl, {
             method: 'POST',
             headers: {
-              'Content-Type': file.type,
+              'Authorization': `Bearer ${token}`,
               'x-file-name': file.name
             },
-            body: file
+            body: formData
           });
 
           if (!uploadResponse.ok) {

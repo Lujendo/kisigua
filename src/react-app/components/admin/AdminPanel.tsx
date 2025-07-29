@@ -6,6 +6,8 @@ const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'settings'>('overview');
   const { user } = useAuth();
 
+  // Simplified admin panel - v1.1
+
   // Check if user is admin or in test mode
   const isTestMode = (window as any).__testAdminMode;
   if (user?.role !== 'admin' && !isTestMode) {

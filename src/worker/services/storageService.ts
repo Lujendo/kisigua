@@ -61,7 +61,8 @@ export class StorageService {
 
     // For R2, we'll use a presigned URL approach
     // Note: This is a simplified implementation. In production, you'd use R2's presigned URL API
-    const uploadUrl = `${this.baseUrl}/api/upload/${fileId}`;
+    // Use current domain instead of non-existent files.kisigua.com
+    const uploadUrl = `/api/upload/${fileId}`;
 
     return {
       uploadUrl,

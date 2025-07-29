@@ -106,7 +106,7 @@ export class FavoritesService {
   async getUserFavorites(userId: string): Promise<FavoriteWithListing[]> {
     try {
       const stmt = this.db.prepare(`
-        SELECT 
+        SELECT
           f.id,
           f.user_id,
           f.listing_id,
@@ -115,20 +115,15 @@ export class FavoritesService {
           l.title,
           l.description,
           l.category,
-          l.location,
+          l.address,
           l.city,
           l.country,
           l.latitude,
           l.longitude,
-          l.images,
-          l.thumbnail,
-          l.price_type,
-          l.price,
-          l.tags,
-          l.created_by,
+          l.user_id as created_by,
           l.created_at as listing_created_at,
-          l.is_verified,
-          l.is_featured,
+          l.is_certified as is_verified,
+          l.featured as is_featured,
           l.views
         FROM favorites f
         JOIN listings l ON f.listing_id = l.id
@@ -148,16 +143,16 @@ export class FavoritesService {
           title: row.title as string,
           description: row.description as string,
           category: row.category as string,
-          location: row.location as string,
+          location: row.address as string,
           city: row.city as string,
           country: row.country as string,
           latitude: row.latitude as number,
           longitude: row.longitude as number,
-          images: row.images ? JSON.parse(row.images as string) : [],
-          thumbnail: row.thumbnail as string,
-          priceType: row.price_type as string,
-          price: row.price as number,
-          tags: row.tags ? JSON.parse(row.tags as string) : [],
+          images: [], // listings table doesn't have images column, will be empty for now
+          thumbnail: '', // listings table doesn't have thumbnail column, will be empty for now
+          priceType: 'free', // listings table doesn't have price_type column, default to free
+          price: 0, // listings table doesn't have price column, default to 0
+          tags: [], // listings table doesn't have tags column, will be empty for now
           createdBy: row.created_by as string,
           createdAt: row.listing_created_at as string,
           isVerified: Boolean(row.is_verified),

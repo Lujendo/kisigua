@@ -97,13 +97,13 @@ app.use("*", async (c, next) => {
 const authMiddleware = async (c: any, next: any) => {
   const services = c.get('services');
   const middleware = createAuthMiddleware(services.authService);
-  await middleware(c, next);
+  return await middleware(c, next);
 };
 
 // Helper middleware for role checking
 const roleMiddleware = (roles: UserRole[]) => async (c: any, next: any) => {
   const middleware = createRoleMiddleware(roles);
-  await middleware(c, next);
+  return await middleware(c, next);
 };
 
 // Basic API endpoint

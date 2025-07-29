@@ -26,9 +26,11 @@ export interface SignedUploadUrl {
 export class StorageService {
   private r2: R2Bucket;
   private baseUrl: string;
+  private db: D1Database;
 
-  constructor(r2Bucket: R2Bucket, bucketName: string, baseUrl: string) {
+  constructor(r2Bucket: R2Bucket, db: D1Database, bucketName: string, baseUrl: string) {
     this.r2 = r2Bucket;
+    this.db = db;
     this.baseUrl = baseUrl;
     // bucketName is stored in the constructor but not used in this implementation
     console.log(`Storage service initialized for bucket: ${bucketName}`);
@@ -66,6 +68,83 @@ export class StorageService {
       fileId,
       r2Key
     };
+  }
+
+  // Track file upload in database
+  async trackFileUpload(
+    fileId: string,
+    userId: string,
+    fileName: string,
+    fileSize: number,
+    fileType: string,
+    r2Key: string,
+    bucketName: string,
+    status: 'pending' | 'completed' | 'failed' = 'pending'
+  ): Promise<void> {
+    try {
+      const stmt = this.db.prepare(`
+        INSERT INTO file_uploads (id, user_id, file_name, file_size, file_type, r2_key, r2_bucket, upload_status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      await stmt.bind(fileId, userId, fileName, fileSize, fileType, r2Key, bucketName, status).run();
+    } catch (error) {
+      console.error('Database tracking error:', error);
+      // Don't throw - file upload can succeed even if tracking fails
+    }
+  }
+
+  // Update file upload status
+  async updateFileUploadStatus(fileId: string, status: 'completed' | 'failed'): Promise<void> {
+    try {
+      const stmt = this.db.prepare(`
+        UPDATE file_uploads SET upload_status = ? WHERE id = ?
+      `);
+
+      await stmt.bind(status, fileId).run();
+    } catch (error) {
+      console.error('Database status update error:', error);
+    }
+  }
+
+  // Get user's uploaded files from database
+  async getUserFiles(userId: string, fileType?: string): Promise<any[]> {
+    try {
+      let query = `
+        SELECT id, file_name, file_size, file_type, r2_key, r2_bucket, upload_status, created_at
+        FROM file_uploads
+        WHERE user_id = ? AND upload_status = 'completed'
+      `;
+      const params = [userId];
+
+      if (fileType) {
+        if (fileType === 'images') {
+          query += ` AND file_type LIKE 'image/%'`;
+        } else if (fileType === 'documents') {
+          query += ` AND file_type NOT LIKE 'image/%'`;
+        }
+      }
+
+      query += ` ORDER BY created_at DESC`;
+
+      const stmt = this.db.prepare(query);
+      const result = await stmt.bind(...params).all();
+
+      return result.results?.map((file: any) => ({
+        id: file.id,
+        fileName: file.file_name,
+        fileSize: file.file_size,
+        fileType: file.file_type,
+        r2Key: file.r2_key,
+        bucket: file.r2_bucket,
+        status: file.upload_status,
+        createdAt: file.created_at,
+        url: this.getPublicUrl(file.r2_key)
+      })) || [];
+    } catch (error) {
+      console.error('Database file query error:', error);
+      return [];
+    }
   }
 
   // Upload file directly to R2

@@ -33,7 +33,7 @@ const app = new Hono<{ Bindings: Env }>();
 function initializeServices(env: Env) {
   console.log('=== INITIALIZING SERVICES ===');
   const databaseService = new DatabaseService(env.DB);
-  const storageService = new StorageService(env.FILES, env.R2_BUCKET_NAME, env.R2_PUBLIC_URL);
+  const storageService = new StorageService(env.FILES, env.DB, env.R2_BUCKET_NAME, env.R2_PUBLIC_URL);
   const analyticsService = new AnalyticsService(env.ANALYTICS, env.DB);
 
   console.log('Creating AuthService with JWT_SECRET:', env.JWT_SECRET ? 'SET' : 'USING FALLBACK');
@@ -597,22 +597,48 @@ app.post("/api/upload/signed-url", authMiddleware, async (c) => {
 });
 
 // Handle file upload
-app.post("/api/upload/:fileId", async (c) => {
+app.post("/api/upload/:fileId", authMiddleware, async (c) => {
   try {
     const services = c.get('services');
+    const auth = c.get('auth');
     const fileId = c.req.param('fileId');
     const contentType = c.req.header('content-type') || 'application/octet-stream';
+    const fileName = c.req.header('x-file-name') || 'unknown';
 
     const fileData = await c.req.arrayBuffer();
-    const r2Key = `temp/${fileId}`;
+    const r2Key = `uploads/${auth.userId}/${fileId}`;
+
+    // Track upload start
+    await services.storageService.trackFileUpload(
+      fileId,
+      auth.userId,
+      fileName,
+      fileData.byteLength,
+      contentType,
+      r2Key,
+      'kisigua-files',
+      'pending'
+    );
 
     const result = await services.storageService.uploadFile(
       r2Key,
       fileData,
-      contentType
+      contentType,
+      {
+        userId: auth.userId,
+        originalFileName: fileName
+      }
     );
 
-    return c.json(result);
+    if (result.success) {
+      // Update status to completed
+      await services.storageService.updateFileUploadStatus(fileId, 'completed');
+      return c.json({ success: true, url: result.url, fileId, r2Key });
+    } else {
+      // Update status to failed
+      await services.storageService.updateFileUploadStatus(fileId, 'failed');
+      return c.json({ error: result.error }, 400);
+    }
   } catch (error) {
     console.error('Upload error:', error);
     return c.json({ error: "Upload failed" }, 400);
@@ -770,20 +796,32 @@ app.get("/files/*", async (c) => {
 });
 
 // Delete file
-app.delete("/api/files/:fileKey", authMiddleware, async (c) => {
+app.delete("/api/files/:fileId", authMiddleware, async (c) => {
   try {
     const services = c.get('services');
     const auth = c.get('auth');
-    const fileKey = c.req.param('fileKey');
+    const fileId = c.req.param('fileId');
 
-    // Verify user owns the file (basic check - in production you'd check database)
-    if (!fileKey.includes(auth.userId)) {
-      return c.json({ error: "Access denied" }, 403);
+    // Get file info from database to verify ownership and get R2 key
+    const stmt = services.storageService.db.prepare(`
+      SELECT r2_key, user_id FROM file_uploads WHERE id = ? AND user_id = ?
+    `);
+    const result = await stmt.bind(fileId, auth.userId).first();
+
+    if (!result) {
+      return c.json({ error: "File not found or access denied" }, 404);
     }
 
-    const success = await services.storageService.deleteFile(fileKey);
+    // Delete from R2
+    const success = await services.storageService.deleteFile(result.r2_key);
 
     if (success) {
+      // Delete from database
+      const deleteStmt = services.storageService.db.prepare(`
+        DELETE FROM file_uploads WHERE id = ? AND user_id = ?
+      `);
+      await deleteStmt.bind(fileId, auth.userId).run();
+
       return c.json({ success: true });
     } else {
       return c.json({ error: "Failed to delete file" }, 400);
@@ -845,16 +883,8 @@ app.get("/api/user/files", authMiddleware, async (c) => {
     const auth = c.get('auth');
     const { type } = c.req.query(); // 'images', 'documents', 'all'
 
-    let prefix = `uploads/${auth.userId}/`;
-    if (type === 'images') {
-      prefix = `listings/`;
-    } else if (type === 'documents') {
-      prefix = `documents/${auth.userId}/`;
-    } else if (type === 'profile') {
-      prefix = `profiles/${auth.userId}/`;
-    }
-
-    const files = await services.storageService.listFiles(prefix, 100);
+    // Get files from database instead of just R2 listing
+    const files = await services.storageService.getUserFiles(auth.userId, type);
 
     return c.json({ files });
   } catch (error) {

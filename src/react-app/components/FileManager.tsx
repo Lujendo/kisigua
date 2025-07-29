@@ -68,12 +68,12 @@ export const FileManager: React.FC<FileManagerProps> = ({ className = '' }) => {
     
     // Convert file list to ImageItem format
     const imageItems: ImageItem[] = data.files
-      .filter((file: any) => file.key.match(/\.(jpg|jpeg|png|webp|gif)$/i))
+      .filter((file: any) => file.fileType.startsWith('image/'))
       .map((file: any) => ({
-        id: file.key,
-        url: `/files/${file.key}`,
-        alt: `Image ${file.key}`,
-        caption: file.key.split('/').pop()
+        id: file.id,
+        url: file.url,
+        alt: file.fileName,
+        caption: `Uploaded ${new Date(file.createdAt).toLocaleDateString()}`
       }));
 
     setImages(imageItems);
@@ -92,15 +92,15 @@ export const FileManager: React.FC<FileManagerProps> = ({ className = '' }) => {
     
     // Convert file list to DocumentItem format
     const documentItems: DocumentItem[] = data.files
-      .filter((file: any) => !file.key.match(/\.(jpg|jpeg|png|webp|gif)$/i))
+      .filter((file: any) => !file.fileType.startsWith('image/'))
       .map((file: any) => ({
-        id: file.key,
-        fileName: file.key.split('/').pop() || file.key,
-        fileType: getFileTypeFromExtension(file.key),
-        fileSize: file.size,
-        uploadDate: file.lastModified,
-        url: `/files/${file.key}`,
-        documentType: getDocumentTypeFromPath(file.key)
+        id: file.id,
+        fileName: file.fileName,
+        fileType: file.fileType,
+        fileSize: file.fileSize,
+        uploadDate: file.createdAt,
+        url: file.url,
+        documentType: getDocumentTypeFromPath(file.r2Key)
       }));
 
     setDocuments(documentItems);
@@ -119,20 +119,7 @@ export const FileManager: React.FC<FileManagerProps> = ({ className = '' }) => {
     setStorageUsage(data.usage);
   };
 
-  const getFileTypeFromExtension = (fileName: string): string => {
-    const ext = fileName.split('.').pop()?.toLowerCase();
-    const typeMap: Record<string, string> = {
-      pdf: 'application/pdf',
-      doc: 'application/msword',
-      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      txt: 'text/plain',
-      jpg: 'image/jpeg',
-      jpeg: 'image/jpeg',
-      png: 'image/png',
-      webp: 'image/webp'
-    };
-    return typeMap[ext || ''] || 'application/octet-stream';
-  };
+  // File type is now provided by the database
 
   const getDocumentTypeFromPath = (path: string): 'certification' | 'license' | 'other' => {
     if (path.includes('/certification/')) return 'certification';

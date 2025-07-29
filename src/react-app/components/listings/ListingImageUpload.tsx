@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface ListingImageUploadProps {
   onImagesChange: (images: string[]) => void;
@@ -13,9 +14,11 @@ const ListingImageUpload: React.FC<ListingImageUploadProps> = ({
   acceptedTypes = ['image/jpeg', 'image/png', 'image/webp'],
   maxFileSize = 5
 }) => {
+  const { token } = useAuth();
   const [images, setImages] = useState<string[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
+  // Upload progress tracking removed for simplicity
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = async (files: FileList) => {
@@ -53,24 +56,60 @@ const ListingImageUpload: React.FC<ListingImageUploadProps> = ({
     setUploading(true);
 
     try {
-      // Convert files to base64 URLs for preview
-      const imagePromises = validFiles.map(file => {
-        return new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
+      const uploadPromises = validFiles.map(async (file) => {
+        try {
+          // Step 1: Get signed upload URL
+          const signedUrlResponse = await fetch('/api/upload/signed-url', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              fileName: file.name,
+              fileType: file.type,
+              fileSize: file.size
+            })
+          });
+
+          if (!signedUrlResponse.ok) {
+            throw new Error('Failed to get upload URL');
+          }
+
+          const { uploadUrl, r2Key } = await signedUrlResponse.json();
+
+          // Step 2: Upload file to R2
+          const uploadResponse = await fetch(uploadUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': file.type,
+              'x-file-name': file.name
+            },
+            body: file
+          });
+
+          if (!uploadResponse.ok) {
+            throw new Error('Failed to upload file');
+          }
+
+          await uploadResponse.json();
+
+          // Return the public URL for the uploaded image
+          return `/files/${r2Key}`;
+        } catch (error) {
+          console.error(`Error uploading ${file.name}:`, error);
+          throw error;
+        }
       });
 
-      const imageUrls = await Promise.all(imagePromises);
-      const newImages = [...images, ...imageUrls];
-      
+      const uploadedUrls = await Promise.all(uploadPromises);
+      const newImages = [...images, ...uploadedUrls];
+
       setImages(newImages);
       onImagesChange(newImages);
     } catch (error) {
-      console.error('Error processing images:', error);
-      alert('Error processing images. Please try again.');
+      console.error('Error uploading images:', error);
+      alert('Error uploading images. Please try again.');
     } finally {
       setUploading(false);
     }

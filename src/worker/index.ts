@@ -112,6 +112,31 @@ app.get("/api/health", (c) => {
   });
 });
 
+// Placeholder image endpoint
+app.get('/api/placeholder/:width/:height', async (c) => {
+  const width = parseInt(c.req.param('width')) || 300;
+  const height = parseInt(c.req.param('height')) || 200;
+
+  // Limit dimensions for security
+  const maxWidth = Math.min(width, 1200);
+  const maxHeight = Math.min(height, 800);
+
+  // Create a simple SVG placeholder
+  const svg = `<svg width="${maxWidth}" height="${maxHeight}" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100%" height="100%" fill="#f3f4f6"/>
+    <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="16" fill="#9ca3af" text-anchor="middle" dy=".3em">
+      ${maxWidth} × ${maxHeight}
+    </text>
+  </svg>`;
+
+  return new Response(svg, {
+    headers: {
+      'Content-Type': 'image/svg+xml',
+      'Cache-Control': 'public, max-age=86400' // Cache for 24 hours
+    }
+  });
+});
+
 // API info endpoint
 app.get("/api/info", (c) => c.json({
   project: "Kisigua",

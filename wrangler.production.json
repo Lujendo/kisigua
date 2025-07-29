@@ -23,7 +23,8 @@
     {
       "binding": "DB",
       "database_name": "kisigua-production",
-      "database_id": "784f55b4-c35e-4e2a-bc38-0645b0e129cd"
+      "database_id": "784f55b4-c35e-4e2a-bc38-0645b0e129cd",
+      "migrations_dir": "./database/migrations"
     }
   ],
   "r2_buckets": [

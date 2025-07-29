@@ -1,13 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import AdminLayout from './AdminLayout';
 import AdminDashboard from './AdminDashboard';
 import UserManagement from './UserManagement';
 import CategoryManagement from './CategoryManagement';
 
-const AdminPanel = () => {
-  const [currentPage, setCurrentPage] = useState<'dashboard' | 'users' | 'categories' | 'listings' | 'analytics'>('dashboard');
+interface AdminPanelProps {
+  initialPage?: 'dashboard' | 'users' | 'categories' | 'listings' | 'analytics';
+}
+
+const AdminPanel = ({ initialPage = 'dashboard' }: AdminPanelProps) => {
+  const [currentPage, setCurrentPage] = useState<'dashboard' | 'users' | 'categories' | 'listings' | 'analytics'>(initialPage);
   const { user } = useAuth();
+
+  // Update current page when initialPage prop changes
+  useEffect(() => {
+    setCurrentPage(initialPage);
+  }, [initialPage]);
 
   // Check if user is admin or in test mode
   const isTestMode = (window as any).__testAdminMode;

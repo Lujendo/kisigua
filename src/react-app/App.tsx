@@ -10,6 +10,7 @@ import Sidebar from './components/Sidebar';
 import EnhancedSearchPage from './components/search/EnhancedSearchPage';
 import MyListingsPage from './components/listings/MyListingsPage';
 import FavoritesPage from './components/favorites/FavoritesPage';
+import AdminPanel from './components/admin/AdminPanel';
 
 function AppContent() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -182,25 +183,14 @@ function AppContent() {
             </div>
           )}
 
-          {currentPage === 'admin' && user?.role === 'admin' && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Admin Panel</h2>
-              <p className="text-gray-600">Admin panel coming soon...</p>
-            </div>
-          )}
-
-          {currentPage === 'users' && user?.role === 'admin' && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">User Management</h2>
-              <p className="text-gray-600">User management coming soon...</p>
-            </div>
-          )}
-
-          {currentPage === 'analytics' && user?.role === 'admin' && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Analytics</h2>
-              <p className="text-gray-600">Analytics dashboard coming soon...</p>
-            </div>
+          {(currentPage === 'admin' || currentPage === 'users' || currentPage === 'analytics') && user?.role === 'admin' && (
+            <AdminPanel
+              initialPage={
+                currentPage === 'users' ? 'users' :
+                currentPage === 'analytics' ? 'analytics' :
+                'dashboard'
+              }
+            />
           )}
 
           {currentPage === 'subscription' && <SubscriptionPage />}

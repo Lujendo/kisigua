@@ -46,16 +46,83 @@ interface Listing {
 }
 
 const MyListingsPage: React.FC = () => {
+  const { token } = useAuth();
   const [listings, setListings] = useState<Listing[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
   const [showDropdownId, setShowDropdownId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data for demonstration
+  // Fetch user's listings from API
   useEffect(() => {
-    const mockListings: Listing[] = [
+    const fetchUserListings = async () => {
+      if (!token) {
+        setError('Please log in to view your listings');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const response = await fetch('/api/user/listings', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch listings');
+        }
+
+        const data = await response.json();
+
+        // Transform API data to match component interface
+        const transformedListings: Listing[] = data.listings.map((listing: any) => ({
+          id: listing.id,
+          title: listing.title,
+          description: listing.description,
+          category: listing.category,
+          location: {
+            street: listing.location.address?.split(' ')[1] || '',
+            houseNumber: listing.location.address?.split(' ')[0] || '',
+            city: listing.location.city,
+            region: listing.location.region,
+            country: listing.location.country,
+            coordinates: {
+              lat: listing.location.latitude,
+              lng: listing.location.longitude
+            }
+          },
+          contact: {
+            phone: listing.contactInfo?.phone,
+            email: listing.contactInfo?.email,
+            website: listing.contactInfo?.website,
+            socials: {}
+          },
+          images: listing.images || [],
+          thumbnail: listing.images?.[0] || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300&h=200&fit=crop',
+          price: listing.priceRange === 'low' ? 10 : listing.priceRange === 'medium' ? 25 : listing.priceRange === 'high' ? 50 : undefined,
+          priceType: listing.priceRange ? 'paid' : 'free',
+          tags: listing.tags || [],
+          status: 'published', // Default status
+          isVerified: listing.isCertified || false,
+          createdAt: listing.createdAt,
+          updatedAt: listing.updatedAt,
+          views: listing.views || 0,
+          inquiries: 0 // Default value
+        }));
+
+        setListings(transformedListings);
+        setError(null);
+      } catch (error) {
+        console.error('Error fetching user listings:', error);
+        setError('Failed to load your listings. Please try again.');
+
+        // Fallback to mock data for development
+        const mockListings: Listing[] = [
       {
         id: '1',
         title: 'Green Valley Organic Farm',
@@ -375,10 +442,15 @@ const MyListingsPage: React.FC = () => {
         views: 45,
         inquiries: 6
       }
-    ];
+        ];
+        setListings(mockListings);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    setListings(mockListings);
-  }, []);
+    fetchUserListings();
+  }, [token]);
 
   const filteredListings = listings.filter(listing => {
     if (filterStatus === 'all') return true;
@@ -403,7 +475,18 @@ const MyListingsPage: React.FC = () => {
   const handleDeleteListing = async (listingId: string) => {
     if (window.confirm('Are you sure you want to delete this listing? This action cannot be undone.')) {
       try {
-        // In real app, make API call to delete
+        const response = await fetch(`/api/listings/${listingId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to delete listing');
+        }
+
+        // Remove from local state
         setListings(prev => prev.filter(l => l.id !== listingId));
         console.log('Deleted listing:', listingId);
       } catch (error) {
@@ -1322,6 +1405,53 @@ const MyListingsPage: React.FC = () => {
       </div>
     );
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">My Listings</h1>
+            <p className="text-gray-600">Manage your listings and track their performance</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+          <span className="ml-3 text-gray-600">Loading your listings...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">My Listings</h1>
+            <p className="text-gray-600">Manage your listings and track their performance</p>
+          </div>
+        </div>
+        <div className="text-center py-12">
+          <div className="text-red-600 mb-4">
+            <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Listings</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

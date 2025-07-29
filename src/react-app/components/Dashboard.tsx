@@ -121,144 +121,15 @@ const Dashboard = ({}: DashboardProps) => {
 
       } catch (error) {
         console.error('Error fetching locations:', error);
-        // Fallback to mock data on error
-        const mockLocations: Location[] = [
-      {
-        id: '1',
-        title: 'Organic Farm Experience',
-        description: 'Visit our sustainable organic farm and learn about permaculture practices. Enjoy fresh produce and connect with nature.',
-        category: 'nature',
-        location: {
-          address: '123 Farm Road',
-          city: 'Green Valley',
-          country: 'Germany',
-          coordinates: { lat: 52.5200, lng: 13.4050 }
-        },
-        images: ['/api/placeholder/400/300', '/api/placeholder/400/300'],
-        thumbnail: '/api/placeholder/300/200',
-        rating: 4.8,
-        reviews: 24,
-        priceType: 'paid',
-        price: 25,
-        tags: ['organic', 'sustainable', 'educational'],
-        createdBy: 'farmer-001',
-        createdAt: '2024-01-15',
-        isVerified: true,
-        isFeatured: true,
-        views: 124
-      },
-      {
-        id: '2',
-        title: 'Community Garden Workshop',
-        description: 'Join our weekly community garden workshop. Learn to grow your own vegetables and herbs in an urban setting.',
-        category: 'activities',
-        location: {
-          address: '456 Community St',
-          city: 'Berlin',
-          country: 'Germany',
-          coordinates: { lat: 52.5170, lng: 13.3889 }
-        },
-        images: ['/api/placeholder/400/300'],
-        thumbnail: '/api/placeholder/300/200',
-        rating: 4.6,
-        reviews: 18,
-        priceType: 'free',
-        tags: ['community', 'gardening', 'workshop'],
-        createdBy: 'community-001',
-        createdAt: '2024-01-10',
-        isVerified: true,
-        isFeatured: false,
-        views: 89
-      },
-      {
-        id: '3',
-        title: 'Traditional Cooking Class',
-        description: 'Learn to cook traditional local dishes using ingredients from our region. Small groups, authentic recipes.',
-        category: 'food',
-        location: {
-          address: '789 Kitchen Lane',
-          city: 'Munich',
-          country: 'Germany',
-          coordinates: { lat: 48.1351, lng: 11.5820 }
-        },
-        images: ['/api/placeholder/400/300', '/api/placeholder/400/300'],
-        thumbnail: '/api/placeholder/300/200',
-        rating: 4.9,
-        reviews: 32,
-        priceType: 'paid',
-        price: 45,
-        tags: ['cooking', 'traditional', 'local'],
-        createdBy: 'chef-001',
-        createdAt: '2024-01-08',
-        isVerified: true,
-        isFeatured: true,
-        views: 156
-      },
-      {
-        id: '4',
-        title: 'Eco-Friendly Accommodation',
-        description: 'Stay in our eco-friendly guesthouse powered by renewable energy. Perfect for sustainable travelers.',
-        category: 'accommodation',
-        location: {
-          address: '321 Green Street',
-          city: 'Hamburg',
-          country: 'Germany',
-          coordinates: { lat: 53.5511, lng: 9.9937 }
-        },
-        images: ['/api/placeholder/400/300'],
-        thumbnail: '/api/placeholder/300/200',
-        rating: 4.7,
-        reviews: 45,
-        priceType: 'paid',
-        price: 80,
-        tags: ['eco-friendly', 'accommodation', 'renewable'],
-        createdBy: 'host-001',
-        createdAt: '2024-01-05',
-        isVerified: true,
-        isFeatured: false,
-        views: 203
-      },
-      {
-        id: '5',
-        title: 'Local Art Gallery Tour',
-        description: 'Discover local artists and their sustainable art practices. Interactive tour with the artists themselves.',
-        category: 'culture',
-        location: {
-          address: '654 Art Avenue',
-          city: 'Dresden',
-          country: 'Germany',
-          coordinates: { lat: 51.0504, lng: 13.7373 }
-        },
-        images: ['/api/placeholder/400/300', '/api/placeholder/400/300'],
-        thumbnail: '/api/placeholder/300/200',
-        rating: 4.5,
-        reviews: 28,
-        priceType: 'donation',
-        tags: ['art', 'culture', 'local'],
-        createdBy: 'artist-001',
-        createdAt: '2024-01-03',
-        isVerified: true,
-        isFeatured: false,
-        views: 67
-      }
-        ];
+        // Set empty array on error instead of mock data
+        setLocations([]);
+        setFilteredLocations([]);
+        setSuggestions([]);
+        setRecentlyViewed([]);
 
-        setLocations(mockLocations);
 
-        // Apply default sorting (relevance)
-        const sortedLocations = mockLocations.sort((a, b) => {
-          if (a.isFeatured !== b.isFeatured) {
-            return b.isFeatured ? 1 : -1;
-          }
-          if (a.rating !== b.rating) {
-            return b.rating - a.rating;
-          }
-          return b.views - a.views;
-        });
 
-        setFilteredLocations(sortedLocations);
-        setSuggestions(mockLocations.filter(loc => loc.isFeatured || loc.rating >= 4.7));
-        setRecentlyViewed(mockLocations.slice(0, 3));
+
       } finally {
         setLoading(false);
       }

@@ -1,12 +1,71 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import CategoryManagement from './CategoryManagement';
 
+interface DashboardStats {
+  totalUsers: number;
+  totalListings: number;
+  totalCategories: number;
+  activeUsers: number;
+  pendingListings: number;
+  totalFavorites: number;
+  totalCollections: number;
+}
+
 const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'settings'>('overview');
-  const { user } = useAuth();
+  const [stats, setStats] = useState<DashboardStats>({
+    totalUsers: 0,
+    totalListings: 0,
+    totalCategories: 0,
+    activeUsers: 0,
+    pendingListings: 0,
+    totalFavorites: 0,
+    totalCollections: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const { user, token } = useAuth();
 
   // Simplified admin panel - v1.1
+
+  useEffect(() => {
+    if (token && activeTab === 'overview') {
+      loadDashboardStats();
+    }
+  }, [token, activeTab]);
+
+  const loadDashboardStats = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/admin/dashboard/stats', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setStats({
+          totalUsers: data.totalUsers || 0,
+          totalListings: data.totalListings || 0,
+          totalCategories: data.totalCategories || 0,
+          activeUsers: data.activeUsers || 0,
+          pendingListings: data.pendingListings || 0,
+          totalFavorites: data.totalFavorites || 0,
+          totalCollections: data.totalCollections || 0,
+        });
+      } else {
+        console.error('Failed to load dashboard stats');
+        // Keep default values
+      }
+    } catch (error) {
+      console.error('Error loading dashboard stats:', error);
+      // Keep default values
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Check if user is admin or in test mode
   const isTestMode = (window as any).__testAdminMode;
@@ -108,7 +167,7 @@ const AdminPanel = () => {
                     </div>
                     <div className="ml-4">
                       <p className="text-green-100">Categories</p>
-                      <p className="text-2xl font-semibold">12</p>
+                      <p className="text-2xl font-semibold">{loading ? '...' : stats.totalCategories}</p>
                     </div>
                   </div>
                 </div>
@@ -122,7 +181,7 @@ const AdminPanel = () => {
                     </div>
                     <div className="ml-4">
                       <p className="text-blue-100">Active Listings</p>
-                      <p className="text-2xl font-semibold">89</p>
+                      <p className="text-2xl font-semibold">{loading ? '...' : stats.totalListings}</p>
                     </div>
                   </div>
                 </div>
@@ -136,7 +195,7 @@ const AdminPanel = () => {
                     </div>
                     <div className="ml-4">
                       <p className="text-purple-100">Total Users</p>
-                      <p className="text-2xl font-semibold">156</p>
+                      <p className="text-2xl font-semibold">{loading ? '...' : stats.totalUsers}</p>
                     </div>
                   </div>
                 </div>

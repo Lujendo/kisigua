@@ -7,6 +7,9 @@ import { DatabaseService } from "./services/databaseService";
 import { StorageService } from "./services/storageService";
 import { AnalyticsService } from "./services/analyticsService";
 import { CategoryService } from "./services/categoryService";
+import { FavoritesService } from "./services/favoritesService";
+import { ActivityService } from "./services/activityService";
+import { StatsService } from "./services/statsService";
 import {
   createAuthMiddleware,
   createRoleMiddleware
@@ -37,6 +40,9 @@ function initializeServices(env: Env) {
   const storageService = new StorageService(env.FILES, env.DB, env.R2_BUCKET_NAME, env.R2_PUBLIC_URL);
   const analyticsService = new AnalyticsService(env.ANALYTICS, env.DB);
   const categoryService = new CategoryService(env.DB);
+  const favoritesService = new FavoritesService(env.DB);
+  const activityService = new ActivityService(env.DB);
+  const statsService = new StatsService(env.DB);
 
   console.log('Creating AuthService with JWT_SECRET:', env.JWT_SECRET ? 'SET' : 'USING FALLBACK');
   const authService = new AuthService(env.JWT_SECRET || 'your-secret-key-change-in-production', databaseService);
@@ -51,6 +57,9 @@ function initializeServices(env: Env) {
     storageService,
     analyticsService,
     categoryService,
+    favoritesService,
+    activityService,
+    statsService,
     authService,
     listingsService,
     subscriptionService
@@ -1271,6 +1280,148 @@ app.get("/api/debug/fresh-db-check", async (c) => {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
     }, 500);
+  }
+});
+
+// ===== FAVORITES ENDPOINTS =====
+
+// Get user's favorites (authenticated)
+app.get("/api/favorites", authMiddleware, async (c) => {
+  try {
+    const services = c.get('services');
+    const auth = c.get('auth');
+    const favorites = await services.favoritesService.getUserFavorites(auth.userId);
+    return c.json({ favorites });
+  } catch (error) {
+    console.error('Error fetching favorites:', error);
+    return c.json({ error: "Failed to fetch favorites" }, 500);
+  }
+});
+
+// Add to favorites (authenticated)
+app.post("/api/favorites", authMiddleware, async (c) => {
+  try {
+    const services = c.get('services');
+    const auth = c.get('auth');
+    const { listingId } = await c.req.json();
+
+    if (!listingId) {
+      return c.json({ error: "Listing ID is required" }, 400);
+    }
+
+    const favorite = await services.favoritesService.addToFavorites(auth.userId, listingId);
+
+    // Log activity
+    await services.activityService.logFavoriteAdded(auth.userId, listingId, 'Listing');
+
+    return c.json({ favorite });
+  } catch (error) {
+    console.error('Error adding to favorites:', error);
+    if (error instanceof Error && error.message === 'Listing already in favorites') {
+      return c.json({ error: error.message }, 409);
+    }
+    return c.json({ error: "Failed to add to favorites" }, 500);
+  }
+});
+
+// Remove from favorites (authenticated)
+app.delete("/api/favorites/:listingId", authMiddleware, async (c) => {
+  try {
+    const services = c.get('services');
+    const auth = c.get('auth');
+    const listingId = c.req.param('listingId');
+
+    const success = await services.favoritesService.removeFromFavorites(auth.userId, listingId);
+
+    if (!success) {
+      return c.json({ error: "Favorite not found" }, 404);
+    }
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Error removing from favorites:', error);
+    return c.json({ error: "Failed to remove from favorites" }, 500);
+  }
+});
+
+// Check if listing is favorited (authenticated)
+app.get("/api/favorites/check/:listingId", authMiddleware, async (c) => {
+  try {
+    const services = c.get('services');
+    const auth = c.get('auth');
+    const listingId = c.req.param('listingId');
+
+    const isFavorited = await services.favoritesService.isListingFavorited(auth.userId, listingId);
+    return c.json({ isFavorited });
+  } catch (error) {
+    console.error('Error checking favorite status:', error);
+    return c.json({ error: "Failed to check favorite status" }, 500);
+  }
+});
+
+// Get user's favorite collections (authenticated)
+app.get("/api/favorites/collections", authMiddleware, async (c) => {
+  try {
+    const services = c.get('services');
+    const auth = c.get('auth');
+    const collections = await services.favoritesService.getUserCollections(auth.userId);
+    return c.json({ collections });
+  } catch (error) {
+    console.error('Error fetching collections:', error);
+    return c.json({ error: "Failed to fetch collections" }, 500);
+  }
+});
+
+// Create favorite collection (authenticated)
+app.post("/api/favorites/collections", authMiddleware, async (c) => {
+  try {
+    const services = c.get('services');
+    const auth = c.get('auth');
+    const { name, description, color, isPublic } = await c.req.json();
+
+    if (!name) {
+      return c.json({ error: "Collection name is required" }, 400);
+    }
+
+    const collection = await services.favoritesService.createCollection(
+      auth.userId,
+      name,
+      description,
+      color,
+      isPublic
+    );
+
+    return c.json({ collection });
+  } catch (error) {
+    console.error('Error creating collection:', error);
+    return c.json({ error: "Failed to create collection" }, 500);
+  }
+});
+
+// ===== DASHBOARD STATS ENDPOINTS =====
+
+// Get dashboard statistics (admin only)
+app.get("/api/admin/dashboard/stats", authMiddleware, roleMiddleware(['admin']), async (c) => {
+  try {
+    const services = c.get('services');
+    const stats = await services.statsService.getDashboardStats();
+    return c.json(stats);
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    return c.json({ error: "Failed to fetch dashboard statistics" }, 500);
+  }
+});
+
+// Get user statistics (authenticated)
+app.get("/api/user/stats", authMiddleware, async (c) => {
+  try {
+    const services = c.get('services');
+    const auth = c.get('auth');
+    const stats = await services.statsService.getUserStats(auth.userId);
+    return c.json(stats);
+  } catch (error) {
+    console.error('Error fetching user stats:', error);
+    return c.json({ error: "Failed to fetch user statistics" }, 500);
   }
 });
 

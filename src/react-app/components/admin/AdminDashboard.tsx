@@ -7,12 +7,29 @@ interface DashboardStats {
   totalCategories: number;
   activeUsers: number;
   pendingListings: number;
+  totalFavorites: number;
+  totalCollections: number;
   recentActivity: Array<{
     id: string;
-    type: 'user_registered' | 'listing_created' | 'listing_approved' | 'listing_rejected';
+    type: string;
     description: string;
     timestamp: string;
     user?: string;
+  }>;
+  userGrowth: {
+    thisMonth: number;
+    lastMonth: number;
+    percentageChange: number;
+  };
+  listingGrowth: {
+    thisMonth: number;
+    lastMonth: number;
+    percentageChange: number;
+  };
+  topCategories: Array<{
+    name: string;
+    count: number;
+    percentage: number;
   }>;
 }
 
@@ -23,7 +40,20 @@ const AdminDashboard = () => {
     totalCategories: 0,
     activeUsers: 0,
     pendingListings: 0,
-    recentActivity: []
+    totalFavorites: 0,
+    totalCollections: 0,
+    recentActivity: [],
+    userGrowth: {
+      thisMonth: 0,
+      lastMonth: 0,
+      percentageChange: 0
+    },
+    listingGrowth: {
+      thisMonth: 0,
+      lastMonth: 0,
+      percentageChange: 0
+    },
+    topCategories: []
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +77,8 @@ const AdminDashboard = () => {
         const data = await response.json();
         setStats(data);
       } else {
+        console.error('Failed to load dashboard stats');
+        setError('Failed to load dashboard statistics');
         // Fallback with mock data for now
         setStats({
           totalUsers: 156,
@@ -54,6 +86,8 @@ const AdminDashboard = () => {
           totalCategories: 12,
           activeUsers: 142,
           pendingListings: 7,
+          totalFavorites: 234,
+          totalCollections: 45,
           recentActivity: [
             {
               id: '1',
@@ -76,6 +110,23 @@ const AdminDashboard = () => {
               timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
               user: 'admin@kisigua.com'
             }
+          ],
+          userGrowth: {
+            thisMonth: 23,
+            lastMonth: 18,
+            percentageChange: 27.8
+          },
+          listingGrowth: {
+            thisMonth: 12,
+            lastMonth: 8,
+            percentageChange: 50.0
+          },
+          topCategories: [
+            { name: 'Organic Farm', count: 25, percentage: 28.1 },
+            { name: 'Water Source', count: 18, percentage: 20.2 },
+            { name: 'Local Product', count: 15, percentage: 16.9 },
+            { name: 'Sustainable Good', count: 12, percentage: 13.5 },
+            { name: 'Community Garden', count: 8, percentage: 9.0 }
           ]
         });
       }

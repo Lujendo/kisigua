@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Location {
   id: string;
@@ -42,9 +43,99 @@ const FavoritesPage: React.FC = () => {
   const [selectedCollection, setSelectedCollection] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showCreateCollection, setShowCreateCollection] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { token } = useAuth();
 
-  // Mock data for demonstration
+  // Load favorites and collections from API
   useEffect(() => {
+    if (token) {
+      loadFavorites();
+      loadCollections();
+    }
+  }, [token]);
+
+  const loadFavorites = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/favorites', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Transform API data to match Location interface
+        const transformedFavorites: Location[] = data.favorites.map((fav: any) => ({
+          id: fav.listing.id,
+          title: fav.listing.title,
+          description: fav.listing.description,
+          category: fav.listing.category,
+          location: {
+            address: fav.listing.location,
+            city: fav.listing.city,
+            country: fav.listing.country,
+            coordinates: {
+              lat: fav.listing.latitude || 0,
+              lng: fav.listing.longitude || 0,
+            },
+          },
+          images: fav.listing.images || [],
+          thumbnail: fav.listing.thumbnail || (fav.listing.images?.[0] || ''),
+          rating: 4.5, // TODO: Add rating system
+          reviews: 0, // TODO: Add reviews system
+          price: fav.listing.price,
+          priceType: fav.listing.priceType as 'free' | 'paid' | 'donation',
+          tags: fav.listing.tags || [],
+          createdBy: fav.listing.createdBy,
+          createdAt: fav.listing.createdAt,
+          isVerified: fav.listing.isVerified,
+          isFeatured: fav.listing.isFeatured,
+          views: fav.listing.views,
+          savedAt: fav.createdAt,
+        }));
+        setFavorites(transformedFavorites);
+      } else {
+        setError('Failed to load favorites');
+        // Fallback to mock data for demonstration
+        loadMockData();
+      }
+    } catch (error) {
+      console.error('Error loading favorites:', error);
+      setError('Network error');
+      // Fallback to mock data for demonstration
+      loadMockData();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadCollections = async () => {
+    try {
+      const response = await fetch('/api/favorites/collections', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCollections(data.collections || []);
+      } else {
+        console.error('Failed to load collections');
+      }
+    } catch (error) {
+      console.error('Error loading collections:', error);
+    }
+  };
+
+  // removeFromFavorites function can be added when needed for UI buttons
+
+  // Fallback mock data for demonstration
+  const loadMockData = () => {
     const mockFavorites: Location[] = [
       {
         id: '1',
@@ -121,7 +212,7 @@ const FavoritesPage: React.FC = () => {
 
     setFavorites(mockFavorites);
     setCollections(mockCollections);
-  }, []);
+  };
 
   const getFilteredFavorites = () => {
     if (selectedCollection === 'all') {
@@ -269,8 +360,27 @@ const FavoritesPage: React.FC = () => {
 
   const filteredFavorites = getFilteredFavorites();
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+          <span className="ml-3 text-gray-600">Loading your favorites...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Error message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>

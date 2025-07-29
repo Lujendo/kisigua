@@ -69,9 +69,60 @@ const Dashboard = ({}: DashboardProps) => {
   // View Mode State
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
 
-  // Mock data initialization
+  // Fetch real data from API
   useEffect(() => {
-    const mockLocations: Location[] = [
+    const fetchLocations = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/listings');
+        if (!response.ok) {
+          throw new Error('Failed to fetch listings');
+        }
+        const data = await response.json();
+
+        // Transform API data to match Location interface
+        const transformedLocations: Location[] = data.listings.map((listing: any) => ({
+          id: listing.id,
+          title: listing.title,
+          description: listing.description,
+          category: listing.category,
+          location: {
+            address: listing.location.address,
+            city: listing.location.city,
+            country: listing.location.country,
+            coordinates: {
+              lat: listing.location.latitude,
+              lng: listing.location.longitude
+            }
+          },
+          images: listing.images || [],
+          thumbnail: listing.images?.[0] || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300&h=200&fit=crop',
+          rating: 4.5, // Default rating since not in database
+          reviews: Math.floor(Math.random() * 50) + 10, // Mock reviews
+          price: listing.priceRange === 'low' ? 10 : listing.priceRange === 'medium' ? 25 : listing.priceRange === 'high' ? 50 : undefined,
+          priceType: listing.priceRange ? 'paid' : 'free',
+          tags: listing.tags || [],
+          createdBy: listing.userId,
+          createdAt: listing.createdAt,
+          isVerified: listing.isCertified,
+          isFeatured: listing.featured || false,
+          views: listing.views || 0,
+          lastViewed: undefined
+        }));
+
+        setLocations(transformedLocations);
+        setFilteredLocations(transformedLocations);
+
+        // Set suggestions based on featured items
+        setSuggestions(transformedLocations.filter(loc => loc.isFeatured || loc.rating >= 4.7));
+
+        // Set recently viewed (first 3 items as mock)
+        setRecentlyViewed(transformedLocations.slice(0, 3));
+
+      } catch (error) {
+        console.error('Error fetching locations:', error);
+        // Fallback to mock data on error
+        const mockLocations: Location[] = [
       {
         id: '1',
         title: 'Organic Farm Experience',
@@ -190,35 +241,47 @@ const Dashboard = ({}: DashboardProps) => {
         isFeatured: false,
         views: 67
       }
-    ];
+        ];
 
+        setLocations(mockLocations);
+
+        // Apply default sorting (relevance)
+        const sortedLocations = mockLocations.sort((a, b) => {
+          if (a.isFeatured !== b.isFeatured) {
+            return b.isFeatured ? 1 : -1;
+          }
+          if (a.rating !== b.rating) {
+            return b.rating - a.rating;
+          }
+          return b.views - a.views;
+        });
+
+        setFilteredLocations(sortedLocations);
+        setSuggestions(mockLocations.filter(loc => loc.isFeatured || loc.rating >= 4.7));
+        setRecentlyViewed(mockLocations.slice(0, 3));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Mock search history
     const mockSearchHistory: SearchHistory[] = [
-      { id: '1', query: 'organic farming', timestamp: '2024-01-20', results: 12 },
-      { id: '2', query: 'cooking classes', timestamp: '2024-01-19', results: 8 },
-      { id: '3', query: 'sustainable accommodation', timestamp: '2024-01-18', results: 15 }
+      {
+        id: '1',
+        query: 'organic farm',
+        timestamp: new Date(Date.now() - 86400000).toISOString(),
+        results: 3
+      },
+      {
+        id: '2',
+        query: 'water source',
+        timestamp: new Date(Date.now() - 172800000).toISOString(),
+        results: 2
+      }
     ];
-
-    setLocations(mockLocations);
-
-    // Apply default sorting (relevance)
-    const sortedLocations = mockLocations.sort((a, b) => {
-      if (a.isFeatured !== b.isFeatured) {
-        return b.isFeatured ? 1 : -1;
-      }
-      if (a.rating !== b.rating) {
-        return b.rating - a.rating;
-      }
-      return b.views - a.views;
-    });
-
-    setFilteredLocations(sortedLocations);
     setSearchHistory(mockSearchHistory);
 
-    // Set suggestions based on user preferences and popular items
-    setSuggestions(mockLocations.filter(loc => loc.isFeatured || loc.rating >= 4.7));
-
-    // Set recently viewed (mock data)
-    setRecentlyViewed(mockLocations.slice(0, 3));
+    fetchLocations();
   }, []);
 
   if (!user) {

@@ -48,7 +48,7 @@ function initializeServices(env: Env) {
   const authService = new AuthService(env.JWT_SECRET || 'your-secret-key-change-in-production', databaseService);
   console.log('AuthService created successfully');
 
-  const listingsService = new ListingsService();
+  const listingsService = new ListingsService(databaseService);
   const subscriptionService = new SubscriptionService(env.STRIPE_SECRET_KEY || 'sk_test_your_stripe_secret_key');
   console.log('=== SERVICES INITIALIZED ===');
 
@@ -1422,6 +1422,20 @@ app.get("/api/user/stats", authMiddleware, async (c) => {
   } catch (error) {
     console.error('Error fetching user stats:', error);
     return c.json({ error: "Failed to fetch user statistics" }, 500);
+  }
+});
+
+// ===== PUBLIC LISTINGS ENDPOINTS =====
+
+// Get all public listings (no authentication required)
+app.get("/api/listings", async (c) => {
+  try {
+    const services = c.get('services');
+    const listings = await services.listingsService.getAllListings();
+    return c.json({ listings });
+  } catch (error) {
+    console.error('Error fetching listings:', error);
+    return c.json({ error: "Failed to fetch listings" }, 500);
   }
 });
 

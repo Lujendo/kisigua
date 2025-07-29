@@ -5,11 +5,14 @@ import {
   CreateListingRequest,
   UpdateListingRequest
 } from '../types/listings';
+import { DatabaseService } from './databaseService';
 
 export class ListingsService {
   private listings: Map<string, Listing> = new Map();
+  private databaseService: DatabaseService;
 
-  constructor() {
+  constructor(databaseService: DatabaseService) {
+    this.databaseService = databaseService;
     this.initializeSampleData();
   }
 
@@ -393,7 +396,26 @@ export class ListingsService {
   }
 
   async getAllListings(): Promise<Listing[]> {
-    return Array.from(this.listings.values());
+    try {
+      // First try to get from database
+      const searchResult = await this.databaseService.searchListings({
+        query: '',
+        filters: {},
+        page: 1,
+        limit: 100 // Get all listings
+      });
+
+      if (searchResult.listings.length > 0) {
+        return searchResult.listings;
+      }
+
+      // Fallback to in-memory data if database is empty
+      return Array.from(this.listings.values());
+    } catch (error) {
+      console.error('Error fetching listings from database:', error);
+      // Fallback to in-memory data on error
+      return Array.from(this.listings.values());
+    }
   }
 
   private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {

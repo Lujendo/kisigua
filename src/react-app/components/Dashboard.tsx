@@ -58,6 +58,10 @@ const Dashboard = ({}: DashboardProps) => {
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(8); // Show 8 items per page
+
   // Sorting State
   const [sortBy, setSortBy] = useState<'relevance' | 'rating' | 'price' | 'distance' | 'newest' | 'popular'>('relevance');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -315,6 +319,7 @@ const Dashboard = ({}: DashboardProps) => {
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     setLoading(true);
+    setCurrentPage(1); // Reset to first page when searching
 
     // Simulate API call delay
     setTimeout(() => {
@@ -353,10 +358,23 @@ const Dashboard = ({}: DashboardProps) => {
     if (newSortOrder) {
       setSortOrder(newSortOrder);
     }
+    setCurrentPage(1); // Reset to first page when sorting
 
     // Re-apply sorting to current results
     const sortedLocations = applySorting(filteredLocations);
     setFilteredLocations(sortedLocations);
+  };
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredLocations.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentItems = filteredLocations.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    // Scroll to top of results
+    document.querySelector('.dashboard-results')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const handleLocationClick = (locationId: string) => {
@@ -532,24 +550,24 @@ const Dashboard = ({}: DashboardProps) => {
 
           {/* Search History & Suggestions */}
           {!searchQuery && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Recent Searches */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Recent Searches - Compact */}
               {searchHistory.length > 0 && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Searches</h3>
-                  <div className="space-y-2">
-                    {searchHistory.map((search) => (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Recent Searches</h3>
+                  <div className="space-y-1">
+                    {searchHistory.slice(0, 3).map((search) => (
                       <button
                         key={search.id}
                         onClick={() => handleSearch(search.query)}
-                        className="w-full text-left p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                        className="w-full text-left p-2 rounded hover:bg-gray-50 transition-colors"
                       >
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          <div className="flex items-center space-x-2">
+                            <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
-                            <span className="text-gray-900">{search.query}</span>
+                            <span className="text-sm text-gray-900">{search.query}</span>
                           </div>
                           <span className="text-xs text-gray-500">{search.results} results</span>
                         </div>
@@ -559,29 +577,26 @@ const Dashboard = ({}: DashboardProps) => {
                 </div>
               )}
 
-              {/* Recently Viewed */}
+              {/* Recently Viewed - Compact */}
               {recentlyViewed.length > 0 && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Recently Viewed</h3>
-                  <div className="space-y-3">
-                    {recentlyViewed.map((location) => (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Recently Viewed</h3>
+                  <div className="space-y-1">
+                    {recentlyViewed.slice(0, 3).map((location) => (
                       <button
                         key={location.id}
                         onClick={() => handleLocationClick(location.id)}
-                        className="w-full text-left p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                        className="w-full text-left p-2 rounded hover:bg-gray-50 transition-colors"
                       >
-                        <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-2">
                           <img
                             src={location.thumbnail}
                             alt={location.title}
-                            className="w-12 h-12 object-cover rounded-lg"
+                            className="w-8 h-8 object-cover rounded"
                           />
-                          <div className="flex-1">
-                            <h4 className="text-sm font-medium text-gray-900">{location.title}</h4>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-medium text-gray-900 truncate">{location.title}</h4>
                             <p className="text-xs text-gray-500">{location.location.city}</p>
-                          </div>
-                          <div className="flex items-center">
-                            {renderStars(location.rating)}
                           </div>
                         </div>
                       </button>
@@ -592,34 +607,33 @@ const Dashboard = ({}: DashboardProps) => {
             </div>
           )}
 
-          {/* Suggestions for You */}
+          {/* Suggestions for You - Compact */}
           {!searchQuery && suggestions.length > 0 && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Suggested for You</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">Suggested for You</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 {suggestions.map((location) => (
                   <div key={location.id} className="relative">
                     <button
                       onClick={() => handleLocationClick(location.id)}
-                      className="w-full text-left p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
+                      className="w-full text-left p-3 rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
                     >
                       <img
                         src={location.thumbnail}
                         alt={location.title}
-                        className="w-full h-32 object-cover rounded-lg mb-3"
+                        className="w-full h-24 object-cover rounded mb-2"
                       />
-                      <h4 className="font-medium text-gray-900 mb-1">{location.title}</h4>
-                      <p className="text-sm text-gray-600 mb-2 line-clamp-2">{location.description}</p>
+                      <h4 className="text-sm font-medium text-gray-900 mb-1 truncate">{location.title}</h4>
+                      <p className="text-xs text-gray-600 mb-2 line-clamp-1">{location.location.city}</p>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
                           {renderStars(location.rating)}
-                          <span className="text-xs text-gray-500 ml-1">({location.reviews})</span>
                         </div>
                         {location.priceType === 'paid' && location.price && (
-                          <span className="text-sm font-semibold text-green-600">€{location.price}</span>
+                          <span className="text-xs font-semibold text-green-600">€{location.price}</span>
                         )}
                         {location.priceType === 'free' && (
-                          <span className="text-sm font-semibold text-green-600">Free</span>
+                          <span className="text-xs font-semibold text-green-600">Free</span>
                         )}
                       </div>
                     </button>
@@ -678,8 +692,8 @@ const Dashboard = ({}: DashboardProps) => {
 
               {/* List View */}
               {viewMode === 'list' && (
-                <div className="divide-y divide-gray-200">
-                  {filteredLocations.map((location) => (
+                <div className="divide-y divide-gray-200 dashboard-results">
+                  {currentItems.map((location) => (
                   <button
                     key={location.id}
                     onClick={() => handleLocationClick(location.id)}
@@ -793,22 +807,73 @@ const Dashboard = ({}: DashboardProps) => {
                 </div>
               )}
 
+              {/* Pagination Controls */}
+              {viewMode === 'list' && totalPages > 1 && (
+                <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-gray-200">
+                  <div className="flex items-center text-sm text-gray-700">
+                    <span>
+                      Showing {startIndex + 1} to {Math.min(endIndex, filteredLocations.length)} of {filteredLocations.length} results
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className={`px-3 py-2 text-sm font-medium rounded-md ${
+                        currentPage === 1
+                          ? 'text-gray-400 cursor-not-allowed'
+                          : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
+                      }`}
+                    >
+                      Previous
+                    </button>
+
+                    {/* Page Numbers */}
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <button
+                        key={page}
+                        onClick={() => handlePageChange(page)}
+                        className={`px-3 py-2 text-sm font-medium rounded-md ${
+                          currentPage === page
+                            ? 'bg-green-600 text-white'
+                            : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className={`px-3 py-2 text-sm font-medium rounded-md ${
+                        currentPage === totalPages
+                          ? 'text-gray-400 cursor-not-allowed'
+                          : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
+                      }`}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Map View */}
               {viewMode === 'map' && (
                 <div className="p-6">
-                  {filteredLocations.length > 0 ? (
+                  {currentItems.length > 0 ? (
                     <Map
                       center={[52.5200, 13.4050]} // Default center (Berlin)
                       zoom={10}
                       height="500px"
-                      markers={filteredLocations.map(location => ({
+                      markers={currentItems.map(location => ({
                         position: [location.location.coordinates.lat, location.location.coordinates.lng],
                         title: location.title,
                         description: `${location.location.city} • ${location.priceType === 'paid' && location.price ? `€${location.price}` : location.priceType === 'free' ? 'Free' : 'Donation'}`,
                         isMain: location.isFeatured
                       }))}
                       onMarkerClick={(marker) => {
-                        const location = filteredLocations.find(loc =>
+                        const location = currentItems.find(loc =>
                           loc.location.coordinates.lat === marker.position[0] &&
                           loc.location.coordinates.lng === marker.position[1]
                         );
@@ -828,6 +893,57 @@ const Dashboard = ({}: DashboardProps) => {
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Pagination Controls for Map View */}
+              {viewMode === 'map' && totalPages > 1 && (
+                <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-gray-200">
+                  <div className="flex items-center text-sm text-gray-700">
+                    <span>
+                      Showing {startIndex + 1} to {Math.min(endIndex, filteredLocations.length)} of {filteredLocations.length} locations on map
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className={`px-3 py-2 text-sm font-medium rounded-md ${
+                        currentPage === 1
+                          ? 'text-gray-400 cursor-not-allowed'
+                          : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
+                      }`}
+                    >
+                      Previous
+                    </button>
+
+                    {/* Page Numbers */}
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <button
+                        key={page}
+                        onClick={() => handlePageChange(page)}
+                        className={`px-3 py-2 text-sm font-medium rounded-md ${
+                          currentPage === page
+                            ? 'bg-green-600 text-white'
+                            : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className={`px-3 py-2 text-sm font-medium rounded-md ${
+                        currentPage === totalPages
+                          ? 'text-gray-400 cursor-not-allowed'
+                          : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
+                      }`}
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
               )}
 

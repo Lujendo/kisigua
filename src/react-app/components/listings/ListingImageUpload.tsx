@@ -76,7 +76,7 @@ const ListingImageUpload: React.FC<ListingImageUploadProps> = ({
             throw new Error('Failed to get upload URL');
           }
 
-          const { uploadUrl, r2Key } = await signedUrlResponse.json();
+          const { uploadUrl } = await signedUrlResponse.json();
 
           // Step 2: Upload file to R2
           const formData = new FormData();
@@ -95,10 +95,10 @@ const ListingImageUpload: React.FC<ListingImageUploadProps> = ({
             throw new Error('Failed to upload file');
           }
 
-          await uploadResponse.json();
+          const uploadResult = await uploadResponse.json();
 
-          // Return the public URL for the uploaded image
-          return `/files/${r2Key}`;
+          // Return the public URL for the uploaded image from the server response
+          return uploadResult.url;
         } catch (error) {
           console.error(`Error uploading ${file.name}:`, error);
           throw error;

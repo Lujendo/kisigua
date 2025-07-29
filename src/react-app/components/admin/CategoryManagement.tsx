@@ -27,8 +27,11 @@ const CategoryManagement: React.FC = () => {
   const { token } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [formData, setFormData] = useState<CategoryFormData>({
     name: '',
     description: '',
@@ -199,22 +202,113 @@ const CategoryManagement: React.FC = () => {
         </button>
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {/* Search and Filters */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="flex justify-between items-center">
+          <div className="flex-1 max-w-md">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                placeholder="Search categories..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+          <div className="ml-4 text-sm text-gray-500">
+            {categories.filter(cat =>
+              cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              cat.description?.toLowerCase().includes(searchTerm.toLowerCase())
+            ).length} of {categories.length} categories
+          </div>
+        </div>
+      </div>
+
       {/* Categories List */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Categories ({categories.length})</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium text-gray-900">
+              Categories ({categories.filter(cat =>
+                cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                cat.description?.toLowerCase().includes(searchTerm.toLowerCase())
+              ).length})
+            </h3>
+            {selectedCategories.length > 0 && (
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-500">{selectedCategories.length} selected</span>
+                <button
+                  onClick={async () => {
+                    if (confirm(`Delete ${selectedCategories.length} categories?`)) {
+                      try {
+                        for (const categoryId of selectedCategories) {
+                          await fetch(`/api/admin/categories/${categoryId}`, {
+                            method: 'DELETE',
+                            headers: {
+                              'Authorization': `Bearer ${token}`,
+                              'Content-Type': 'application/json',
+                            },
+                          });
+                        }
+                        setSelectedCategories([]);
+                        loadCategories();
+                      } catch (error) {
+                        console.error('Error deleting categories:', error);
+                        setError('Failed to delete categories');
+                      }
+                    }
+                  }}
+                  className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
+                >
+                  Delete Selected
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-        
-        {categories.length === 0 ? (
+
+        {categories.filter(cat =>
+          cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          cat.description?.toLowerCase().includes(searchTerm.toLowerCase())
+        ).length === 0 ? (
           <div className="p-6 text-center text-gray-500">
-            No categories found. Create your first category to get started.
+            {searchTerm ? 'No categories match your search.' : 'No categories found. Create your first category to get started.'}
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
-            {categories.map((category) => (
+            {categories
+              .filter(cat =>
+                cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                cat.description?.toLowerCase().includes(searchTerm.toLowerCase())
+              )
+              .map((category) => (
               <div key={category.id} className="p-6 flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div 
+                  <input
+                    type="checkbox"
+                    checked={selectedCategories.includes(category.id)}
+                    onChange={() => {
+                      setSelectedCategories(prev =>
+                        prev.includes(category.id)
+                          ? prev.filter(id => id !== category.id)
+                          : [...prev, category.id]
+                      );
+                    }}
+                    className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                  />
+                  <div
                     className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-medium"
                     style={{ backgroundColor: category.color }}
                   >

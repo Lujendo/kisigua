@@ -6,6 +6,7 @@ import { SubscriptionService } from "./services/subscriptionService";
 import { DatabaseService } from "./services/databaseService";
 import { StorageService } from "./services/storageService";
 import { AnalyticsService } from "./services/analyticsService";
+import { CategoryService } from "./services/categoryService";
 import {
   createAuthMiddleware,
   createRoleMiddleware
@@ -35,6 +36,7 @@ function initializeServices(env: Env) {
   const databaseService = new DatabaseService(env.DB);
   const storageService = new StorageService(env.FILES, env.DB, env.R2_BUCKET_NAME, env.R2_PUBLIC_URL);
   const analyticsService = new AnalyticsService(env.ANALYTICS, env.DB);
+  const categoryService = new CategoryService(env.DB);
 
   console.log('Creating AuthService with JWT_SECRET:', env.JWT_SECRET ? 'SET' : 'USING FALLBACK');
   const authService = new AuthService(env.JWT_SECRET || 'your-secret-key-change-in-production', databaseService);
@@ -48,6 +50,7 @@ function initializeServices(env: Env) {
     databaseService,
     storageService,
     analyticsService,
+    categoryService,
     authService,
     listingsService,
     subscriptionService
@@ -478,6 +481,132 @@ app.get("/api/admin/listings", authMiddleware, roleMiddleware(['admin']), async 
   const services = c.get('services');
   const listings = await services.listingsService.getAllListings();
   return c.json({ listings });
+});
+
+// ===== CATEGORY ENDPOINTS =====
+
+// Get all categories (public)
+app.get("/api/categories", async (c) => {
+  try {
+    const services = c.get('services');
+    const categories = await services.categoryService.getAllCategories(false);
+    return c.json({ categories });
+  } catch (error) {
+    console.error('Categories fetch error:', error);
+    return c.json({ error: "Failed to fetch categories" }, 500);
+  }
+});
+
+// Get category by slug (public)
+app.get("/api/categories/:slug", async (c) => {
+  try {
+    const services = c.get('services');
+    const slug = c.req.param('slug');
+    const category = await services.categoryService.getCategoryBySlug(slug);
+
+    if (!category) {
+      return c.json({ error: "Category not found" }, 404);
+    }
+
+    return c.json({ category });
+  } catch (error) {
+    console.error('Category fetch error:', error);
+    return c.json({ error: "Failed to fetch category" }, 500);
+  }
+});
+
+// Admin: Get all categories (including inactive)
+app.get("/api/admin/categories", authMiddleware, roleMiddleware(['admin']), async (c) => {
+  try {
+    const services = c.get('services');
+    const categories = await services.categoryService.getAllCategories(true);
+    return c.json({ categories });
+  } catch (error) {
+    console.error('Admin categories fetch error:', error);
+    return c.json({ error: "Failed to fetch categories" }, 500);
+  }
+});
+
+// Admin: Create category
+app.post("/api/admin/categories", authMiddleware, roleMiddleware(['admin']), async (c) => {
+  try {
+    const services = c.get('services');
+    const auth = c.get('auth');
+    const data = await c.req.json();
+
+    if (!data.name) {
+      return c.json({ error: "Category name is required" }, 400);
+    }
+
+    const category = await services.categoryService.createCategory(data, auth.userId);
+    return c.json({ category }, 201);
+  } catch (error) {
+    console.error('Category creation error:', error);
+    if (error instanceof Error && error.message.includes('already exists')) {
+      return c.json({ error: error.message }, 409);
+    }
+    return c.json({ error: "Failed to create category" }, 500);
+  }
+});
+
+// Admin: Update category
+app.put("/api/admin/categories/:id", authMiddleware, roleMiddleware(['admin']), async (c) => {
+  try {
+    const services = c.get('services');
+    const id = c.req.param('id');
+    const data = await c.req.json();
+
+    const category = await services.categoryService.updateCategory(id, data);
+    return c.json({ category });
+  } catch (error) {
+    console.error('Category update error:', error);
+    if (error instanceof Error && error.message.includes('not found')) {
+      return c.json({ error: error.message }, 404);
+    }
+    if (error instanceof Error && error.message.includes('already exists')) {
+      return c.json({ error: error.message }, 409);
+    }
+    return c.json({ error: "Failed to update category" }, 500);
+  }
+});
+
+// Admin: Delete category
+app.delete("/api/admin/categories/:id", authMiddleware, roleMiddleware(['admin']), async (c) => {
+  try {
+    const services = c.get('services');
+    const id = c.req.param('id');
+
+    const success = await services.categoryService.deleteCategory(id);
+    if (!success) {
+      return c.json({ error: "Category not found" }, 404);
+    }
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Category deletion error:', error);
+    if (error instanceof Error && error.message.includes('being used')) {
+      return c.json({ error: error.message }, 409);
+    }
+    return c.json({ error: "Failed to delete category" }, 500);
+  }
+});
+
+// Admin: Reorder categories
+app.post("/api/admin/categories/reorder", authMiddleware, roleMiddleware(['admin']), async (c) => {
+  try {
+    const services = c.get('services');
+    const { categoryIds } = await c.req.json();
+
+    if (!Array.isArray(categoryIds)) {
+      return c.json({ error: "categoryIds must be an array" }, 400);
+    }
+
+    const success = await services.categoryService.reorderCategories(categoryIds);
+    return c.json({ success });
+  } catch (error) {
+    console.error('Category reorder error:', error);
+    return c.json({ error: "Failed to reorder categories" }, 500);
+  }
 });
 
 // Subscription routes

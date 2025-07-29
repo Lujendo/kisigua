@@ -623,15 +623,8 @@ const MyListingsPage: React.FC = () => {
       tags: ''
     });
     const [images, setImages] = useState<string[]>([]);
-
-    const categories = [
-      { id: 'organic_farm', label: 'Organic Farm' },
-      { id: 'local_product', label: 'Local Product' },
-      { id: 'water_source', label: 'Water Source' },
-      { id: 'vending_machine', label: 'Vending Machine' },
-      { id: 'craft', label: 'Craft & Handmade' },
-      { id: 'sustainable_good', label: 'Sustainable Good' }
-    ];
+    const [categories, setCategories] = useState<Array<{ id: string; label: string; color?: string; icon?: string }>>([]);
+    const [loadingCategories, setLoadingCategories] = useState(true);
 
     const countries = [
       'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Australia', 'Austria',
@@ -655,6 +648,55 @@ const MyListingsPage: React.FC = () => {
       'Tuvalu', 'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom', 'United States', 'Uruguay', 'Uzbekistan', 'Vanuatu', 'Vatican City',
       'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe'
     ];
+
+    // Load categories from API
+    useEffect(() => {
+      const loadCategories = async () => {
+        try {
+          const response = await fetch('/api/categories');
+          if (response.ok) {
+            const data = await response.json();
+            const formattedCategories = data.categories.map((cat: any) => ({
+              id: cat.id,
+              label: cat.name,
+              color: cat.color,
+              icon: cat.icon
+            }));
+            setCategories(formattedCategories);
+          } else {
+            console.error('Failed to load categories');
+            // Fallback to hardcoded categories
+            setCategories([
+              { id: 'organic_farm', label: 'Organic Farm' },
+              { id: 'local_product', label: 'Local Product' },
+              { id: 'water_source', label: 'Water Source' },
+              { id: 'vending_machine', label: 'Vending Machine' },
+              { id: 'craft', label: 'Craft & Handmade' },
+              { id: 'sustainable_good', label: 'Sustainable Good' }
+            ]);
+          }
+        } catch (error) {
+          console.error('Error loading categories:', error);
+          // Fallback to hardcoded categories
+          setCategories([
+            { id: 'organic_farm', label: 'Organic Farm' },
+            { id: 'local_product', label: 'Local Product' },
+            { id: 'water_source', label: 'Water Source' },
+            { id: 'vending_machine', label: 'Vending Machine' },
+            { id: 'craft', label: 'Craft & Handmade' },
+            { id: 'sustainable_good', label: 'Sustainable Good' }
+          ]);
+        } finally {
+          setLoadingCategories(false);
+        }
+      };
+
+      loadCategories();
+    }, []);
+
+    const handleImagesChange = (newImages: string[]) => {
+      setImages(newImages);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
@@ -846,12 +888,23 @@ const MyListingsPage: React.FC = () => {
                           onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                           required
+                          disabled={loadingCategories}
                         >
-                          <option value="">Select a category</option>
+                          <option value="">
+                            {loadingCategories ? 'Loading categories...' : 'Select a category'}
+                          </option>
                           {categories.map(category => (
-                            <option key={category.id} value={category.id}>{category.label}</option>
+                            <option key={category.id} value={category.id}>
+                              {category.icon ? `${category.icon} ` : ''}{category.label}
+                            </option>
                           ))}
                         </select>
+                        {loadingCategories && (
+                          <div className="mt-1 text-sm text-gray-500 flex items-center">
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-green-600 mr-2"></div>
+                            Loading categories from database...
+                          </div>
+                        )}
                       </div>
 
                       <div>

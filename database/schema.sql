@@ -148,6 +148,22 @@ CREATE TABLE IF NOT EXISTS file_uploads (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- Categories for listings
+CREATE TABLE IF NOT EXISTS categories (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    slug TEXT NOT NULL UNIQUE,
+    description TEXT,
+    icon TEXT, -- Icon name or emoji for the category
+    color TEXT DEFAULT '#10B981', -- Hex color for category display
+    is_active BOOLEAN DEFAULT TRUE,
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by TEXT,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
 -- Indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
@@ -156,6 +172,9 @@ CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
 CREATE INDEX IF NOT EXISTS idx_listings_user_id ON listings(user_id);
 CREATE INDEX IF NOT EXISTS idx_listings_category ON listings(category);
 CREATE INDEX IF NOT EXISTS idx_listings_status ON listings(status);
+CREATE INDEX IF NOT EXISTS idx_categories_active ON categories(is_active);
+CREATE INDEX IF NOT EXISTS idx_categories_sort_order ON categories(sort_order);
+CREATE INDEX IF NOT EXISTS idx_categories_slug ON categories(slug);
 CREATE INDEX IF NOT EXISTS idx_listings_location ON listings(latitude, longitude);
 CREATE INDEX IF NOT EXISTS idx_listings_city ON listings(city);
 CREATE INDEX IF NOT EXISTS idx_listings_created_at ON listings(created_at);

@@ -185,6 +185,14 @@ export class DatabaseService {
     return result as DatabaseListing | null;
   }
 
+  async getFullListingById(listingId: string): Promise<Listing | null> {
+    const dbListing = await this.getListingById(listingId);
+    if (!dbListing) {
+      return null;
+    }
+    return this.convertDatabaseListingToListing(dbListing);
+  }
+
   async updateListing(listingId: string, updates: Partial<UpdateListingRequest>): Promise<DatabaseListing | null> {
     // Build dynamic update query
     const updateFields: string[] = [];
@@ -385,8 +393,13 @@ export class DatabaseService {
     const countResult = await countStmt.bind(...countParams).first() as { total: number };
     const total = countResult.total;
 
+    // Convert listings with images
+    const convertedListings = await Promise.all(
+      listings.map(listing => this.convertDatabaseListingToListing(listing))
+    );
+
     return {
-      listings: listings.map(this.convertDatabaseListingToListing),
+      listings: convertedListings,
       total,
       page,
       limit,
@@ -399,7 +412,13 @@ export class DatabaseService {
     const stmt = this.db.prepare('SELECT * FROM listings WHERE user_id = ? ORDER BY created_at DESC');
     const result = await stmt.bind(userId).all();
     const listings = result.results as unknown as DatabaseListing[];
-    return listings.map(this.convertDatabaseListingToListing);
+
+    // Convert listings with images
+    const convertedListings = await Promise.all(
+      listings.map(listing => this.convertDatabaseListingToListing(listing))
+    );
+
+    return convertedListings;
   }
 
   async incrementListingViews(listingId: string): Promise<void> {
@@ -485,8 +504,28 @@ export class DatabaseService {
     return result as UserSubscription | null;
   }
 
+  // Helper method to get images for a listing
+  async getListingImages(listingId: string): Promise<string[]> {
+    try {
+      const stmt = this.db.prepare(`
+        SELECT image_url
+        FROM listing_images
+        WHERE listing_id = ?
+        ORDER BY sort_order ASC
+      `);
+      const result = await stmt.bind(listingId).all();
+      return (result.results as any[])?.map(row => row.image_url) || [];
+    } catch (error) {
+      console.error('Error fetching listing images:', error);
+      return [];
+    }
+  }
+
   // Helper method to convert database listing to API listing format
-  private convertDatabaseListingToListing(dbListing: DatabaseListing): Listing {
+  private async convertDatabaseListingToListing(dbListing: DatabaseListing): Promise<Listing> {
+    // Fetch images for this listing
+    const images = await this.getListingImages(dbListing.id);
+
     return {
       id: dbListing.id,
       title: dbListing.title,
@@ -507,7 +546,7 @@ export class DatabaseService {
         phone: dbListing.contact_phone || undefined,
         website: dbListing.contact_website || undefined
       },
-      images: [], // Will be populated separately
+      images: images,
       tags: [], // Will be populated separately
       isOrganic: dbListing.is_organic,
       isCertified: dbListing.is_certified,

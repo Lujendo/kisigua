@@ -3,7 +3,7 @@
 -- Purpose: Import 10 listings from frontend components to have 15 total listings
 
 -- Insert listings from Dashboard component (5 listings)
-INSERT INTO listings (
+INSERT OR IGNORE INTO listings (
     id, user_id, title, description, category, status,
     latitude, longitude, address, city, country,
     contact_email, contact_website, is_organic, is_certified,
@@ -50,7 +50,7 @@ INSERT INTO listings (
  67, false, '2024-01-03T00:00:00Z', '2024-01-03T00:00:00Z');
 
 -- Insert listings from MyListingsPage component (5 additional listings)
-INSERT INTO listings (
+INSERT OR IGNORE INTO listings (
     id, user_id, title, description, category, status,
     latitude, longitude, address, city, country, region,
     contact_phone, contact_email, contact_website, is_organic, is_certified,

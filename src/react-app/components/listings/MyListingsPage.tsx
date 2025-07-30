@@ -10,22 +10,30 @@ interface Listing {
   description: string;
   category: string;
   location: {
-    street: string;
-    houseNumber: string;
+    street?: string;
+    houseNumber?: string;
     city: string;
     region?: string;
     country: string;
-    coordinates: {
+    coordinates?: {
       lat: number;
       lng: number;
     };
+    latitude?: number;
+    longitude?: number;
+    address?: string;
   };
-  contact: {
+  contactInfo?: {
+    phone?: string;
+    email?: string;
+    website?: string;
+  };
+  contact?: {
     phone?: string;
     mobile?: string;
     email?: string;
     website?: string;
-    socials: {
+    socials?: {
       facebook?: string;
       instagram?: string;
       twitter?: string;
@@ -33,16 +41,17 @@ interface Listing {
     };
   };
   images: string[];
-  thumbnail: string;
+  thumbnail?: string;
   price?: number;
-  priceType: 'free' | 'paid' | 'donation';
+  priceType?: 'free' | 'paid' | 'donation';
   tags: string[];
-  status: 'draft' | 'published' | 'archived';
-  isVerified: boolean;
+  status: 'draft' | 'published' | 'archived' | 'active' | 'inactive' | 'pending' | 'rejected';
+  isVerified?: boolean;
   createdAt: string;
   updatedAt: string;
   views: number;
-  inquiries: number;
+  inquiries?: number;
+  favorites?: number;
 }
 
 const MyListingsPage: React.FC = () => {
@@ -380,14 +389,14 @@ const MyListingsPage: React.FC = () => {
       city: editingListing?.location?.city || '',
       region: editingListing?.location?.region || '',
       country: editingListing?.location?.country || '',
-      phone: editingListing?.contactInfo?.phone || '',
-      mobile: editingListing?.contactInfo?.mobile || '',
-      email: editingListing?.contactInfo?.email || '',
-      website: editingListing?.contactInfo?.website || '',
-      facebook: editingListing?.contactInfo?.socialMedia?.facebook || '',
-      instagram: editingListing?.contactInfo?.socialMedia?.instagram || '',
-      twitter: editingListing?.contactInfo?.socialMedia?.twitter || '',
-      linkedin: editingListing?.contactInfo?.socialMedia?.linkedin || '',
+      phone: editingListing?.contactInfo?.phone || editingListing?.contact?.phone || '',
+      mobile: editingListing?.contact?.mobile || '',
+      email: editingListing?.contactInfo?.email || editingListing?.contact?.email || '',
+      website: editingListing?.contactInfo?.website || editingListing?.contact?.website || '',
+      facebook: editingListing?.contact?.socials?.facebook || '',
+      instagram: editingListing?.contact?.socials?.instagram || '',
+      twitter: editingListing?.contact?.socials?.twitter || '',
+      linkedin: editingListing?.contact?.socials?.linkedin || '',
       priceType: (editingListing?.priceType || 'free') as 'free' | 'paid' | 'donation',
       price: editingListing?.price?.toString() || '',
       tags: editingListing?.tags?.join(', ') || ''

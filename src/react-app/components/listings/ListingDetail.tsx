@@ -13,22 +13,30 @@ interface Listing {
   description: string;
   category: string;
   location: {
-    street: string;
-    houseNumber: string;
+    street?: string;
+    houseNumber?: string;
     city: string;
     region?: string;
     country: string;
-    coordinates: {
+    coordinates?: {
       lat: number;
       lng: number;
     };
+    latitude?: number;
+    longitude?: number;
+    address?: string;
   };
-  contact: {
+  contactInfo?: {
+    phone?: string;
+    email?: string;
+    website?: string;
+  };
+  contact?: {
     phone?: string;
     mobile?: string;
     email?: string;
     website?: string;
-    socials: {
+    socials?: {
       facebook?: string;
       instagram?: string;
       twitter?: string;
@@ -36,22 +44,24 @@ interface Listing {
     };
   };
   images: string[];
-  thumbnail: string;
+  thumbnail?: string;
   price?: number;
-  priceType: 'free' | 'paid' | 'donation';
+  priceType?: 'free' | 'paid' | 'donation';
   tags: string[];
-  status: 'draft' | 'published' | 'archived';
-  isVerified: boolean;
+  status: 'draft' | 'published' | 'archived' | 'active' | 'inactive' | 'pending' | 'rejected';
+  isVerified?: boolean;
   createdAt: string;
   updatedAt: string;
   views: number;
-  inquiries: number;
+  inquiries?: number;
+  favorites?: number;
 }
 
 const ListingDetail: React.FC<ListingDetailProps> = ({ listingId, onClose, onEdit }) => {
   const [listing, setListing] = useState<Listing | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchListing = async () => {
@@ -202,37 +212,38 @@ const ListingDetail: React.FC<ListingDetailProps> = ({ listingId, onClose, onEdi
           {/* Image Gallery */}
           <div className="space-y-4">
             {listing.images && listing.images.length > 0 ? (
-              <div className="relative">
-                <img
-                  src={listing.images[currentImageIndex]}
-                  alt={listing.title}
-                  className="w-full h-96 object-cover rounded-lg"
-                  onError={(e) => {
-                    // Fallback to placeholder if image fails to load
-                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=600&fit=crop';
-                  }}
-                />
-                {listing.images.length > 1 && (
-                <>
-                  <button
-                    onClick={() => setCurrentImageIndex(prev => prev === 0 ? listing.images.length - 1 : prev - 1)}
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-opacity"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => setCurrentImageIndex(prev => prev === listing.images.length - 1 ? 0 : prev + 1)}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-opacity"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </>
-              )}
-            </div>
+              <>
+                <div className="relative">
+                  <img
+                    src={listing.images[currentImageIndex]}
+                    alt={listing.title}
+                    className="w-full h-96 object-cover rounded-lg"
+                    onError={(e) => {
+                      // Fallback to placeholder if image fails to load
+                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=600&fit=crop';
+                    }}
+                  />
+                  {listing.images.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => setCurrentImageIndex(prev => prev === 0 ? listing.images.length - 1 : prev - 1)}
+                      className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-opacity"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => setCurrentImageIndex(prev => prev === listing.images.length - 1 ? 0 : prev + 1)}
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-opacity"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </>
+                )}
+                </div>
 
                 {/* Thumbnail Gallery */}
                 {listing.images.length > 1 && (
@@ -257,7 +268,7 @@ const ListingDetail: React.FC<ListingDetailProps> = ({ listingId, onClose, onEdi
                     ))}
                   </div>
                 )}
-              </div>
+              </>
             ) : (
               <div className="w-full h-96 bg-gray-200 rounded-lg flex items-center justify-center">
                 <div className="text-center text-gray-500">
@@ -305,23 +316,33 @@ const ListingDetail: React.FC<ListingDetailProps> = ({ listingId, onClose, onEdi
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Location</h3>
                 <div className="bg-gray-100 rounded-lg p-4 mb-4">
                   <p className="text-gray-700">
-                    {listing.location.street} {listing.location.houseNumber}<br />
+                    {listing.location.address ||
+                     `${listing.location.street || ''} ${listing.location.houseNumber || ''}`.trim()}<br />
                     {listing.location.city}, {listing.location.region && `${listing.location.region}, `}{listing.location.country}
                   </p>
                 </div>
-                <Map
-                  center={[listing.location.coordinates.lat, listing.location.coordinates.lng]}
-                  zoom={15}
-                  height="300px"
-                  markers={[
-                    {
-                      position: [listing.location.coordinates.lat, listing.location.coordinates.lng],
-                      title: listing.title,
-                      description: `${listing.location.street} ${listing.location.houseNumber}`,
-                      isMain: true
-                    }
-                  ]}
-                />
+                {(listing.location.coordinates || (listing.location.latitude && listing.location.longitude)) && (
+                  <Map
+                    center={[
+                      listing.location.coordinates?.lat || listing.location.latitude || 0,
+                      listing.location.coordinates?.lng || listing.location.longitude || 0
+                    ]}
+                    zoom={15}
+                    height="300px"
+                    markers={[
+                      {
+                        position: [
+                          listing.location.coordinates?.lat || listing.location.latitude || 0,
+                          listing.location.coordinates?.lng || listing.location.longitude || 0
+                        ],
+                        title: listing.title,
+                        description: listing.location.address ||
+                                   `${listing.location.street || ''} ${listing.location.houseNumber || ''}`.trim(),
+                        isMain: true
+                      }
+                    ]}
+                  />
+                )}
               </div>
             </div>
 

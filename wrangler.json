@@ -1,22 +1,22 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "kisigua-dev",
+  "name": "kisigua",
   "main": "./src/worker/index.ts",
   "compatibility_date": "2025-04-01",
   "compatibility_flags": ["nodejs_compat"],
   "observability": {
     "enabled": true
   },
-  "upload_source_maps": true,
+  "upload_source_maps": false,
   "assets": {
     "directory": "./dist/client",
     "not_found_handling": "single-page-application"
   },
   "vars": {
-    "ENVIRONMENT": "development",
-    "APP_URL": "http://localhost:8787",
+    "ENVIRONMENT": "production",
+    "APP_URL": "https://kisigua.com",
     "R2_BUCKET_NAME": "kisigua-files",
-    "R2_PUBLIC_URL": "https://files.kisigua.com"
+    "R2_PUBLIC_URL": "https://pub-49c315845edf402b9841432c6b1083f1.r2.dev"
   },
   "d1_databases": [
     {

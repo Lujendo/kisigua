@@ -575,20 +575,25 @@ const MyListingsPage: React.FC = () => {
     };
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg w-[900px] h-[850px] overflow-hidden">
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4">
+        <div className="bg-white rounded-lg w-full max-w-7xl h-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden shadow-2xl">
           <div className="flex flex-col h-full">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">
-                {isEditing ? 'Edit Listing' : 'Create New Listing'}
-              </h2>
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 bg-gradient-to-r from-green-50 to-blue-50">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+                  {isEditing ? 'Edit Listing' : 'Create New Listing'}
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  {isEditing ? 'Update your listing information' : 'Share your sustainable location with the community'}
+                </p>
+              </div>
               <button
                 onClick={() => {
                   setEditingListing(null);
                   setShowCreateForm(false);
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 hover:bg-white rounded-full p-2 transition-all duration-200"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -649,156 +654,188 @@ const MyListingsPage: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                  className={`flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center space-x-2 ${
+                  className={`flex-1 px-3 sm:px-4 py-3 text-sm font-medium transition-all duration-200 flex items-center justify-center space-x-2 border-b-2 ${
                     activeTab === tab.id
-                      ? 'text-green-600 border-b-2 border-green-600 bg-white'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                      ? 'text-green-600 border-green-600 bg-white rounded-t-lg shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 border-transparent hover:border-gray-300'
                   }`}
                 >
                   {tab.icon}
-                  <span>{tab.label}</span>
+                  <span className="hidden sm:inline">{tab.label}</span>
+                  <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
                 </button>
               ))}
             </div>
 
             {/* Tab Content */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto bg-gray-50">
               <form onSubmit={handleSubmit} className="h-full flex flex-col">
-                <div className="flex-1 p-6">
+                <div className="flex-1 p-4 sm:p-6 lg:p-8">
                   {/* Basic Info Tab */}
                   {activeTab === 'basic' && (
-                    <div className="space-y-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Title *</label>
-                        <input
-                          type="text"
-                          value={formData.title}
-                          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                          placeholder="Enter a descriptive title for your listing"
-                          required
-                        />
-                      </div>
+                    <div className="max-w-4xl mx-auto">
+                      <div className="bg-white rounded-xl shadow-sm p-6 space-y-8">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-800 mb-3">
+                            Title *
+                            <span className="text-gray-500 font-normal ml-2">Give your listing a clear, descriptive name</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.title}
+                            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 text-lg"
+                            placeholder="e.g., Organic Farm Market, Community Garden, Local Artisan Shop"
+                            required
+                          />
+                        </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
-                        <RichTextEditor
-                          value={formData.description}
-                          onChange={(value) => setFormData({ ...formData, description: value })}
-                          placeholder="Describe your location, what makes it special, and what visitors can expect..."
-                          minHeight="200px"
-                          className="focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Use the toolbar to format your text with bold, italic, bullet points, and more.
-                        </p>
-                      </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-800 mb-3">
+                            Description *
+                            <span className="text-gray-500 font-normal ml-2">Tell people what makes this place special</span>
+                          </label>
+                          <RichTextEditor
+                            value={formData.description}
+                            onChange={(value) => setFormData({ ...formData, description: value })}
+                            placeholder="Describe your location, what makes it special, and what visitors can expect..."
+                            minHeight="250px"
+                            className="focus:ring-2 focus:ring-green-500 focus:border-transparent rounded-xl"
+                          />
+                          <p className="text-sm text-gray-600 mt-2 bg-blue-50 p-3 rounded-lg">
+                            💡 <strong>Tip:</strong> Use the toolbar to format your text with bold, italic, bullet points, and more.
+                            Include details about accessibility, opening hours, and what visitors should bring.
+                          </p>
+                        </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
-                        <select
-                          value={formData.category}
-                          onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                          required
-                          disabled={loadingCategories}
-                        >
-                          <option value="">
-                            {loadingCategories ? 'Loading categories...' : 'Select a category'}
-                          </option>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-800 mb-3">
+                            Category *
+                            <span className="text-gray-500 font-normal ml-2">Choose the best category for your listing</span>
+                          </label>
+                          <select
+                            value={formData.category}
+                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 text-lg"
+                            required
+                            disabled={loadingCategories}
+                          >
+                            <option value="">
+                              {loadingCategories ? 'Loading categories...' : 'Select a category'}
+                            </option>
                           {categories.map(category => (
                             <option key={category.id} value={category.id}>
                               {category.icon ? `${category.icon} ` : ''}{category.label}
                             </option>
                           ))}
                         </select>
-                        {loadingCategories && (
-                          <div className="mt-1 text-sm text-gray-500 flex items-center">
-                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-green-600 mr-2"></div>
-                            Loading categories from database...
-                          </div>
-                        )}
-                      </div>
+                          {loadingCategories && (
+                            <div className="mt-2 text-sm text-gray-500 flex items-center bg-yellow-50 p-3 rounded-lg">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600 mr-2"></div>
+                              Loading categories from database...
+                            </div>
+                          )}
+                        </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Tags</label>
-                        <input
-                          type="text"
-                          value={formData.tags}
-                          onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                          placeholder="Enter tags separated by commas (e.g., organic, sustainable, family-friendly)"
-                        />
-                        <p className="text-sm text-gray-500 mt-1">Tags help people find your listing more easily</p>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-800 mb-3">
+                            Tags
+                            <span className="text-gray-500 font-normal ml-2">Help people discover your listing</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.tags}
+                            onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                            placeholder="organic, sustainable, family-friendly, local, artisan"
+                          />
+                          <p className="text-sm text-gray-600 mt-2">Separate tags with commas. Good tags help people find your listing more easily.</p>
+                        </div>
                       </div>
                     </div>
                   )}
 
                   {/* Location Tab */}
                   {activeTab === 'location' && (
-                    <div className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Street *</label>
-                          <input
-                            type="text"
-                            value={formData.street}
-                            onChange={(e) => setFormData({ ...formData, street: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            placeholder="Street name"
-                            required
-                          />
+                    <div className="max-w-4xl mx-auto">
+                      <div className="bg-white rounded-xl shadow-sm p-6 space-y-8">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                          <div className="lg:col-span-2">
+                            <label className="block text-sm font-semibold text-gray-800 mb-3">
+                              Street Address *
+                              <span className="text-gray-500 font-normal ml-2">The main street or road</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={formData.street}
+                              onChange={(e) => setFormData({ ...formData, street: e.target.value })}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                              placeholder="e.g., Main Street, Oak Avenue, Rural Road"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-800 mb-3">
+                              Number *
+                              <span className="text-gray-500 font-normal ml-2">House/building number</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={formData.houseNumber}
+                              onChange={(e) => setFormData({ ...formData, houseNumber: e.target.value })}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                              placeholder="123, A, B-12"
+                              required
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">House Number *</label>
-                          <input
-                            type="text"
-                            value={formData.houseNumber}
-                            onChange={(e) => setFormData({ ...formData, houseNumber: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            placeholder="123"
-                            required
-                          />
-                        </div>
-                      </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">City *</label>
-                          <input
-                            type="text"
-                            value={formData.city}
-                            onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            placeholder="City name"
-                            required
-                          />
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-800 mb-3">
+                              City *
+                              <span className="text-gray-500 font-normal ml-2">The city or town</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={formData.city}
+                              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                              placeholder="e.g., Berlin, Munich, Hamburg"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-800 mb-3">
+                              Region/State
+                              <span className="text-gray-500 font-normal ml-2">State, province, or region</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={formData.region}
+                              onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                              placeholder="e.g., Bavaria, North Rhine-Westphalia"
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Region/State</label>
-                          <input
-                            type="text"
-                            value={formData.region}
-                            onChange={(e) => setFormData({ ...formData, region: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            placeholder="State, province, or region"
-                          />
-                        </div>
-                      </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Country *</label>
-                        <select
-                          value={formData.country}
-                          onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                          required
-                        >
-                          <option value="">Select a country</option>
-                          {countries.map(country => (
-                            <option key={country} value={country}>{country}</option>
-                          ))}
-                        </select>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-800 mb-3">
+                            Country *
+                            <span className="text-gray-500 font-normal ml-2">Select your country</span>
+                          </label>
+                          <select
+                            value={formData.country}
+                            onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                            required
+                          >
+                            <option value="">Select a country</option>
+                            {countries.map(country => (
+                              <option key={country} value={country}>{country}</option>
+                            ))}
+                          </select>
                       </div>
 
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -814,6 +851,7 @@ const MyListingsPage: React.FC = () => {
                             </p>
                           </div>
                         </div>
+                      </div>
                       </div>
                     </div>
                   )}
@@ -918,32 +956,48 @@ const MyListingsPage: React.FC = () => {
 
                   {/* Media Tab */}
                   {activeTab === 'media' && (
-                    <div className="space-y-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-4">Images</label>
-                        <ListingImageUpload
-                          key={editingListing?.id || 'new'}
-                          onImagesChange={setImages}
-                          initialImages={images}
-                        />
-                        <p className="text-sm text-gray-500 mt-2">
-                          Upload high-quality images that showcase your location. The first image will be used as the main thumbnail.
-                        </p>
-                      </div>
+                    <div className="max-w-4xl mx-auto">
+                      <div className="bg-white rounded-xl shadow-sm p-6 space-y-8">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-800 mb-4">
+                            📸 Images
+                            <span className="text-gray-500 font-normal ml-2">Show off your location with beautiful photos</span>
+                          </label>
+                          <ListingImageUpload
+                            key={editingListing?.id || 'new'}
+                            onImagesChange={setImages}
+                            initialImages={images}
+                          />
+                        </div>
 
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                        <div className="flex items-start">
-                          <svg className="w-5 h-5 text-yellow-600 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                          </svg>
-                          <div>
-                            <h4 className="text-sm font-medium text-yellow-900">Image Guidelines</h4>
-                            <ul className="text-sm text-yellow-700 mt-1 list-disc list-inside space-y-1">
-                              <li>Use high-resolution images (at least 1200x800 pixels)</li>
-                              <li>Show different angles and aspects of your location</li>
-                              <li>Include people enjoying the space if possible</li>
-                              <li>Avoid heavily filtered or edited photos</li>
-                            </ul>
+                        <div className="bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-xl p-6">
+                          <div className="flex items-start">
+                            <svg className="w-6 h-6 text-blue-600 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <div>
+                              <h4 className="text-lg font-semibold text-gray-800 mb-3">📷 Photo Guidelines</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
+                                <div>
+                                  <h5 className="font-medium mb-2">✅ Best Practices:</h5>
+                                  <ul className="space-y-1">
+                                    <li>• High-resolution images (1200x800px+)</li>
+                                    <li>• Natural lighting when possible</li>
+                                    <li>• Multiple angles and perspectives</li>
+                                    <li>• Show people enjoying the space</li>
+                                  </ul>
+                                </div>
+                                <div>
+                                  <h5 className="font-medium mb-2">💡 Pro Tips:</h5>
+                                  <ul className="space-y-1">
+                                    <li>• First image becomes the cover</li>
+                                    <li>• Drag and drop to reorder</li>
+                                    <li>• Include unique features</li>
+                                    <li>• Avoid heavy filters</li>
+                                  </ul>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1056,9 +1110,9 @@ const MyListingsPage: React.FC = () => {
                 </div>
 
                 {/* Form Footer */}
-                <div className="border-t border-gray-200 p-6 bg-gray-50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex space-x-2">
+                <div className="border-t border-gray-200 p-4 sm:p-6 bg-gradient-to-r from-gray-50 to-gray-100">
+                  <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
+                    <div className="flex space-x-3">
                       {activeTab !== 'basic' && (
                         <button
                           type="button"
@@ -1069,29 +1123,40 @@ const MyListingsPage: React.FC = () => {
                               setActiveTab(tabs[currentIndex - 1] as typeof activeTab);
                             }
                           }}
-                          className="px-4 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                          className="px-4 py-2 border border-gray-300 rounded-xl font-medium hover:bg-white hover:shadow-sm transition-all duration-200 flex items-center space-x-2"
                         >
-                          Previous
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                          </svg>
+                          <span>Previous</span>
                         </button>
                       )}
                     </div>
 
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-4">
                       {/* Tab Progress Indicators */}
-                      <div className="flex space-x-1">
-                        {['basic', 'location', 'contact', 'media', 'pricing'].map((tab, index) => (
-                          <div
-                            key={tab}
-                            className={`w-2 h-2 rounded-full ${
-                              tab === activeTab ? 'bg-green-600' :
-                              ['basic', 'location', 'contact', 'media', 'pricing'].indexOf(activeTab) > index ? 'bg-green-300' : 'bg-gray-300'
-                            }`}
-                          />
-                        ))}
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-600 font-medium">Progress:</span>
+                        <div className="flex space-x-2">
+                          {['basic', 'location', 'contact', 'media', 'pricing'].map((tab, index) => {
+                            const isActive = tab === activeTab;
+                            const isCompleted = ['basic', 'location', 'contact', 'media', 'pricing'].indexOf(activeTab) > index;
+                            return (
+                              <div
+                                key={tab}
+                                className={`w-3 h-3 rounded-full transition-all duration-200 ${
+                                  isActive ? 'bg-green-600 ring-2 ring-green-200' :
+                                  isCompleted ? 'bg-green-400' : 'bg-gray-300'
+                                }`}
+                                title={tab.charAt(0).toUpperCase() + tab.slice(1)}
+                              />
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex space-x-2">
+                    <div className="flex space-x-3">
                       {activeTab !== 'pricing' ? (
                         <button
                           type="button"
@@ -1102,18 +1167,21 @@ const MyListingsPage: React.FC = () => {
                               setActiveTab(tabs[currentIndex + 1] as typeof activeTab);
                             }
                           }}
-                          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+                          className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl"
                         >
-                          Next
+                          <span>Next</span>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
                         </button>
                       ) : (
                         <button
                           type="submit"
                           disabled={isSubmitting}
-                          className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center space-x-2"
+                          className="px-8 py-3 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl"
                         >
                           {isSubmitting && (
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
@@ -1121,7 +1189,7 @@ const MyListingsPage: React.FC = () => {
                           <span>
                             {isSubmitting
                               ? (isEditing ? 'Updating...' : 'Creating...')
-                              : (isEditing ? 'Update Listing' : 'Create Listing')
+                              : (isEditing ? '✨ Update Listing' : '🚀 Create Listing')
                             }
                           </span>
                         </button>

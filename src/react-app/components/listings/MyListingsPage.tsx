@@ -176,6 +176,7 @@ const MyListingsPage: React.FC = () => {
   // Function to refresh listings data without full page reload
   const refreshListings = async () => {
     try {
+      console.log('Starting to refresh listings...');
       setLoading(true);
       const response = await fetch('/api/user/listings', {
         headers: {
@@ -244,6 +245,7 @@ const MyListingsPage: React.FC = () => {
         });
 
         setListings(transformedListings);
+        console.log(`Refreshed listings: ${transformedListings.length} listings loaded`);
         setError(null);
       } else {
         throw new Error('Failed to fetch listings');
@@ -351,11 +353,17 @@ const MyListingsPage: React.FC = () => {
       console.log('Duplicated listing created:', result.listing);
 
       // Refresh the listings to show the new duplicate
+      console.log('Refreshing listings after duplication...');
       await refreshListings();
+      console.log('Listings refreshed successfully');
+
+      // Show success message
+      alert(`Listing "${result.listing.title}" duplicated successfully!`);
 
     } catch (error) {
       console.error('Error duplicating listing:', error);
       setError('Failed to duplicate listing. Please try again.');
+      alert('Failed to duplicate listing. Please try again.');
     }
   };
 

@@ -1,4 +1,4 @@
-export type ListingCategory = 'organic_farm' | 'local_product' | 'water_source' | 'vending_machine' | 'craft' | 'sustainable_good';
+export type ListingCategory = string; // Accept any category ID from the database
 
 export type ListingStatus = 'active' | 'inactive' | 'pending' | 'rejected';
 

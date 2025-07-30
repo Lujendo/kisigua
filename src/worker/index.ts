@@ -496,12 +496,30 @@ app.put("/api/listings/:id", authMiddleware, async (c) => {
     const listingId = c.req.param('id');
     const data = await c.req.json() as UpdateListingRequest;
 
-    const isAdmin = auth.role === 'admin';
-    const listing = await services.listingsService.updateListing(listingId, auth.userId, data, isAdmin);
+    console.log('Updating listing:', listingId, 'with data:', data);
 
-    if (!listing) {
-      return c.json({ error: "Listing not found or access denied" }, 404);
+    // Check if listing exists and user has permission
+    const existingListing = await services.databaseService.getFullListingById(listingId);
+    if (!existingListing) {
+      return c.json({ error: "Listing not found" }, 404);
     }
+
+    const isAdmin = auth.role === 'admin';
+    const isOwner = existingListing.userId === auth.userId;
+
+    if (!isAdmin && !isOwner) {
+      return c.json({ error: "Access denied" }, 403);
+    }
+
+    // Update the listing in database
+    const updatedDbListing = await services.databaseService.updateListing(listingId, data);
+    if (!updatedDbListing) {
+      return c.json({ error: "Failed to update listing" }, 500);
+    }
+
+    // Get the updated listing with proper format
+    const listing = await services.databaseService.getFullListingById(listingId);
+    console.log('Listing updated successfully:', listing);
 
     return c.json({ listing });
   } catch (error) {

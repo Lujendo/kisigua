@@ -191,8 +191,14 @@ const MyListingsPage: React.FC = () => {
           title: string;
           description: string;
           category: string;
-          address?: string;
-          location?: { city?: string; region?: string; country?: string; latitude?: number; longitude?: number };
+          location?: {
+            address?: string;
+            city?: string;
+            region?: string;
+            country?: string;
+            latitude?: number;
+            longitude?: number
+          };
           images?: string[];
           priceRange?: string;
           tags?: string[];
@@ -202,10 +208,10 @@ const MyListingsPage: React.FC = () => {
           views?: number;
           contactInfo?: { phone?: string; email?: string; website?: string };
         }) => {
-          // Parse address from the combined address field
-          const addressParts = listing.address ? listing.address.split(', ') : [];
-          const street = addressParts[0] || '';
-          const houseNumber = addressParts[1] || '';
+          // Parse address from the location.address field
+          const addressParts = listing.location?.address ? listing.location.address.split(' ') : [];
+          const houseNumber = addressParts[0] || '';
+          const street = addressParts.slice(1).join(' ') || '';
 
           return {
             id: listing.id,

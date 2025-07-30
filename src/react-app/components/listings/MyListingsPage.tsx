@@ -148,6 +148,74 @@ const MyListingsPage: React.FC = () => {
     fetchUserListings();
   }, [token]);
 
+  // Function to refresh listings data without full page reload
+  const refreshListings = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/user/listings', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const transformedListings = data.listings.map((listing: any) => {
+          // Parse address from the combined address field
+          const addressParts = listing.address ? listing.address.split(', ') : [];
+          const street = addressParts[0] || '';
+          const houseNumber = addressParts[1] || '';
+
+          return {
+            id: listing.id,
+            title: listing.title,
+            description: listing.description,
+            category: listing.category,
+            location: {
+              street: street,
+              houseNumber: houseNumber,
+              city: listing.location?.city || '',
+              region: listing.location?.region || '',
+              country: listing.location?.country || '',
+              coordinates: {
+                lat: listing.location?.latitude || 0,
+                lng: listing.location?.longitude || 0
+              }
+            },
+            contact: {
+              phone: listing.contactInfo?.phone || '',
+              mobile: '',
+              email: listing.contactInfo?.email || '',
+              website: listing.contactInfo?.website || '',
+              socials: {}
+            },
+            images: listing.images || [],
+            thumbnail: listing.images?.[0] || undefined,
+            price: listing.priceRange === 'low' ? 10 : listing.priceRange === 'medium' ? 25 : listing.priceRange === 'high' ? 50 : undefined,
+            priceType: listing.priceRange ? 'paid' : 'free',
+            tags: listing.tags || [],
+            status: 'published',
+            isVerified: listing.isCertified || false,
+            createdAt: listing.createdAt,
+            updatedAt: listing.updatedAt,
+            views: listing.views || 0,
+            inquiries: 0
+          };
+        });
+
+        setListings(transformedListings);
+        setError(null);
+      } else {
+        throw new Error('Failed to fetch listings');
+      }
+    } catch (error) {
+      console.error('Error refreshing listings:', error);
+      setError('Failed to refresh listings. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredListings = listings.filter(listing => {
     if (filterStatus === 'all') return true;
     return listing.status === filterStatus;
@@ -559,8 +627,8 @@ const MyListingsPage: React.FC = () => {
           alert(`Listing ${isEditing ? 'updated' : 'created'} successfully!`);
           setEditingListing(null);
           setShowCreateForm(false);
-          // Refresh the listings
-          window.location.reload();
+          // Refresh the listings without full page reload
+          await refreshListings();
         } else {
           const error = await response.json();
           console.error(`Failed to ${isEditing ? 'update' : 'create'} listing:`, error);
@@ -1253,7 +1321,7 @@ const MyListingsPage: React.FC = () => {
           <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Listings</h3>
           <p className="text-gray-600 mb-4">{error}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={refreshListings}
             className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
           >
             Try Again

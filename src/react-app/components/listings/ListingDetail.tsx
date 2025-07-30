@@ -219,177 +219,220 @@ const ListingDetail: React.FC<ListingDetailProps> = ({ listingId, onClose, onEdi
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white rounded-lg w-full max-w-7xl h-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden shadow-2xl">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <h2 className="text-xl font-semibold text-gray-900">{listing.title}</h2>
-            <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(listing.status)}`}>
-              {listing.status.charAt(0).toUpperCase() + listing.status.slice(1)}
-            </span>
-            {listing.isVerified && (
-              <div className="bg-blue-600 text-white p-1 rounded-full">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
+        <div className="sticky top-0 bg-gradient-to-r from-green-50 to-blue-50 border-b border-gray-200 px-4 sm:px-6 py-4 sm:py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
+            <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{listing.title}</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  {getCategoryLabel(listing.category)} • {getPriceDisplay(listing)}
+                </p>
               </div>
-            )}
-          </div>
-          <div className="flex items-center space-x-2">
-            {onEdit && (
+              <div className="flex items-center space-x-2">
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(listing.status)}`}>
+                  {listing.status.charAt(0).toUpperCase() + listing.status.slice(1)}
+                </span>
+                {listing.isVerified && (
+                  <div className="bg-blue-600 text-white p-1.5 rounded-full shadow-sm">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              {onEdit && (
+                <button
+                  onClick={() => onEdit(listing.id)}
+                  className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 shadow-lg hover:shadow-xl flex items-center space-x-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  <span>Edit</span>
+                </button>
+              )}
               <button
-                onClick={() => onEdit(listing.id)}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600 hover:bg-white rounded-full p-2 transition-all duration-200"
               >
-                Edit
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
-            )}
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            </div>
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
-          {/* Image Gallery */}
-          <div className="space-y-4">
-            {listing.images && listing.images.length > 0 ? (
-              <>
-                <div className="relative">
-                  <img
-                    src={listing.images[currentImageIndex]}
-                    alt={listing.title}
-                    className="w-full h-96 object-cover rounded-lg"
-                    onError={(e) => {
-                      // Fallback to placeholder if image fails to load
-                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=600&fit=crop';
-                    }}
-                  />
-                  {listing.images.length > 1 && (
-                  <>
-                    <button
-                      onClick={() => setCurrentImageIndex(prev => prev === 0 ? listing.images.length - 1 : prev - 1)}
-                      className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-opacity"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => setCurrentImageIndex(prev => prev === listing.images.length - 1 ? 0 : prev + 1)}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-opacity"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                  </>
-                )}
+        <div className="flex-1 overflow-y-auto bg-gray-50">
+          <div className="p-4 sm:p-6 lg:p-8 space-y-8">
+            {/* Image Gallery */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Photos
+              </h3>
+              {listing.images && listing.images.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="relative">
+                    <img
+                      src={listing.images[currentImageIndex]}
+                      alt={listing.title}
+                      className="w-full h-96 object-cover rounded-xl shadow-lg"
+                      onError={(e) => {
+                        // Fallback to placeholder if image fails to load
+                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=600&fit=crop';
+                      }}
+                    />
+                    {listing.images.length > 1 && (
+                      <>
+                        <button
+                          onClick={() => setCurrentImageIndex(prev => prev === 0 ? listing.images.length - 1 : prev - 1)}
+                          className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-90 hover:bg-opacity-100 text-gray-800 p-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => setCurrentImageIndex(prev => prev === listing.images.length - 1 ? 0 : prev + 1)}
+                          className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-90 hover:bg-opacity-100 text-gray-800 p-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                        {/* Image counter */}
+                        <div className="absolute bottom-4 right-4 bg-black bg-opacity-75 text-white px-3 py-1 rounded-full text-sm">
+                          {currentImageIndex + 1} / {listing.images.length}
+                        </div>
+                      </>
+                    )}
                 </div>
 
-                {/* Thumbnail Gallery */}
-                {listing.images.length > 1 && (
-                  <div className="space-y-3">
-                    <div className="flex space-x-2 overflow-x-auto">
-                      {listing.images.map((image, index) => (
-                        <div key={index} className="flex-shrink-0">
-                          <button
-                            onClick={() => setCurrentImageIndex(index)}
-                            className={`w-20 h-20 rounded-lg overflow-hidden border-2 ${
-                              index === currentImageIndex ? 'border-green-500' : 'border-gray-200'
-                            }`}
-                          >
-                            <img
-                              src={image}
-                              alt={`${listing.title} ${index + 1}`}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300&h=200&fit=crop';
-                              }}
-                            />
-                          </button>
-
-                          {/* Set as Cover button for listing owner */}
-                          {isOwner && index !== 0 && (
+                  {/* Thumbnail Gallery */}
+                  {listing.images.length > 1 && (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium text-gray-700">All Photos</h4>
+                      <div className="flex space-x-3 overflow-x-auto pb-2">
+                        {listing.images.map((image, index) => (
+                          <div key={index} className="flex-shrink-0">
                             <button
-                              onClick={() => handleSetCoverImage(index)}
-                              disabled={updatingCover}
-                              className="mt-1 w-20 px-1 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                              onClick={() => setCurrentImageIndex(index)}
+                              className={`w-24 h-24 rounded-xl overflow-hidden border-2 transition-all duration-200 ${
+                                index === currentImageIndex
+                                  ? 'border-green-500 shadow-lg scale-105'
+                                  : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+                              }`}
                             >
-                              {updatingCover ? 'Setting...' : 'Set Cover'}
+                              <img
+                                src={image}
+                                alt={`${listing.title} ${index + 1}`}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300&h=200&fit=crop';
+                                }}
+                              />
                             </button>
-                          )}
 
-                          {/* Cover badge for current cover image */}
-                          {index === 0 && (
-                            <div className="mt-1 w-20 px-1 py-1 text-xs bg-gray-600 text-white rounded text-center">
-                              Cover
-                            </div>
-                          )}
-                        </div>
+                            {/* Set as Cover button for listing owner */}
+                            {isOwner && index !== 0 && (
+                              <button
+                                onClick={() => handleSetCoverImage(index)}
+                                disabled={updatingCover}
+                                className="mt-2 w-24 px-2 py-1 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                              >
+                                {updatingCover ? 'Setting...' : 'Set Cover'}
+                              </button>
+                            )}
+
+                            {/* Cover badge for current cover image */}
+                            {index === 0 && (
+                              <div className="mt-2 w-24 px-2 py-1 text-xs bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-lg text-center font-medium">
+                                Cover
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="w-full h-96 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center">
+                  <div className="text-center text-gray-500">
+                    <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <p className="font-medium">No images available</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Main Content */}
+              <div className="lg:col-span-2 space-y-8">
+                {/* Description */}
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    About This Place
+                  </h3>
+                  <div className="flex items-center space-x-4 mb-6">
+                    <span className="bg-gradient-to-r from-green-100 to-blue-100 text-green-800 px-4 py-2 rounded-full text-sm font-semibold">
+                      {getCategoryLabel(listing.category)}
+                    </span>
+                    <span className="text-xl font-bold text-green-600">
+                      {getPriceDisplay(listing)}
+                    </span>
+                  </div>
+                  <div className="prose max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: listing.description }} />
+                </div>
+
+                {/* Tags */}
+                {listing.tags.length > 0 && (
+                  <div className="bg-white rounded-xl shadow-sm p-6">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                      <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                      </svg>
+                      Tags
+                    </h3>
+                    <div className="flex flex-wrap gap-3">
+                      {listing.tags.map((tag, index) => (
+                        <span key={index} className="bg-gradient-to-r from-blue-100 to-green-100 text-gray-800 px-4 py-2 rounded-full text-sm font-medium border border-gray-200">
+                          #{tag}
+                        </span>
                       ))}
                     </div>
                   </div>
                 )}
-              </>
-            ) : (
-              <div className="w-full h-96 bg-gray-200 rounded-lg flex items-center justify-center">
-                <div className="text-center text-gray-500">
-                  <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <p>No images available</p>
-                </div>
-              </div>
-            )}
-          </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Main Content */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Basic Info */}
-              <div>
-                <div className="flex items-center space-x-4 mb-4">
-                  <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                    {getCategoryLabel(listing.category)}
-                  </span>
-                  <span className="text-lg font-semibold text-green-600">
-                    {getPriceDisplay(listing)}
-                  </span>
-                </div>
-                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: listing.description }} />
-              </div>
-
-              {/* Tags */}
-              {listing.tags.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Tags</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {listing.tags.map((tag, index) => (
-                      <span key={index} className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
-                        {tag}
-                      </span>
-                    ))}
+                {/* Location */}
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Location
+                  </h3>
+                  <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl p-4 mb-4 border border-gray-200">
+                    <p className="text-gray-800 font-medium">
+                      {listing.location.address ||
+                       `${listing.location.street || ''} ${listing.location.houseNumber || ''}`.trim()}<br />
+                      {listing.location.city}, {listing.location.region && `${listing.location.region}, `}{listing.location.country}
+                    </p>
                   </div>
-                </div>
-              )}
-
-              {/* Map */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Location</h3>
-                <div className="bg-gray-100 rounded-lg p-4 mb-4">
-                  <p className="text-gray-700">
-                    {listing.location.address ||
-                     `${listing.location.street || ''} ${listing.location.houseNumber || ''}`.trim()}<br />
-                    {listing.location.city}, {listing.location.region && `${listing.location.region}, `}{listing.location.country}
-                  </p>
-                </div>
                 {(listing.location.coordinates || (listing.location.latitude && listing.location.longitude)) && (
                   <Map
                     center={[
@@ -412,14 +455,19 @@ const ListingDetail: React.FC<ListingDetailProps> = ({ listingId, onClose, onEdi
                     ]}
                   />
                 )}
+                </div>
               </div>
-            </div>
 
-            {/* Sidebar */}
-            <div className="space-y-6">
-              {/* Contact Info */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
+              {/* Sidebar */}
+              <div className="space-y-8">
+                {/* Contact Info */}
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    Contact Information
+                  </h3>
                 <div className="space-y-3">
                   {(listing.contactInfo?.phone || listing.contact?.phone) && (
                     <div className="flex items-center space-x-3">
@@ -479,25 +527,43 @@ const ListingDetail: React.FC<ListingDetailProps> = ({ listingId, onClose, onEdi
                 )}
               </div>
 
-              {/* Stats */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Statistics</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Views</span>
-                    <span className="font-medium">{listing.views}</span>
+                {/* Stats */}
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Statistics
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 text-center">
+                      <div className="text-2xl font-bold text-blue-600">{listing.views}</div>
+                      <div className="text-sm text-blue-700">Views</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 text-center">
+                      <div className="text-2xl font-bold text-green-600">{listing.inquiries}</div>
+                      <div className="text-sm text-green-700">Inquiries</div>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Inquiries</span>
-                    <span className="font-medium">{listing.inquiries}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Created</span>
-                    <span className="font-medium">{new Date(listing.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Updated</span>
-                    <span className="font-medium">{new Date(listing.updatedAt).toLocaleDateString()}</span>
+                  <div className="mt-4 space-y-3 pt-4 border-t border-gray-200">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600 flex items-center">
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Created
+                      </span>
+                      <span className="font-medium text-gray-800">{new Date(listing.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600 flex items-center">
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Updated
+                      </span>
+                      <span className="font-medium text-gray-800">{new Date(listing.updatedAt).toLocaleDateString()}</span>
+                    </div>
                   </div>
                 </div>
               </div>

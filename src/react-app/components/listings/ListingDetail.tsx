@@ -66,6 +66,7 @@ const ListingDetail: React.FC<ListingDetailProps> = ({ listingId, onClose, onEdi
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatingCover, setUpdatingCover] = useState(false);
+  const [showScrollIndicator, setShowScrollIndicator] = useState(true);
 
   // Check if current user owns this listing
   const isOwner = user && listing && user.id === listing.userId;
@@ -136,6 +137,23 @@ const ListingDetail: React.FC<ListingDetailProps> = ({ listingId, onClose, onEdi
 
     fetchListing();
   }, [listingId]);
+
+  // Handle scroll indicator visibility
+  useEffect(() => {
+    const handleScroll = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (target.scrollTop > 50) {
+        setShowScrollIndicator(false);
+      }
+    };
+
+    // Add scroll listener to the modal content
+    const modalContent = document.querySelector('.listing-detail-scroll');
+    if (modalContent) {
+      modalContent.addEventListener('scroll', handleScroll);
+      return () => modalContent.removeEventListener('scroll', handleScroll);
+    }
+  }, []);
 
   const getCategoryLabel = (category: string) => {
     const categories: Record<string, string> = {
@@ -268,7 +286,18 @@ const ListingDetail: React.FC<ListingDetailProps> = ({ listingId, onClose, onEdi
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-gray-50">
+        {/* Scroll Indicator */}
+        {showScrollIndicator && (
+          <div className="absolute top-20 right-4 z-10 opacity-50 animate-bounce transition-opacity duration-300">
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m0 0l7-7" />
+            </svg>
+          </div>
+        )}
+
+        <div className="listing-detail-scroll flex-1 overflow-y-auto bg-gray-50 scroll-smooth scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 shadow-inner relative">
+          {/* Scroll gradient overlay */}
+          <div className="absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-gray-50 to-transparent pointer-events-none z-10"></div>
           <div className="p-4 sm:p-6 lg:p-8 space-y-8">
             {/* Image Gallery */}
             <div className="bg-white rounded-xl shadow-sm p-6">

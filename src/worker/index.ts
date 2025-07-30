@@ -464,16 +464,10 @@ app.post("/api/listings", authMiddleware, async (c) => {
       postalCode: data.location.postalCode
     };
 
-    // Transform category from frontend format (cat_water_source) to database format (water_source)
-    const transformedCategory = data.category.startsWith('cat_')
-      ? data.category.substring(4) as any // Remove 'cat_' prefix
-      : data.category;
-
     const listingData = {
       ...data,
       id: listingId,
       user_id: auth.userId,
-      category: transformedCategory,
       location: transformedLocation
     };
 
@@ -533,10 +527,7 @@ app.put("/api/listings/:id", authMiddleware, async (c) => {
       };
     }
 
-    // Transform category from frontend format (cat_water_source) to database format (water_source)
-    if (data.category && data.category.startsWith('cat_')) {
-      transformedData.category = data.category.substring(4) as any; // Remove 'cat_' prefix
-    }
+
 
     console.log('Transformed update data:', transformedData);
 

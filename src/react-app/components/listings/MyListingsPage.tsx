@@ -350,8 +350,8 @@ const MyListingsPage: React.FC = () => {
   };
 
   const ListingCard: React.FC<{ listing: Listing }> = ({ listing }) => (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-      <div className="relative">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-visible">
+      <div className="relative overflow-hidden rounded-t-lg">
         <img
           src={listing.images?.[0] || listing.thumbnail || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=300&fit=crop'}
           alt={listing.title}
@@ -452,7 +452,7 @@ const MyListingsPage: React.FC = () => {
 
             {/* Dropdown Menu */}
             {showDropdownId === listing.id && (
-              <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+              <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                 <div className="py-1">
                   <button
                     onClick={() => {

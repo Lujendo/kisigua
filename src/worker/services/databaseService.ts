@@ -176,6 +176,11 @@ export class DatabaseService {
       await this.addListingTags(listingData.id, listingData.tags);
     }
 
+    // Add images if provided
+    if (listingData.images && listingData.images.length > 0) {
+      await this.addListingImages(listingData.id, listingData.images);
+    }
+
     return this.getListingById(listingData.id) as Promise<DatabaseListing>;
   }
 
@@ -278,6 +283,11 @@ export class DatabaseService {
     // Update tags if provided
     if (updates.tags) {
       await this.replaceListingTags(listingId, updates.tags);
+    }
+
+    // Update images if provided
+    if (updates.images !== undefined) {
+      await this.updateListingImages(listingId, updates.images);
     }
 
     return this.getListingById(listingId);
@@ -518,6 +528,44 @@ export class DatabaseService {
     } catch (error) {
       console.error('Error fetching listing images:', error);
       return [];
+    }
+  }
+
+  // Helper method to add images to a listing
+  async addListingImages(listingId: string, imageUrls: string[]): Promise<void> {
+    try {
+      for (let i = 0; i < imageUrls.length; i++) {
+        const imageId = `img_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+        const stmt = this.db.prepare(`
+          INSERT INTO listing_images (id, listing_id, image_url, image_key, sort_order)
+          VALUES (?, ?, ?, ?, ?)
+        `);
+
+        // Extract the R2 key from the URL (assuming URL format: https://domain/path/key)
+        const imageKey = imageUrls[i].split('/').pop() || imageUrls[i];
+
+        await stmt.bind(imageId, listingId, imageUrls[i], imageKey, i).run();
+      }
+    } catch (error) {
+      console.error('Error adding listing images:', error);
+      throw error;
+    }
+  }
+
+  // Helper method to update images for a listing
+  async updateListingImages(listingId: string, imageUrls: string[]): Promise<void> {
+    try {
+      // First, delete existing images
+      const deleteStmt = this.db.prepare(`DELETE FROM listing_images WHERE listing_id = ?`);
+      await deleteStmt.bind(listingId).run();
+
+      // Then add new images
+      if (imageUrls.length > 0) {
+        await this.addListingImages(listingId, imageUrls);
+      }
+    } catch (error) {
+      console.error('Error updating listing images:', error);
+      throw error;
     }
   }
 

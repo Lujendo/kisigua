@@ -446,7 +446,12 @@ app.post("/api/listings", authMiddleware, async (c) => {
     const auth = c.get('auth');
     const data = await c.req.json() as CreateListingRequest;
 
-    const listing = await services.listingsService.createListing(auth.userId, data);
+    console.log('Creating listing with data:', data);
+
+    // Use database service to create and persist the listing
+    const listing = await services.databaseService.createListing(auth.userId, data);
+    console.log('Listing created in database:', listing);
+
     return c.json({ listing }, 201);
   } catch (error) {
     console.error('Create listing error:', error);

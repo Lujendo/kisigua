@@ -448,9 +448,23 @@ app.post("/api/listings", authMiddleware, async (c) => {
 
     console.log('Creating listing with data:', data);
 
+    // Prepare data for database service (needs id and user_id)
+    const listingId = `listing-${Date.now()}`;
+    const listingData = {
+      ...data,
+      id: listingId,
+      user_id: auth.userId
+    };
+
+    console.log('Prepared listing data for database:', listingData);
+
     // Use database service to create and persist the listing
-    const listing = await services.databaseService.createListing(auth.userId, data);
-    console.log('Listing created in database:', listing);
+    const dbListing = await services.databaseService.createListing(listingData);
+    console.log('Listing created in database:', dbListing);
+
+    // Get the full listing with proper format
+    const listing = await services.databaseService.getFullListingById(listingId);
+    console.log('Retrieved full listing for API response:', listing);
 
     return c.json({ listing }, 201);
   } catch (error) {

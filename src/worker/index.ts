@@ -511,8 +511,26 @@ app.put("/api/listings/:id", authMiddleware, async (c) => {
       return c.json({ error: "Access denied" }, 403);
     }
 
+    // Transform frontend location format to database format (same as create endpoint)
+    let transformedData = { ...data };
+    if (data.location) {
+      transformedData.location = {
+        latitude: (data.location as any).coordinates?.lat || data.location.latitude || 0,
+        longitude: (data.location as any).coordinates?.lng || data.location.longitude || 0,
+        address: (data.location as any).street && (data.location as any).houseNumber
+          ? `${(data.location as any).street} ${(data.location as any).houseNumber}`.trim()
+          : data.location.address || '',
+        city: data.location.city,
+        region: data.location.region,
+        country: data.location.country,
+        postalCode: data.location.postalCode
+      };
+    }
+
+    console.log('Transformed update data:', transformedData);
+
     // Update the listing in database
-    const updatedDbListing = await services.databaseService.updateListing(listingId, data);
+    const updatedDbListing = await services.databaseService.updateListing(listingId, transformedData);
     if (!updatedDbListing) {
       return c.json({ error: "Failed to update listing" }, 500);
     }

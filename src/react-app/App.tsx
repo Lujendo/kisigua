@@ -51,7 +51,7 @@ function AppContent() {
   }, [isAuthenticated]);
 
   const handleNavigation = (page: string) => {
-    setCurrentPage(page as any);
+    setCurrentPage(page as 'dashboard' | 'search' | 'listings' | 'favorites' | 'subscription' | 'profile');
     // Only close sidebar on mobile devices after navigation
     if (window.innerWidth < 1024) {
       setSidebarOpen(false);

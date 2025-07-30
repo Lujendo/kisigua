@@ -37,7 +37,7 @@ const Dashboard = ({ onNavigateToSearch, onNavigateToMyListings, onNavigateToExp
           const data = await response.json();
           setStats({
             totalListings: data.listings?.length || 0,
-            totalViews: data.listings?.reduce((sum: number, listing: any) => sum + (listing.views || 0), 0) || 0,
+            totalViews: data.listings?.reduce((sum: number, listing: { views?: number }) => sum + (listing.views || 0), 0) || 0,
             totalUsers: 150, // Mock data for now
             recentActivity: 24 // Mock data for now
           });

@@ -90,7 +90,22 @@ const MyListingsPage: React.FC = () => {
         const data = await response.json();
 
         // Transform API data to match component interface
-        const transformedListings: Listing[] = data.listings.map((listing: any) => {
+        const transformedListings: Listing[] = data.listings.map((listing: {
+          id: string;
+          title: string;
+          description: string;
+          category: string;
+          location?: { address?: string; city?: string; region?: string; country?: string; latitude?: number; longitude?: number };
+          images?: string[];
+          priceRange?: string;
+          tags?: string[];
+          userId: string;
+          createdAt: string;
+          updatedAt: string;
+          isCertified?: boolean;
+          views?: number;
+          contactInfo?: { phone?: string; email?: string; website?: string };
+        }) => {
           // Parse address safely
           const addressParts = listing.location?.address?.split(' ') || [];
           const houseNumber = addressParts[0] || '';
@@ -160,7 +175,22 @@ const MyListingsPage: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        const transformedListings = data.listings.map((listing: any) => {
+        const transformedListings = data.listings.map((listing: {
+          id: string;
+          title: string;
+          description: string;
+          category: string;
+          address?: string;
+          location?: { city?: string; region?: string; country?: string; latitude?: number; longitude?: number };
+          images?: string[];
+          priceRange?: string;
+          tags?: string[];
+          createdAt: string;
+          updatedAt: string;
+          isCertified?: boolean;
+          views?: number;
+          contactInfo?: { phone?: string; email?: string; website?: string };
+        }) => {
           // Parse address from the combined address field
           const addressParts = listing.address ? listing.address.split(', ') : [];
           const street = addressParts[0] || '';
@@ -529,7 +559,7 @@ const MyListingsPage: React.FC = () => {
           const response = await fetch('/api/categories');
           if (response.ok) {
             const data = await response.json();
-            const formattedCategories = data.categories.map((cat: any) => ({
+            const formattedCategories = data.categories.map((cat: { id: string; name: string; color: string; icon: string }) => ({
               id: cat.id,
               label: cat.name,
               color: cat.color,

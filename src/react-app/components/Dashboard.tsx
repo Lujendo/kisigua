@@ -67,7 +67,7 @@ const Dashboard = ({}: DashboardProps) => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // View Mode State
-  const [viewMode, setViewMode] = useState<'cards' | 'map'>('cards');
+  const [viewMode, setViewMode] = useState<'list' | 'cards' | 'map'>('list');
 
   // Fetch real data from API
   useEffect(() => {
@@ -467,8 +467,22 @@ const Dashboard = ({}: DashboardProps) => {
                   {/* View Toggle */}
                   <div className="flex bg-gray-100 rounded-lg p-1">
                     <button
+                      onClick={() => setViewMode('list')}
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1 ${
+                        viewMode === 'list'
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                      title="List View"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                      </svg>
+                      <span>List</span>
+                    </button>
+                    <button
                       onClick={() => setViewMode('cards')}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2 ${
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1 ${
                         viewMode === 'cards'
                           ? 'bg-white text-gray-900 shadow-sm'
                           : 'text-gray-600 hover:text-gray-900'
@@ -482,7 +496,7 @@ const Dashboard = ({}: DashboardProps) => {
                     </button>
                     <button
                       onClick={() => setViewMode('map')}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2 ${
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1 ${
                         viewMode === 'map'
                           ? 'bg-white text-gray-900 shadow-sm'
                           : 'text-gray-600 hover:text-gray-900'
@@ -532,6 +546,83 @@ const Dashboard = ({}: DashboardProps) => {
                       if (location) handleLocationClick(location.id);
                     }}
                   />
+                </div>
+              ) : viewMode === 'list' ? (
+                <div className="space-y-4">
+                  {currentItems.map((location) => (
+                    <div
+                      key={location.id}
+                      className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer p-4"
+                      onClick={() => handleLocationClick(location.id)}
+                    >
+                      <div className="flex items-start space-x-4">
+                        <div className="flex-shrink-0 relative">
+                          <img
+                            src={location.thumbnail}
+                            alt={location.title}
+                            className="w-24 h-24 object-cover rounded-lg"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300&h=200&fit=crop';
+                            }}
+                          />
+                          <div className="absolute top-2 right-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleFavorite(location.id);
+                              }}
+                              className={`p-1 rounded-full shadow-lg transition-colors ${
+                                isFavorite(location.id)
+                                  ? 'bg-red-500 text-white hover:bg-red-600'
+                                  : 'bg-white text-gray-600 hover:text-red-500'
+                              }`}
+                            >
+                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          </div>
+                          {location.isVerified && (
+                            <div className="absolute top-2 left-2 bg-blue-600 text-white p-1 rounded-full">
+                              <svg className="w-2 h-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h3 className="text-lg font-semibold text-gray-900 mb-1">{location.title}</h3>
+                              <p className="text-sm text-gray-600 mb-2 line-clamp-2">{location.description}</p>
+
+                              <div className="flex items-center space-x-4 mb-2">
+                                <div className="flex items-center">
+                                  {renderStars(location.rating)}
+                                  <span className="ml-1 text-sm text-gray-600">({location.reviews})</span>
+                                </div>
+                                <span className="text-sm font-medium text-green-600">
+                                  {location.price ? `$${location.price}` : 'Free'}
+                                </span>
+                                <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
+                                  {location.category}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center text-sm text-gray-500">
+                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                {location.location.city}, {location.location.country}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

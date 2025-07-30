@@ -408,10 +408,8 @@ const MyListingsPage: React.FC = () => {
     // Initialize images when editingListing changes
     useEffect(() => {
       if (editingListing?.images) {
-        console.log('Setting images from editingListing:', editingListing.images);
         setImages(editingListing.images);
       } else {
-        console.log('Clearing images (no editingListing or no images)');
         setImages([]);
       }
     }, [editingListing]);

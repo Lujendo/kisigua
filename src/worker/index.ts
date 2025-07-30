@@ -413,15 +413,30 @@ app.post("/api/listings/search", async (c) => {
 
 // Get single listing (public)
 app.get("/api/listings/:id", async (c) => {
-  const services = c.get('services');
-  const listingId = c.req.param('id');
-  const listing = await services.listingsService.getListing(listingId);
+  try {
+    const services = c.get('services');
+    const listingId = c.req.param('id');
 
-  if (!listing) {
-    return c.json({ error: "Listing not found" }, 404);
+    // First try to get from database
+    const listing = await services.databaseService.getFullListingById(listingId);
+
+    if (!listing) {
+      // Fallback to in-memory service
+      const fallbackListing = await services.listingsService.getListing(listingId);
+      if (!fallbackListing) {
+        return c.json({ error: "Listing not found" }, 404);
+      }
+      return c.json({ listing: fallbackListing });
+    }
+
+    // Increment view count
+    await services.databaseService.incrementListingViews(listingId);
+
+    return c.json({ listing });
+  } catch (error) {
+    console.error('Get listing error:', error);
+    return c.json({ error: "Failed to retrieve listing" }, 500);
   }
-
-  return c.json({ listing });
 });
 
 // Create listing (authenticated)

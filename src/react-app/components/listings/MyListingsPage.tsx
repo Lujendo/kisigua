@@ -49,6 +49,7 @@ const MyListingsPage: React.FC = () => {
   const { token } = useAuth();
   const [listings, setListings] = useState<Listing[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingListing, setEditingListing] = useState<Listing | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
@@ -149,12 +150,10 @@ const MyListingsPage: React.FC = () => {
   };
 
   const handleEditListing = (listingId: string) => {
-    setShowCreateForm(true);
-    // Load listing data into form
     const listing = listings.find(l => l.id === listingId);
     if (listing) {
-      // This would populate the form with existing data
-      console.log('Editing listing:', listing);
+      setEditingListing(listing);
+      setShowCreateForm(true);
     }
   };
 
@@ -370,28 +369,30 @@ const MyListingsPage: React.FC = () => {
     const { token } = useAuth();
     const [activeTab, setActiveTab] = useState<'basic' | 'location' | 'contact' | 'media' | 'pricing'>('basic');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const isEditing = editingListing !== null;
+
     const [formData, setFormData] = useState({
-      title: '',
-      description: '',
-      category: '',
-      street: '',
-      houseNumber: '',
-      city: '',
-      region: '',
-      country: '',
-      phone: '',
-      mobile: '',
-      email: '',
-      website: '',
-      facebook: '',
-      instagram: '',
-      twitter: '',
-      linkedin: '',
-      priceType: 'free' as 'free' | 'paid' | 'donation',
-      price: '',
-      tags: ''
+      title: editingListing?.title || '',
+      description: editingListing?.description || '',
+      category: editingListing?.category || '',
+      street: editingListing?.location?.street || '',
+      houseNumber: editingListing?.location?.houseNumber || '',
+      city: editingListing?.location?.city || '',
+      region: editingListing?.location?.region || '',
+      country: editingListing?.location?.country || '',
+      phone: editingListing?.contactInfo?.phone || '',
+      mobile: editingListing?.contactInfo?.mobile || '',
+      email: editingListing?.contactInfo?.email || '',
+      website: editingListing?.contactInfo?.website || '',
+      facebook: editingListing?.contactInfo?.socialMedia?.facebook || '',
+      instagram: editingListing?.contactInfo?.socialMedia?.instagram || '',
+      twitter: editingListing?.contactInfo?.socialMedia?.twitter || '',
+      linkedin: editingListing?.contactInfo?.socialMedia?.linkedin || '',
+      priceType: (editingListing?.priceType || 'free') as 'free' | 'paid' | 'donation',
+      price: editingListing?.price?.toString() || '',
+      tags: editingListing?.tags?.join(', ') || ''
     });
-    const [images, setImages] = useState<string[]>([]);
+    const [images, setImages] = useState<string[]>(editingListing?.images || []);
     const [categories, setCategories] = useState<Array<{ id: string; label: string; color?: string; icon?: string }>>([]);
     const [loadingCategories, setLoadingCategories] = useState(true);
 
@@ -503,10 +504,13 @@ const MyListingsPage: React.FC = () => {
                      formData.priceType === 'paid' ? 'medium' : 'low'
         };
 
-        console.log('Submitting listing data:', listingData);
+        console.log(`Submitting listing data for ${isEditing ? 'update' : 'create'}:`, listingData);
 
-        const response = await fetch('/api/listings', {
-          method: 'POST',
+        const url = isEditing ? `/api/listings/${editingListing.id}` : '/api/listings';
+        const method = isEditing ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+          method,
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
@@ -516,18 +520,20 @@ const MyListingsPage: React.FC = () => {
 
         if (response.ok) {
           const result = await response.json();
-          console.log('Listing created successfully:', result);
-          alert('Listing created successfully!');
+          console.log(`Listing ${isEditing ? 'updated' : 'created'} successfully:`, result);
+          alert(`Listing ${isEditing ? 'updated' : 'created'} successfully!`);
+          setEditingListing(null);
           setShowCreateForm(false);
-          // Optionally refresh the listings
+          // Refresh the listings
+          window.location.reload();
         } else {
           const error = await response.json();
-          console.error('Failed to create listing:', error);
-          alert(`Failed to create listing: ${error.error || 'Unknown error'}`);
+          console.error(`Failed to ${isEditing ? 'update' : 'create'} listing:`, error);
+          alert(`Failed to ${isEditing ? 'update' : 'create'} listing: ${error.error || 'Unknown error'}`);
         }
       } catch (error) {
-        console.error('Error creating listing:', error);
-        alert('An error occurred while creating the listing. Please try again.');
+        console.error(`Error ${isEditing ? 'updating' : 'creating'} listing:`, error);
+        alert(`An error occurred while ${isEditing ? 'updating' : 'creating'} the listing. Please try again.`);
       } finally {
         setIsSubmitting(false);
       }
@@ -539,9 +545,14 @@ const MyListingsPage: React.FC = () => {
           <div className="flex flex-col h-full">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Create New Listing</h2>
+              <h2 className="text-xl font-semibold text-gray-900">
+                {isEditing ? 'Edit Listing' : 'Create New Listing'}
+              </h2>
               <button
-                onClick={() => setShowCreateForm(false)}
+                onClick={() => {
+                  setEditingListing(null);
+                  setShowCreateForm(false);
+                }}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -877,6 +888,7 @@ const MyListingsPage: React.FC = () => {
                         <label className="block text-sm font-medium text-gray-700 mb-4">Images</label>
                         <ListingImageUpload
                           onImagesChange={setImages}
+                          initialImages={editingListing?.images || []}
                         />
                         <p className="text-sm text-gray-500 mt-2">
                           Upload high-quality images that showcase your location. The first image will be used as the main thumbnail.
@@ -1070,13 +1082,21 @@ const MyListingsPage: React.FC = () => {
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
                           )}
-                          <span>{isSubmitting ? 'Creating...' : 'Create Listing'}</span>
+                          <span>
+                            {isSubmitting
+                              ? (isEditing ? 'Updating...' : 'Creating...')
+                              : (isEditing ? 'Update Listing' : 'Create Listing')
+                            }
+                          </span>
                         </button>
                       )}
 
                       <button
                         type="button"
-                        onClick={() => setShowCreateForm(false)}
+                        onClick={() => {
+                          setEditingListing(null);
+                          setShowCreateForm(false);
+                        }}
                         className="px-4 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors"
                       >
                         Cancel
@@ -1170,7 +1190,10 @@ const MyListingsPage: React.FC = () => {
           </div>
 
           <button
-            onClick={() => setShowCreateForm(true)}
+            onClick={() => {
+              setEditingListing(null);
+              setShowCreateForm(true);
+            }}
             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1279,7 +1302,10 @@ const MyListingsPage: React.FC = () => {
           <h3 className="text-lg font-medium text-gray-900 mb-2">No listings found</h3>
           <p className="text-gray-600 mb-4">Create your first listing to share with the community</p>
           <button
-            onClick={() => setShowCreateForm(true)}
+            onClick={() => {
+              setEditingListing(null);
+              setShowCreateForm(true);
+            }}
             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
           >
             Create Your First Listing

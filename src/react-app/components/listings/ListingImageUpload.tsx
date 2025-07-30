@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 interface ListingImageUploadProps {
   onImagesChange: (images: string[]) => void;
+  initialImages?: string[];
   maxImages?: number;
   acceptedTypes?: string[];
   maxFileSize?: number; // in MB
@@ -10,16 +11,22 @@ interface ListingImageUploadProps {
 
 const ListingImageUpload: React.FC<ListingImageUploadProps> = ({
   onImagesChange,
+  initialImages = [],
   maxImages = 5,
   acceptedTypes = ['image/jpeg', 'image/png', 'image/webp'],
   maxFileSize = 5
 }) => {
   const { token } = useAuth();
-  const [images, setImages] = useState<string[]>([]);
+  const [images, setImages] = useState<string[]>(initialImages);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   // Upload progress tracking removed for simplicity
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Update images when initialImages changes (for edit mode)
+  React.useEffect(() => {
+    setImages(initialImages);
+  }, [initialImages]);
 
   const handleFileSelect = async (files: FileList) => {
     if (files.length === 0) return;

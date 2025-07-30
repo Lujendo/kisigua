@@ -54,52 +54,29 @@ const ListingDetail: React.FC<ListingDetailProps> = ({ listingId, onClose, onEdi
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock data - in real app, fetch from API
-    const mockListings: Listing[] = [
-      {
-        id: '1',
-        title: 'Green Valley Organic Farm',
-        description: 'Family-owned organic farm specializing in seasonal vegetables, herbs, and fruits. We use sustainable farming practices and offer fresh produce year-round. Visit our farm shop and enjoy guided tours every weekend.',
-        category: 'organic_farm',
-        location: {
-          street: 'Hauptstraße',
-          houseNumber: '123',
-          city: 'Berlin',
-          region: 'Brandenburg',
-          country: 'Germany',
-          coordinates: { lat: 52.5200, lng: 13.4050 }
-        },
-        contact: {
-          phone: '+49 30 12345678',
-          mobile: '+49 170 1234567',
-          email: 'info@greenvalley.de',
-          website: 'https://greenvalley.de',
-          socials: {
-            facebook: 'https://facebook.com/greenvalley',
-            instagram: 'https://instagram.com/greenvalley'
-          }
-        },
-        images: [
-          'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&h=600&fit=crop',
-          'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&h=600&fit=crop',
-          'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=800&h=600&fit=crop'
-        ],
-        thumbnail: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=300&h=200&fit=crop',
-        priceType: 'free',
-        tags: ['organic', 'vegetables', 'sustainable', 'family-owned'],
-        status: 'published',
-        isVerified: true,
-        createdAt: '2024-01-15',
-        updatedAt: '2024-01-15',
-        views: 245,
-        inquiries: 12
-      },
-      // Add more mock listings as needed...
-    ];
+    const fetchListing = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-    const foundListing = mockListings.find(l => l.id === listingId);
-    setListing(foundListing || null);
-    setLoading(false);
+        const response = await fetch(`/api/listings/${listingId}`);
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch listing');
+        }
+
+        const data = await response.json();
+        setListing(data.listing);
+      } catch (error) {
+        console.error('Error fetching listing:', error);
+        setError('Failed to load listing details');
+        setListing(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchListing();
   }, [listingId]);
 
   const getCategoryLabel = (category: string) => {
@@ -136,6 +113,31 @@ const ListingDetail: React.FC<ListingDetailProps> = ({ listingId, onClose, onEdi
         <div className="bg-white rounded-lg p-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading listing...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-8 max-w-md text-center">
+          <h3 className="text-lg font-semibold text-red-600 mb-4">Error Loading Listing</h3>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <div className="flex space-x-3 justify-center">
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              Retry
+            </button>
+            <button
+              onClick={onClose}
+              className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg transition-colors"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -199,13 +201,18 @@ const ListingDetail: React.FC<ListingDetailProps> = ({ listingId, onClose, onEdi
         <div className="p-6 space-y-6">
           {/* Image Gallery */}
           <div className="space-y-4">
-            <div className="relative">
-              <img
-                src={listing.images[currentImageIndex]}
-                alt={listing.title}
-                className="w-full h-96 object-cover rounded-lg"
-              />
-              {listing.images.length > 1 && (
+            {listing.images && listing.images.length > 0 ? (
+              <div className="relative">
+                <img
+                  src={listing.images[currentImageIndex]}
+                  alt={listing.title}
+                  className="w-full h-96 object-cover rounded-lg"
+                  onError={(e) => {
+                    // Fallback to placeholder if image fails to load
+                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=600&fit=crop';
+                  }}
+                />
+                {listing.images.length > 1 && (
                 <>
                   <button
                     onClick={() => setCurrentImageIndex(prev => prev === 0 ? listing.images.length - 1 : prev - 1)}
@@ -227,20 +234,38 @@ const ListingDetail: React.FC<ListingDetailProps> = ({ listingId, onClose, onEdi
               )}
             </div>
 
-            {/* Thumbnail Gallery */}
-            {listing.images.length > 1 && (
-              <div className="flex space-x-2 overflow-x-auto">
-                {listing.images.map((image, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentImageIndex(index)}
-                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
-                      index === currentImageIndex ? 'border-green-500' : 'border-gray-200'
-                    }`}
-                  >
-                    <img src={image} alt={`${listing.title} ${index + 1}`} className="w-full h-full object-cover" />
-                  </button>
-                ))}
+                {/* Thumbnail Gallery */}
+                {listing.images.length > 1 && (
+                  <div className="flex space-x-2 overflow-x-auto">
+                    {listing.images.map((image, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentImageIndex(index)}
+                        className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
+                          index === currentImageIndex ? 'border-green-500' : 'border-gray-200'
+                        }`}
+                      >
+                        <img
+                          src={image}
+                          alt={`${listing.title} ${index + 1}`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300&h=200&fit=crop';
+                          }}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="w-full h-96 bg-gray-200 rounded-lg flex items-center justify-center">
+                <div className="text-center text-gray-500">
+                  <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p>No images available</p>
+                </div>
               </div>
             )}
           </div>
@@ -306,32 +331,32 @@ const ListingDetail: React.FC<ListingDetailProps> = ({ listingId, onClose, onEdi
               <div className="bg-gray-50 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
                 <div className="space-y-3">
-                  {listing.contact.phone && (
+                  {(listing.contactInfo?.phone || listing.contact?.phone) && (
                     <div className="flex items-center space-x-3">
                       <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                       </svg>
-                      <a href={`tel:${listing.contact.phone}`} className="text-green-600 hover:text-green-700">
-                        {listing.contact.phone}
+                      <a href={`tel:${listing.contactInfo?.phone || listing.contact?.phone}`} className="text-green-600 hover:text-green-700">
+                        {listing.contactInfo?.phone || listing.contact?.phone}
                       </a>
                     </div>
                   )}
-                  {listing.contact.email && (
+                  {(listing.contactInfo?.email || listing.contact?.email) && (
                     <div className="flex items-center space-x-3">
                       <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                       </svg>
-                      <a href={`mailto:${listing.contact.email}`} className="text-green-600 hover:text-green-700">
-                        {listing.contact.email}
+                      <a href={`mailto:${listing.contactInfo?.email || listing.contact?.email}`} className="text-green-600 hover:text-green-700">
+                        {listing.contactInfo?.email || listing.contact?.email}
                       </a>
                     </div>
                   )}
-                  {listing.contact.website && (
+                  {(listing.contactInfo?.website || listing.contact?.website) && (
                     <div className="flex items-center space-x-3">
                       <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                       </svg>
-                      <a href={listing.contact.website} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:text-green-700">
+                      <a href={listing.contactInfo?.website || listing.contact?.website} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:text-green-700">
                         Visit Website
                       </a>
                     </div>
@@ -339,7 +364,7 @@ const ListingDetail: React.FC<ListingDetailProps> = ({ listingId, onClose, onEdi
                 </div>
 
                 {/* Social Media */}
-                {Object.values(listing.contact.socials).some(Boolean) && (
+                {(listing.contact?.socials && Object.values(listing.contact.socials).some(Boolean)) && (
                   <div className="mt-4 pt-4 border-t border-gray-200">
                     <h4 className="text-sm font-medium text-gray-900 mb-3">Follow Us</h4>
                     <div className="flex space-x-3">

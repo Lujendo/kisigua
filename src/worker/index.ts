@@ -450,10 +450,25 @@ app.post("/api/listings", authMiddleware, async (c) => {
 
     // Prepare data for database service (needs id and user_id)
     const listingId = `listing-${Date.now()}`;
+
+    // Transform frontend location format to database format
+    const transformedLocation = {
+      latitude: (data.location as any).coordinates?.lat || data.location.latitude || 0,
+      longitude: (data.location as any).coordinates?.lng || data.location.longitude || 0,
+      address: (data.location as any).street && (data.location as any).houseNumber
+        ? `${(data.location as any).street} ${(data.location as any).houseNumber}`.trim()
+        : data.location.address || '',
+      city: data.location.city,
+      region: data.location.region,
+      country: data.location.country,
+      postalCode: data.location.postalCode
+    };
+
     const listingData = {
       ...data,
       id: listingId,
-      user_id: auth.userId
+      user_id: auth.userId,
+      location: transformedLocation
     };
 
     console.log('Prepared listing data for database:', listingData);

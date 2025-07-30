@@ -312,21 +312,50 @@ const MyListingsPage: React.FC = () => {
     }
   };
 
-  const handleDuplicateListing = (listingId: string) => {
+  const handleDuplicateListing = async (listingId: string) => {
     const listing = listings.find(l => l.id === listingId);
-    if (listing) {
-      const duplicatedListing = {
-        ...listing,
-        id: `${Date.now()}`,
+    if (!listing || !token) return;
+
+    try {
+      // Prepare the listing data for duplication
+      const duplicateData = {
         title: `${listing.title} (Copy)`,
-        status: 'draft' as const,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        views: 0,
-        inquiries: 0
+        description: listing.description,
+        category: listing.category,
+        location: listing.location,
+        contactInfo: listing.contact,
+        images: listing.images || [],
+        tags: listing.tags || [],
+        priceRange: listing.priceType === 'free' ? 'free' :
+                   listing.priceType === 'paid' ? 'medium' : 'low',
+        isOrganic: false,
+        isCertified: false
       };
-      setListings(prev => [duplicatedListing, ...prev]);
-      console.log('Duplicated listing:', duplicatedListing);
+
+      console.log('Duplicating listing with data:', duplicateData);
+
+      const response = await fetch('/api/listings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(duplicateData)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to duplicate listing');
+      }
+
+      const result = await response.json();
+      console.log('Duplicated listing created:', result.listing);
+
+      // Refresh the listings to show the new duplicate
+      await refreshListings();
+
+    } catch (error) {
+      console.error('Error duplicating listing:', error);
+      setError('Failed to duplicate listing. Please try again.');
     }
   };
 

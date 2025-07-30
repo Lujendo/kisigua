@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Map from '../Map';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface ListingDetailProps {
   listingId: string;
@@ -12,6 +13,7 @@ interface Listing {
   title: string;
   description: string;
   category: string;
+  userId: string;
   location: {
     street?: string;
     houseNumber?: string;
@@ -58,10 +60,56 @@ interface Listing {
 }
 
 const ListingDetail: React.FC<ListingDetailProps> = ({ listingId, onClose, onEdit }) => {
+  const { user, token } = useAuth();
   const [listing, setListing] = useState<Listing | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [updatingCover, setUpdatingCover] = useState(false);
+
+  // Check if current user owns this listing
+  const isOwner = user && listing && user.id === listing.userId;
+
+  // Function to set cover image
+  const handleSetCoverImage = async (imageIndex: number) => {
+    if (!listing || !token || !isOwner) return;
+
+    try {
+      setUpdatingCover(true);
+      const response = await fetch(`/api/listings/${listing.id}/cover`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          coverImageIndex: imageIndex
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update cover image');
+      }
+
+      // Update the local listing state to reflect the change
+      const updatedListing = { ...listing };
+      // Move the selected image to the front of the array
+      const selectedImage = updatedListing.images[imageIndex];
+      updatedListing.images.splice(imageIndex, 1);
+      updatedListing.images.unshift(selectedImage);
+      updatedListing.thumbnail = selectedImage;
+
+      setListing(updatedListing);
+      setCurrentImageIndex(0); // Reset to show the new cover image
+
+      alert('Cover image updated successfully!');
+    } catch (error) {
+      console.error('Error updating cover image:', error);
+      alert('Failed to update cover image. Please try again.');
+    } finally {
+      setUpdatingCover(false);
+    }
+  };
 
   useEffect(() => {
     const fetchListing = async () => {
@@ -247,25 +295,46 @@ const ListingDetail: React.FC<ListingDetailProps> = ({ listingId, onClose, onEdi
 
                 {/* Thumbnail Gallery */}
                 {listing.images.length > 1 && (
-                  <div className="flex space-x-2 overflow-x-auto">
-                    {listing.images.map((image, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setCurrentImageIndex(index)}
-                        className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
-                          index === currentImageIndex ? 'border-green-500' : 'border-gray-200'
-                        }`}
-                      >
-                        <img
-                          src={image}
-                          alt={`${listing.title} ${index + 1}`}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300&h=200&fit=crop';
-                          }}
-                        />
-                      </button>
-                    ))}
+                  <div className="space-y-3">
+                    <div className="flex space-x-2 overflow-x-auto">
+                      {listing.images.map((image, index) => (
+                        <div key={index} className="flex-shrink-0">
+                          <button
+                            onClick={() => setCurrentImageIndex(index)}
+                            className={`w-20 h-20 rounded-lg overflow-hidden border-2 ${
+                              index === currentImageIndex ? 'border-green-500' : 'border-gray-200'
+                            }`}
+                          >
+                            <img
+                              src={image}
+                              alt={`${listing.title} ${index + 1}`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300&h=200&fit=crop';
+                              }}
+                            />
+                          </button>
+
+                          {/* Set as Cover button for listing owner */}
+                          {isOwner && index !== 0 && (
+                            <button
+                              onClick={() => handleSetCoverImage(index)}
+                              disabled={updatingCover}
+                              className="mt-1 w-20 px-1 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {updatingCover ? 'Setting...' : 'Set Cover'}
+                            </button>
+                          )}
+
+                          {/* Cover badge for current cover image */}
+                          {index === 0 && (
+                            <div className="mt-1 w-20 px-1 py-1 text-xs bg-gray-600 text-white rounded text-center">
+                              Cover
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </>

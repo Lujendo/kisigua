@@ -494,10 +494,18 @@ app.delete("/api/listings/:id", authMiddleware, async (c) => {
 
 // Get user's listings (authenticated)
 app.get("/api/user/listings", authMiddleware, async (c) => {
-  const services = c.get('services');
-  const auth = c.get('auth');
-  const listings = await services.listingsService.getUserListings(auth.userId);
-  return c.json({ listings });
+  try {
+    const services = c.get('services');
+    const auth = c.get('auth');
+
+    // Get listings from database with images
+    const listings = await services.databaseService.getUserListings(auth.userId);
+
+    return c.json({ listings });
+  } catch (error) {
+    console.error('Error fetching user listings:', error);
+    return c.json({ error: "Failed to fetch user listings" }, 500);
+  }
 });
 
 // Admin: Get all listings
@@ -1126,6 +1134,155 @@ app.get("/health", async (c) => {
       timestamp: new Date().toISOString(),
       error: 'Health check failed'
     }, 503);
+  }
+});
+
+// Admin endpoint to populate sample images for existing listings
+app.post("/api/admin/populate-sample-images", authMiddleware, async (c) => {
+  try {
+    const services = c.get('services');
+    const auth = c.get('auth');
+
+    // Check if user is admin
+    if (auth.role !== 'admin') {
+      return c.json({ error: "Admin access required" }, 403);
+    }
+
+    // Sample images for different categories
+    const sampleImages = {
+      organic_farm: [
+        'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&h=600&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&h=600&fit=crop&q=80'
+      ],
+      local_product: [
+        'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&h=600&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1506976785307-8732e854ad03?w=800&h=600&fit=crop&q=80'
+      ],
+      water_source: [
+        'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&h=600&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=800&h=600&fit=crop&q=80'
+      ],
+      vending_machine: [
+        'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=800&h=600&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=800&h=600&fit=crop&q=80'
+      ],
+      craft: [
+        'https://images.unsplash.com/photo-1452860606245-08befc0ff44b?w=800&h=600&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=800&h=600&fit=crop&q=80'
+      ],
+      sustainable_good: [
+        'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800&h=600&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=800&h=600&fit=crop&q=80'
+      ]
+    };
+
+    // Get all listings
+    const searchResult = await services.databaseService.searchListings({
+      query: '',
+      filters: {},
+      page: 1,
+      limit: 100
+    });
+
+    const listings = searchResult.listings;
+    let updatedCount = 0;
+
+    for (const listing of listings) {
+      // Check if listing already has images
+      const existingImages = await services.databaseService.getListingImages(listing.id);
+      console.log(`Listing ${listing.id} (${listing.title}) has ${existingImages.length} existing images`);
+
+      // For now, let's force update to ensure we have sample images
+      // if (existingImages.length > 0) {
+      //   continue; // Skip if already has images
+      // }
+
+      // Get sample images for this category
+      const categoryImages = sampleImages[listing.category as keyof typeof sampleImages] || sampleImages.sustainable_good;
+      const imagesToAdd = categoryImages.slice(0, 2); // Add 2 images per listing
+
+      // Add images to the listing_images table
+      for (let i = 0; i < imagesToAdd.length; i++) {
+        const imageUrl = imagesToAdd[i];
+        const imageId = `img_${listing.id}_${i + 1}_${Date.now()}`;
+
+        await services.databaseService.db.prepare(`
+          INSERT INTO listing_images (id, listing_id, image_url, image_key, sort_order)
+          VALUES (?, ?, ?, ?, ?)
+        `).bind(imageId, listing.id, imageUrl, `sample/${imageId}.jpg`, i).run();
+      }
+
+      updatedCount++;
+    }
+
+    return c.json({
+      success: true,
+      message: `Added sample images to ${updatedCount} listings`,
+      totalListings: listings.length,
+      updatedListings: updatedCount
+    });
+
+  } catch (error) {
+    console.error('Error populating sample images:', error);
+    return c.json({ error: "Failed to populate sample images" }, 500);
+  }
+});
+
+// Update listing cover image
+app.put("/api/listings/:id/cover", authMiddleware, async (c) => {
+  try {
+    const services = c.get('services');
+    const auth = c.get('auth');
+    const listingId = c.req.param('id');
+    const { coverImageIndex } = await c.req.json();
+
+    // Get the listing to check ownership
+    const listing = await services.databaseService.getFullListingById(listingId);
+    if (!listing) {
+      return c.json({ error: "Listing not found" }, 404);
+    }
+
+    // Check if user owns the listing or is admin
+    if (listing.userId !== auth.userId && auth.role !== 'admin') {
+      return c.json({ error: "Unauthorized" }, 403);
+    }
+
+    // Validate the cover image index
+    if (typeof coverImageIndex !== 'number' || coverImageIndex < 0 || coverImageIndex >= listing.images.length) {
+      return c.json({ error: "Invalid cover image index" }, 400);
+    }
+
+    // Get all listing images from database
+    const images = await services.databaseService.getListingImages(listingId);
+    if (images.length === 0) {
+      return c.json({ error: "No images found for this listing" }, 400);
+    }
+
+    // Update sort_order to make the selected image the cover (sort_order = 0)
+    // First, increment all sort_orders
+    await services.databaseService.db.prepare(`
+      UPDATE listing_images
+      SET sort_order = sort_order + 1
+      WHERE listing_id = ?
+    `).bind(listingId).run();
+
+    // Then set the selected image to sort_order = 0
+    const selectedImageUrl = listing.images[coverImageIndex];
+    await services.databaseService.db.prepare(`
+      UPDATE listing_images
+      SET sort_order = 0
+      WHERE listing_id = ? AND image_url = ?
+    `).bind(listingId, selectedImageUrl).run();
+
+    return c.json({
+      success: true,
+      message: "Cover image updated successfully",
+      coverImage: selectedImageUrl
+    });
+
+  } catch (error) {
+    console.error('Error updating cover image:', error);
+    return c.json({ error: "Failed to update cover image" }, 500);
   }
 });
 

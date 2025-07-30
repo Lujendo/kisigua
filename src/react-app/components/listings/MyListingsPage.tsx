@@ -120,7 +120,7 @@ const MyListingsPage: React.FC = () => {
               socials: {}
             },
             images: listing.images || [],
-            thumbnail: listing.images?.[0] || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300&h=200&fit=crop',
+            thumbnail: listing.images?.[0] || undefined,
             price: listing.priceRange === 'low' ? 10 : listing.priceRange === 'medium' ? 25 : listing.priceRange === 'high' ? 50 : undefined,
             priceType: listing.priceRange ? 'paid' : 'free',
             tags: listing.tags || [],
@@ -158,11 +158,25 @@ const MyListingsPage: React.FC = () => {
     setSelectedListingId(listingId);
   };
 
-  const handleEditListing = (listingId: string) => {
-    const listing = listings.find(l => l.id === listingId);
-    if (listing) {
-      setEditingListing(listing);
+  const handleEditListing = async (listingId: string) => {
+    try {
+      // Fetch the complete listing data including images
+      const response = await fetch(`/api/listings/${listingId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch listing details');
+      }
+
+      const data = await response.json();
+      setEditingListing(data.listing);
       setShowCreateForm(true);
+    } catch (error) {
+      console.error('Error fetching listing for edit:', error);
+      // Fallback to the listing from the list
+      const listing = listings.find(l => l.id === listingId);
+      if (listing) {
+        setEditingListing(listing);
+        setShowCreateForm(true);
+      }
     }
   };
 
@@ -231,9 +245,12 @@ const MyListingsPage: React.FC = () => {
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
       <div className="relative">
         <img
-          src={listing.thumbnail}
+          src={listing.images?.[0] || listing.thumbnail || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=300&fit=crop'}
           alt={listing.title}
           className="w-full h-48 object-cover"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=300&fit=crop';
+          }}
         />
         <div className="absolute top-2 left-2">
           <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(listing.status)}`}>

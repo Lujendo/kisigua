@@ -238,7 +238,7 @@ const ListingDetail: React.FC<ListingDetailProps> = ({ listingId, onClose, onEdi
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-      <div className="bg-white rounded-lg w-full max-w-7xl h-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden shadow-2xl">
+      <div className="bg-white rounded-lg w-full max-w-7xl h-full max-h-[98vh] sm:max-h-[95vh] overflow-hidden shadow-2xl flex flex-col">
         {/* Header */}
         <div className="sticky top-0 bg-gradient-to-r from-green-50 to-blue-50 border-b border-gray-200 px-4 sm:px-6 py-4 sm:py-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">

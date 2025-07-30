@@ -139,10 +139,9 @@ export class DatabaseService {
 
   // Listing operations
   async createListing(listingData: CreateListingRequest & { id: string; user_id: string }): Promise<DatabaseListing> {
-    // Transform category from API format (organic_farm) to database format (cat_organic_farm)
-    const dbCategory = listingData.category.startsWith('cat_')
-      ? listingData.category
-      : `cat_${listingData.category}`;
+    // Use category ID as-is (no transformation needed)
+    // The frontend sends the actual category ID from the database
+    const categoryId = listingData.category;
 
     const stmt = this.db.prepare(`
       INSERT INTO listings (
@@ -158,7 +157,7 @@ export class DatabaseService {
       listingData.user_id,
       listingData.title,
       listingData.description,
-      dbCategory,
+      categoryId,
       listingData.location.latitude,
       listingData.location.longitude,
       listingData.location.address,
@@ -218,11 +217,8 @@ export class DatabaseService {
     }
     if (updates.category) {
       updateFields.push('category = ?');
-      // Transform category from API format to database format
-      const dbCategory = updates.category.startsWith('cat_')
-        ? updates.category
-        : `cat_${updates.category}`;
-      values.push(dbCategory);
+      // Use category ID as-is (no transformation needed)
+      values.push(updates.category);
     }
     if (updates.location) {
       updateFields.push('latitude = ?', 'longitude = ?', 'address = ?', 'city = ?', 'country = ?');
@@ -322,11 +318,8 @@ export class DatabaseService {
 
       if (filters.category && filters.category.length > 0) {
         sql += ` AND l.category IN (${filters.category.map(() => '?').join(',')})`;
-        // Transform category filters from API format to database format
-        const dbCategories = filters.category.map(cat =>
-          cat.startsWith('cat_') ? cat : `cat_${cat}`
-        );
-        params.push(...dbCategories);
+        // Use category IDs as-is (no transformation needed)
+        params.push(...filters.category);
       }
 
       if (filters.isOrganic !== undefined) {
@@ -587,16 +580,14 @@ export class DatabaseService {
     // Fetch images for this listing
     const images = await this.getListingImages(dbListing.id);
 
-    // Transform category from database format (cat_organic_farm) to API format (organic_farm)
-    const apiCategory = dbListing.category.startsWith('cat_')
-      ? dbListing.category.substring(4)
-      : dbListing.category;
+    // Use category ID as-is (no transformation needed)
+    // The database stores the actual category IDs that should be returned to the frontend
 
     return {
       id: dbListing.id,
       title: dbListing.title,
       description: dbListing.description,
-      category: apiCategory as any, // Cast to maintain type compatibility
+      category: dbListing.category as any, // Cast to maintain type compatibility
       status: dbListing.status,
       location: {
         latitude: dbListing.latitude,

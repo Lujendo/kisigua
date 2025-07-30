@@ -160,8 +160,7 @@ function AppContent() {
           {currentPage === 'dashboard' && (
             <Dashboard
               onNavigateToSearch={() => setCurrentPage('search')}
-              onNavigateToMyListings={() => setCurrentPage('listings')}
-              onNavigateToExplore={() => setCurrentPage('search')}
+              onNavigateToSubscription={() => setCurrentPage('subscription')}
             />
           )}
 

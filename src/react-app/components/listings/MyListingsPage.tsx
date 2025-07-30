@@ -163,6 +163,16 @@ const MyListingsPage: React.FC = () => {
     fetchUserListings();
   }, [token]);
 
+  // Check for edit location ID from localStorage (from Dashboard navigation)
+  useEffect(() => {
+    const editLocationId = localStorage.getItem('editLocationId');
+    if (editLocationId && listings.length > 0) {
+      localStorage.removeItem('editLocationId');
+      // Automatically open edit form for this location
+      handleEditListing(editLocationId);
+    }
+  }, [listings]); // Run after listings are loaded
+
   // Function to refresh listings data without full page reload
   const refreshListings = async () => {
     try {

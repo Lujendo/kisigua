@@ -41,9 +41,10 @@ interface SearchHistory {
 interface DashboardProps {
   onNavigateToSearch?: () => void;
   onNavigateToSubscription?: () => void;
+  onNavigateToMyListings?: () => void;
 }
 
-const Dashboard = ({}: DashboardProps) => {
+const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
   const { user } = useAuth();
   const { toggleFavorite, isFavorite } = useFavorites();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'admin'>('dashboard');
@@ -329,6 +330,17 @@ const Dashboard = ({}: DashboardProps) => {
     setSelectedLocation(locationId);
   };
 
+  const handleEditLocation = (locationId: string) => {
+    // Close the location detail modal
+    setSelectedLocation(null);
+    // Navigate to My Listings page where the edit functionality is
+    if (onNavigateToMyListings) {
+      onNavigateToMyListings();
+      // Store the location ID to edit in localStorage so MyListingsPage can pick it up
+      localStorage.setItem('editLocationId', locationId);
+    }
+  };
+
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
       <svg
@@ -532,20 +544,42 @@ const Dashboard = ({}: DashboardProps) => {
                 </div>
               ) : viewMode === 'map' ? (
                 <div className="h-96 rounded-lg overflow-hidden">
-                  <Map
-                    center={[40.7128, -74.0060]} // Default to NYC
-                    zoom={10}
-                    height="100%"
-                    markers={currentItems.map(location => ({
+                  {(() => {
+                    // Filter locations with valid coordinates
+                    const validLocations = currentItems.filter(location =>
+                      location.location.coordinates.lat !== 0 &&
+                      location.location.coordinates.lng !== 0 &&
+                      !isNaN(location.location.coordinates.lat) &&
+                      !isNaN(location.location.coordinates.lng)
+                    );
+
+                    // Calculate center point from valid locations
+                    let mapCenter: [number, number] = [52.5200, 13.4050]; // Default to Berlin
+                    if (validLocations.length > 0) {
+                      const avgLat = validLocations.reduce((sum, loc) => sum + loc.location.coordinates.lat, 0) / validLocations.length;
+                      const avgLng = validLocations.reduce((sum, loc) => sum + loc.location.coordinates.lng, 0) / validLocations.length;
+                      mapCenter = [avgLat, avgLng];
+                    }
+
+                    const markers = validLocations.map(location => ({
                       position: [location.location.coordinates.lat, location.location.coordinates.lng] as [number, number],
                       title: location.title,
                       description: location.description
-                    }))}
-                    onMarkerClick={(marker) => {
-                      const location = currentItems.find(loc => loc.title === marker.title);
-                      if (location) handleLocationClick(location.id);
-                    }}
-                  />
+                    }));
+
+                    return (
+                      <Map
+                        center={mapCenter}
+                        zoom={validLocations.length > 1 ? 10 : 13}
+                        height="100%"
+                        markers={markers}
+                        onMarkerClick={(marker) => {
+                          const location = validLocations.find(loc => loc.title === marker.title);
+                          if (location) handleLocationClick(location.id);
+                        }}
+                      />
+                    );
+                  })()}
                 </div>
               ) : viewMode === 'list' ? (
                 <div className="space-y-4">
@@ -748,6 +782,7 @@ const Dashboard = ({}: DashboardProps) => {
         <LocationDetail
           locationId={selectedLocation}
           onClose={() => setSelectedLocation(null)}
+          onEdit={handleEditLocation}
         />
       )}
     </div>

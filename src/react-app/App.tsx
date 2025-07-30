@@ -161,6 +161,7 @@ function AppContent() {
             <Dashboard
               onNavigateToSearch={() => setCurrentPage('search')}
               onNavigateToSubscription={() => setCurrentPage('subscription')}
+              onNavigateToMyListings={() => setCurrentPage('listings')}
             />
           )}
 

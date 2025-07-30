@@ -12,7 +12,7 @@ INSERT INTO listings (
 -- 1. Organic Farm Experience
 ('listing-006', 'user-001', 'Organic Farm Experience',
  'Visit our sustainable organic farm and learn about permaculture practices. Enjoy fresh produce and connect with nature.',
- 'organic_farm', 'active',
+ 'cat_organic_farm', 'active',
  52.5200, 13.4050, '123 Farm Road', 'Green Valley', 'Germany',
  'info@organicfarm.de', 'https://organicfarm.de', true, true,
  124, true, '2024-01-15T00:00:00Z', '2024-01-15T00:00:00Z'),
@@ -20,7 +20,7 @@ INSERT INTO listings (
 -- 2. Community Garden Workshop
 ('listing-007', 'premium-001', 'Community Garden Workshop',
  'Join our weekly community garden workshop. Learn to grow your own vegetables and herbs in an urban setting.',
- 'organic_farm', 'active',
+ 'cat_organic_farm', 'active',
  52.5170, 13.3889, '456 Community St', 'Berlin', 'Germany',
  'info@communitygarden.de', 'https://communitygarden.de', true, true,
  89, false, '2024-01-10T00:00:00Z', '2024-01-10T00:00:00Z'),
@@ -28,7 +28,7 @@ INSERT INTO listings (
 -- 3. Traditional Cooking Class
 ('listing-008', 'supporter-001', 'Traditional Cooking Class',
  'Learn to cook traditional local dishes using ingredients from our region. Small groups, authentic recipes.',
- 'local_product', 'active',
+ 'cat_local_product', 'active',
  48.1351, 11.5820, '789 Kitchen Lane', 'Munich', 'Germany',
  'chef@cookingclass.de', 'https://cookingclass.de', false, true,
  156, true, '2024-01-08T00:00:00Z', '2024-01-08T00:00:00Z'),
@@ -36,7 +36,7 @@ INSERT INTO listings (
 -- 4. Eco-Friendly Accommodation
 ('listing-009', 'admin-001', 'Eco-Friendly Accommodation',
  'Stay in our eco-friendly guesthouse powered by renewable energy. Perfect for sustainable travelers.',
- 'sustainable_good', 'active',
+ 'cat_sustainable_good', 'active',
  53.5511, 9.9937, '321 Green Street', 'Hamburg', 'Germany',
  'stay@ecoguesthouse.de', 'https://ecoguesthouse.de', false, true,
  203, false, '2024-01-05T00:00:00Z', '2024-01-05T00:00:00Z'),
@@ -44,7 +44,7 @@ INSERT INTO listings (
 -- 5. Local Art Gallery Tour
 ('listing-010', 'user-001', 'Local Art Gallery Tour',
  'Discover local artists and their sustainable art practices. Interactive tour with the artists themselves.',
- 'craft', 'active',
+ 'cat_craft', 'active',
  51.0504, 13.7373, '654 Art Avenue', 'Dresden', 'Germany',
  'art@gallery.de', 'https://artgallery.de', false, true,
  67, false, '2024-01-03T00:00:00Z', '2024-01-03T00:00:00Z');
@@ -59,7 +59,7 @@ INSERT INTO listings (
 -- 6. Fresh Mountain Spring Water
 ('listing-011', 'premium-001', 'Fresh Mountain Spring Water',
  'Natural spring water source accessible to the public. Clean, tested water available 24/7. Perfect for filling bottles and containers.',
- 'water_source', 'active',
+ 'cat_water_source', 'active',
  48.1351, 11.5820, 'Bergweg 45', 'Munich', 'Germany', 'Bavaria',
  null, 'water@munich.de', 'https://munich-water.de', false, true,
  156, false, '2024-01-20T00:00:00Z', '2024-01-20T00:00:00Z'),
@@ -67,7 +67,7 @@ INSERT INTO listings (
 -- 7. Healthy Snack Vending Machine
 ('listing-012', 'supporter-001', 'Healthy Snack Vending Machine',
  'Automated vending machine offering organic snacks, fresh fruits, and healthy beverages. Available 24/7 with contactless payment options.',
- 'vending_machine', 'active',
+ 'cat_vending_machine', 'active',
  50.1109, 8.6821, 'Universitätsstraße 12', 'Frankfurt', 'Germany', 'Hesse',
  null, 'support@healthysnacks.de', 'https://healthysnacks.de', true, true,
  67, false, '2024-01-25T00:00:00Z', '2024-01-25T00:00:00Z'),
@@ -75,7 +75,7 @@ INSERT INTO listings (
 -- 8. Community Garden Fresh Produce
 ('listing-013', 'admin-001', 'Community Garden Fresh Produce',
  'Fresh vegetables and herbs grown by our community garden members. Seasonal produce available for pickup.',
- 'organic_farm', 'active',
+ 'cat_organic_farm', 'active',
  50.9375, 6.9603, 'Gartenweg 88', 'Cologne', 'Germany', 'North Rhine-Westphalia',
  null, 'community@gardencoop.de', 'https://gardencoop.de', true, true,
  76, false, '2024-01-18T00:00:00Z', '2024-01-18T00:00:00Z'),
@@ -83,7 +83,7 @@ INSERT INTO listings (
 -- 9. Natural Spring Water Station
 ('listing-014', 'user-001', 'Natural Spring Water Station',
  'Public water station with filtered natural spring water. Free access for everyone. Water quality tested weekly.',
- 'water_source', 'active',
+ 'cat_water_source', 'active',
  49.4521, 11.0767, 'Parkstraße 15', 'Nuremberg', 'Germany', 'Bavaria',
  null, 'water@nuremberg.de', null, false, true,
  112, false, '2024-01-22T00:00:00Z', '2024-01-22T00:00:00Z'),
@@ -91,7 +91,7 @@ INSERT INTO listings (
 -- 10. Artisan Bread & Pastries
 ('listing-015', 'premium-001', 'Artisan Bread & Pastries',
  'Traditional German bread and pastries made with organic flour and natural ingredients. Fresh daily baking using time-honored recipes.',
- 'local_product', 'active',
+ 'cat_local_product', 'active',
  51.3397, 12.3731, 'Bäckerstraße 42', 'Leipzig', 'Germany', 'Saxony',
  '+49 341 5566778', 'orders@traditionalbakery.de', 'https://traditionalbakery.de', true, true,
  203, false, '2024-01-08T00:00:00Z', '2024-01-08T00:00:00Z');

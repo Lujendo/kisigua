@@ -401,9 +401,20 @@ const MyListingsPage: React.FC = () => {
       price: editingListing?.price?.toString() || '',
       tags: editingListing?.tags?.join(', ') || ''
     });
-    const [images, setImages] = useState<string[]>(editingListing?.images || []);
+    const [images, setImages] = useState<string[]>([]);
     const [categories, setCategories] = useState<Array<{ id: string; label: string; color?: string; icon?: string }>>([]);
     const [loadingCategories, setLoadingCategories] = useState(true);
+
+    // Initialize images when editingListing changes
+    useEffect(() => {
+      if (editingListing?.images) {
+        console.log('Setting images from editingListing:', editingListing.images);
+        setImages(editingListing.images);
+      } else {
+        console.log('Clearing images (no editingListing or no images)');
+        setImages([]);
+      }
+    }, [editingListing]);
 
     const countries = [
       'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Australia', 'Austria',
@@ -896,8 +907,9 @@ const MyListingsPage: React.FC = () => {
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-4">Images</label>
                         <ListingImageUpload
+                          key={editingListing?.id || 'new'}
                           onImagesChange={setImages}
-                          initialImages={editingListing?.images || []}
+                          initialImages={images}
                         />
                         <p className="text-sm text-gray-500 mt-2">
                           Upload high-quality images that showcase your location. The first image will be used as the main thumbnail.

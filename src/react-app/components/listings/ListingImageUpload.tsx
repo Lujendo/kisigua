@@ -25,8 +25,10 @@ const ListingImageUpload: React.FC<ListingImageUploadProps> = ({
 
   // Update images when initialImages changes (for edit mode)
   React.useEffect(() => {
+    console.log('ListingImageUpload: initialImages changed:', initialImages);
     setImages(initialImages);
-  }, [initialImages]);
+    onImagesChange(initialImages);
+  }, [initialImages, onImagesChange]);
 
   const handleFileSelect = async (files: FileList) => {
     if (files.length === 0) return;

@@ -139,9 +139,10 @@ export class DatabaseService {
 
   // Listing operations
   async createListing(listingData: CreateListingRequest & { id: string; user_id: string }): Promise<DatabaseListing> {
-    // Use category ID as-is (no transformation needed)
-    // The frontend sends the actual category ID from the database
-    const categoryId = listingData.category;
+    // Transform category from API format (1753818080779_q2e6cq87ie) to database format (cat_1753818080779_q2e6cq87ie)
+    const dbCategory = listingData.category.startsWith('cat_')
+      ? listingData.category
+      : `cat_${listingData.category}`;
 
     const stmt = this.db.prepare(`
       INSERT INTO listings (
@@ -157,7 +158,7 @@ export class DatabaseService {
       listingData.user_id,
       listingData.title,
       listingData.description,
-      categoryId,
+      dbCategory,
       listingData.location.latitude,
       listingData.location.longitude,
       listingData.location.address,
@@ -217,8 +218,11 @@ export class DatabaseService {
     }
     if (updates.category) {
       updateFields.push('category = ?');
-      // Use category ID as-is (no transformation needed)
-      values.push(updates.category);
+      // Transform category from API format to database format
+      const dbCategory = updates.category.startsWith('cat_')
+        ? updates.category
+        : `cat_${updates.category}`;
+      values.push(dbCategory);
     }
     if (updates.location) {
       updateFields.push('latitude = ?', 'longitude = ?', 'address = ?', 'city = ?', 'country = ?');
@@ -318,8 +322,11 @@ export class DatabaseService {
 
       if (filters.category && filters.category.length > 0) {
         sql += ` AND l.category IN (${filters.category.map(() => '?').join(',')})`;
-        // Use category IDs as-is (no transformation needed)
-        params.push(...filters.category);
+        // Transform category filters from API format to database format
+        const dbCategories = filters.category.map(cat =>
+          cat.startsWith('cat_') ? cat : `cat_${cat}`
+        );
+        params.push(...dbCategories);
       }
 
       if (filters.isOrganic !== undefined) {
@@ -580,14 +587,16 @@ export class DatabaseService {
     // Fetch images for this listing
     const images = await this.getListingImages(dbListing.id);
 
-    // Use category ID as-is (no transformation needed)
-    // The database stores the actual category IDs that should be returned to the frontend
+    // Transform category from database format (cat_1753818080779_q2e6cq87ie) to API format (1753818080779_q2e6cq87ie)
+    const apiCategory = dbListing.category.startsWith('cat_')
+      ? dbListing.category.substring(4)
+      : dbListing.category;
 
     return {
       id: dbListing.id,
       title: dbListing.title,
       description: dbListing.description,
-      category: dbListing.category as any, // Cast to maintain type compatibility
+      category: apiCategory as any, // Cast to maintain type compatibility
       status: dbListing.status,
       location: {
         latitude: dbListing.latitude,

@@ -1220,7 +1220,7 @@ app.post("/api/admin/populate-sample-images", authMiddleware, async (c) => {
       return c.json({ error: "Admin access required" }, 403);
     }
 
-    // Sample images for different categories
+    // Sample images for different categories (API returns categories without cat_ prefix)
     const sampleImages = {
       organic_farm: [
         'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&h=600&fit=crop&q=80',

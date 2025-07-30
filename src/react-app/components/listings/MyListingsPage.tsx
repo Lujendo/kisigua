@@ -621,7 +621,7 @@ const MyListingsPage: React.FC = () => {
             setCategories(formattedCategories);
           } else {
             console.error('Failed to load categories');
-            // Fallback to hardcoded categories
+            // Fallback to hardcoded categories (using API format)
             setCategories([
               { id: 'organic_farm', label: 'Organic Farm' },
               { id: 'local_product', label: 'Local Product' },
@@ -633,7 +633,7 @@ const MyListingsPage: React.FC = () => {
           }
         } catch (error) {
           console.error('Error loading categories:', error);
-          // Fallback to hardcoded categories
+          // Fallback to hardcoded categories (using API format)
           setCategories([
             { id: 'organic_farm', label: 'Organic Farm' },
             { id: 'local_product', label: 'Local Product' },

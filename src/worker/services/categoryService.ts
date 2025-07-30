@@ -69,19 +69,26 @@ export class CategoryService {
       const stmt = this.db.prepare(query);
       const result = await stmt.all();
       
-      return result.results?.map((row: any) => ({
-        id: row.id as string,
-        name: row.name as string,
-        slug: row.slug as string,
-        description: row.description as string | undefined,
-        icon: row.icon as string | undefined,
-        color: (row.color as string) || '#10B981',
-        isActive: Boolean(row.isActive),
-        sortOrder: (row.sortOrder as number) || 0,
-        createdAt: row.createdAt as string,
-        updatedAt: row.updatedAt as string,
-        createdBy: row.createdBy as string | undefined
-      })) || [];
+      return result.results?.map((row: any) => {
+        // Transform category ID from database format (cat_organic_farm) to API format (organic_farm)
+        const apiId = (row.id as string).startsWith('cat_')
+          ? (row.id as string).substring(4)
+          : (row.id as string);
+
+        return {
+          id: apiId,
+          name: row.name as string,
+          slug: row.slug as string,
+          description: row.description as string | undefined,
+          icon: row.icon as string | undefined,
+          color: (row.color as string) || '#10B981',
+          isActive: Boolean(row.isActive),
+          sortOrder: (row.sortOrder as number) || 0,
+          createdAt: row.createdAt as string,
+          updatedAt: row.updatedAt as string,
+          createdBy: row.createdBy as string | undefined
+        };
+      }) || [];
     } catch (error) {
       console.error('Error fetching categories:', error);
       throw new Error('Failed to fetch categories');
@@ -91,19 +98,27 @@ export class CategoryService {
   // Get category by ID
   async getCategoryById(id: string): Promise<Category | null> {
     try {
+      // Transform API format ID to database format if needed
+      const dbId = id.startsWith('cat_') ? id : `cat_${id}`;
+
       const stmt = this.db.prepare(`
-        SELECT id, name, slug, description, icon, color, is_active as isActive, 
+        SELECT id, name, slug, description, icon, color, is_active as isActive,
                sort_order as sortOrder, created_at as createdAt, updated_at as updatedAt, created_by as createdBy
-        FROM categories 
+        FROM categories
         WHERE id = ?
       `);
-      
-      const result = await stmt.bind(id).first();
-      
+
+      const result = await stmt.bind(dbId).first();
+
       if (!result) return null;
-      
+
+      // Transform category ID from database format to API format
+      const apiId = (result.id as string).startsWith('cat_')
+        ? (result.id as string).substring(4)
+        : (result.id as string);
+
       return {
-        id: result.id as string,
+        id: apiId,
         name: result.name as string,
         slug: result.slug as string,
         description: result.description as string | undefined,

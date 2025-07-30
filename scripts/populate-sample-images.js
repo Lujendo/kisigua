@@ -9,7 +9,7 @@ const fetch = require('node-fetch');
 const fs = require('fs');
 const path = require('path');
 
-// Sample images for different categories
+// Sample images for different categories (API returns categories without cat_ prefix)
 const SAMPLE_IMAGES = {
   organic_farm: [
     'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&h=600&fit=crop&q=80',

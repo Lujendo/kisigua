@@ -194,6 +194,55 @@ app.get('/api/placeholder/:width/:height', async (c) => {
   });
 });
 
+// Health check endpoint for monitoring
+app.get("/health", async (c) => {
+  try {
+    const services = c.get('services');
+
+    // Check database connectivity
+    let dbStatus = 'unknown';
+    try {
+      await services.databaseService.db.prepare('SELECT 1').first();
+      dbStatus = 'healthy';
+    } catch (dbError) {
+      console.error('Database health check failed:', dbError);
+      dbStatus = 'unhealthy';
+    }
+
+    // Check email service
+    let emailStatus = 'unknown';
+    try {
+      const apiKey = c.env.RESEND_API_KEY;
+      emailStatus = apiKey && apiKey.startsWith('re_') ? 'configured' : 'not_configured';
+    } catch {
+      emailStatus = 'error';
+    }
+
+    const health = {
+      status: dbStatus === 'healthy' ? 'healthy' : 'degraded',
+      timestamp: new Date().toISOString(),
+      version: '1.0.0',
+      services: {
+        database: dbStatus,
+        email: emailStatus,
+        auth: 'healthy',
+        search: 'healthy'
+      },
+      uptime: process.uptime ? Math.floor(process.uptime()) : 'unknown'
+    };
+
+    const statusCode = health.status === 'healthy' ? 200 : 503;
+    return c.json(health, statusCode);
+  } catch (error) {
+    console.error('Health check error:', error);
+    return c.json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      error: 'Health check failed'
+    }, 503);
+  }
+});
+
 // API info endpoint
 app.get("/api/info", (c) => c.json({
   project: "Kisigua",

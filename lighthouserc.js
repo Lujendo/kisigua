@@ -2,10 +2,9 @@ module.exports = {
   ci: {
     collect: {
       url: [
-        'https://kisura.com',
-        'https://kisura.com/search',
-        'https://kisura.com/login',
-        'https://kisura.com/register'
+        'https://kisigua.com',
+        'https://kisigua.com/auth',
+        'https://kisigua.com/search'
       ],
       numberOfRuns: 3,
       settings: {

@@ -46,12 +46,8 @@ function AppContent() {
   // Auto-navigate after successful login
   useEffect(() => {
     if (isAuthenticated && currentPage === 'auth') {
-      // Set default page based on user role
-      if (user?.role === 'user') {
-        setCurrentPage('search');
-      } else {
-        setCurrentPage('dashboard');
-      }
+      // Redirect all users to Dashboard after successful login
+      setCurrentPage('dashboard');
     }
   }, [isAuthenticated, currentPage, user]);
 

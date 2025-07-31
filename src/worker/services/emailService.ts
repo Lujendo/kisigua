@@ -4,23 +4,40 @@ import { Resend } from 'resend';
 export class EmailService {
   private resend: Resend;
   private fromEmail: string;
+  private apiKey: string;
 
   constructor(apiKey: string, fromEmail: string = 'Kisigua <noreply@kisigua.com>') {
+    this.apiKey = apiKey;
     this.resend = new Resend(apiKey);
     this.fromEmail = fromEmail;
+
+    // Log API key status for debugging
+    console.log('EmailService initialized with API key:', apiKey ? (apiKey.startsWith('re_') ? 'VALID_FORMAT' : 'INVALID_FORMAT') : 'MISSING');
   }
 
   /**
    * Send email verification email to user
    */
   async sendVerificationEmail(
-    to: string, 
-    verificationToken: string, 
+    to: string,
+    verificationToken: string,
     userName: string
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
+      // Check if API key is properly configured
+      if (!this.apiKey || !this.apiKey.startsWith('re_')) {
+        console.error('❌ Invalid or missing Resend API key:', this.apiKey ? 'INVALID_FORMAT' : 'MISSING');
+        return {
+          success: false,
+          error: 'Email service not properly configured. Please contact support.'
+        };
+      }
+
       const verificationUrl = `https://kisigua.com/verify-email?token=${verificationToken}`;
-      
+
+      console.log('📧 Sending verification email to:', to);
+      console.log('🔗 Verification URL:', verificationUrl);
+
       const { data, error } = await this.resend.emails.send({
         from: this.fromEmail,
         to: [to],
@@ -29,14 +46,18 @@ export class EmailService {
       });
 
       if (error) {
-        console.error('Resend API error:', error);
+        console.error('❌ Resend API error:', error);
         return { success: false, error: error.message };
       }
 
+      console.log('✅ Verification email sent successfully:', data);
       return { success: true, messageId: data?.id };
     } catch (error) {
-      console.error('Email service error:', error);
-      return { success: false, error: 'Failed to send verification email' };
+      console.error('❌ Email service error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to send verification email'
+      };
     }
   }
 

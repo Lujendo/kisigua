@@ -233,9 +233,21 @@ export class AuthService {
 
   async register(userData: RegisterRequest): Promise<AuthResponse> {
     try {
-      // Check if user already exists
+      // Check if user already exists in database first
+      try {
+        const existingDbUser = await this.databaseService.getUserByEmail(userData.email);
+        if (existingDbUser) {
+          return {
+            success: false,
+            message: 'User with this email already exists'
+          };
+        }
+      } catch (dbError) {
+        console.log('Database check failed, checking in-memory users:', dbError);
+      }
+
+      // Also check in-memory users (fallback)
       const existingUser = Array.from(this.users.values()).find(u => u.email === userData.email);
-      
       if (existingUser) {
         return {
           success: false,
@@ -244,9 +256,9 @@ export class AuthService {
       }
 
       // Create new user
-      const userId = `user-${Date.now()}`;
+      const userId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const hashedPassword = bcrypt.hashSync(userData.password, 10);
-      
+
       const newUser: User = {
         id: userId,
         email: userData.email,
@@ -260,6 +272,25 @@ export class AuthService {
         updatedAt: new Date().toISOString(),
       };
 
+      // Save user to database
+      try {
+        await this.databaseService.createUser({
+          id: userId,
+          email: userData.email,
+          password_hash: hashedPassword,
+          role: 'user',
+          first_name: userData.firstName,
+          last_name: userData.lastName
+        });
+        console.log('✅ User saved to database:', userId);
+      } catch (dbError) {
+        console.error('❌ Failed to save user to database:', dbError);
+        // Still store in memory as fallback
+        this.users.set(userId, newUser);
+        console.log('✅ User saved to memory as fallback:', userId);
+      }
+
+      // Also store in memory for immediate access
       this.users.set(userId, newUser);
 
       // Generate JWT token with longer expiration

@@ -1,7 +1,8 @@
 import { EmailService } from './emailService';
 import {
   EmailLog,
-  User
+  User,
+  UserRole
 } from '../types/auth';
 
 export class EmailVerificationService {
@@ -34,47 +35,71 @@ export class EmailVerificationService {
    */
   async sendEmailVerification(user: User): Promise<{ success: boolean; error?: string }> {
     try {
+      console.log('📧 Starting email verification process for user:', user.email);
+
       // Generate verification token
       const token = this.generateToken();
       const tokenId = this.generateId();
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours
 
-      // Store token in database
-      await this.db.prepare(`
-        INSERT INTO email_verification_tokens (id, user_id, token, email, expires_at)
-        VALUES (?, ?, ?, ?, ?)
-      `).bind(tokenId, user.id, token, user.email, expiresAt).run();
+      console.log('🔑 Generated verification token:', token.substring(0, 10) + '...');
 
-      // Update user with verification token
-      await this.db.prepare(`
-        UPDATE users 
-        SET email_verification_token = ?, email_verification_expires_at = ?
-        WHERE id = ?
-      `).bind(token, expiresAt, user.id).run();
+      // Store token in database
+      try {
+        await this.db.prepare(`
+          INSERT INTO email_verification_tokens (id, user_id, token, email, expires_at)
+          VALUES (?, ?, ?, ?, ?)
+        `).bind(tokenId, user.id, token, user.email, expiresAt).run();
+        console.log('✅ Token stored in database');
+      } catch (dbError) {
+        console.error('❌ Failed to store token in database:', dbError);
+        return { success: false, error: 'Failed to store verification token' };
+      }
+
+      // Update user with verification token (handle missing columns gracefully)
+      try {
+        await this.db.prepare(`
+          UPDATE users
+          SET email_verification_token = ?, email_verification_expires_at = ?
+          WHERE id = ?
+        `).bind(token, expiresAt, user.id).run();
+        console.log('✅ User updated with verification token');
+      } catch (dbError) {
+        console.log('⚠️ Could not update user with verification token (columns may not exist):', dbError);
+        // Continue anyway - the token is stored in the tokens table
+      }
 
       // Send email
+      console.log('📤 Sending verification email...');
       const emailResult = await this.emailService.sendVerificationEmail(
         user.email,
         token,
         user.firstName
       );
 
+      console.log('📧 Email result:', emailResult);
+
       // Log email
-      await this.logEmail({
-        id: this.generateId(),
-        userId: user.id,
-        emailType: 'verification',
-        recipientEmail: user.email,
-        subject: 'Verify your Kisigua account',
-        resendMessageId: emailResult.messageId,
-        status: emailResult.success ? 'sent' : 'failed',
-        errorMessage: emailResult.error,
-        sentAt: new Date().toISOString()
-      });
+      try {
+        await this.logEmail({
+          id: this.generateId(),
+          userId: user.id,
+          emailType: 'verification',
+          recipientEmail: user.email,
+          subject: 'Verify your Kisigua account',
+          resendMessageId: emailResult.messageId,
+          status: emailResult.success ? 'sent' : 'failed',
+          errorMessage: emailResult.error,
+          sentAt: new Date().toISOString()
+        });
+        console.log('✅ Email logged successfully');
+      } catch (logError) {
+        console.error('⚠️ Failed to log email (continuing anyway):', logError);
+      }
 
       return emailResult;
     } catch (error) {
-      console.error('Send email verification error:', error);
+      console.error('❌ Send email verification error:', error);
       return { success: false, error: 'Failed to send verification email' };
     }
   }
@@ -266,30 +291,64 @@ export class EmailVerificationService {
    */
   async resendVerification(email: string): Promise<{ success: boolean; error?: string }> {
     try {
+      console.log('🔄 Resending verification for email:', email);
+
       // Find user by email - first try with email_verified column
       let userResult;
       try {
         userResult = await this.db.prepare(`
           SELECT * FROM users WHERE email = ? AND is_active = true AND (email_verified = false OR email_verified IS NULL)
         `).bind(email).first();
+        console.log('✅ User found with email_verified query');
       } catch (dbError) {
         // If email_verified column doesn't exist, fall back to simpler query
-        console.log('email_verified column not found, using fallback query');
+        console.log('⚠️ email_verified column not found, using fallback query');
         userResult = await this.db.prepare(`
           SELECT * FROM users WHERE email = ? AND is_active = true
         `).bind(email).first();
+        console.log('✅ User found with fallback query');
       }
 
       if (!userResult) {
-        return { success: false, error: 'User not found' };
+        console.log('❌ User not found in database for email:', email);
+        return { success: false, error: 'User not found or already verified' };
       }
+
+      console.log('👤 Found user:', { id: userResult.id, email: userResult.email });
 
       // Check if user is already verified (if column exists)
       if (userResult.email_verified === true) {
+        console.log('⚠️ User email is already verified');
         return { success: false, error: 'Email is already verified' };
       }
 
-      return await this.sendEmailVerification(userResult as unknown as User);
+      // Convert database user to User type
+      const user: User = {
+        id: userResult.id as string,
+        email: userResult.email as string,
+        password: userResult.password_hash as string,
+        role: userResult.role as UserRole,
+        firstName: userResult.first_name as string,
+        lastName: userResult.last_name as string,
+        emailVerified: false,
+        isActive: Boolean(userResult.is_active),
+        createdAt: userResult.created_at as string,
+        updatedAt: userResult.updated_at as string,
+        lastLoginAt: userResult.last_login_at as string
+      };
+
+      console.log('📧 Sending verification email to user:', user.firstName, user.email);
+
+      // Send verification email
+      const result = await this.sendEmailVerification(user);
+
+      if (result.success) {
+        console.log('✅ Verification email resent successfully');
+      } else {
+        console.log('❌ Failed to resend verification email:', result.error);
+      }
+
+      return result;
     } catch (error) {
       console.error('Resend verification error:', error);
       return { success: false, error: 'Failed to resend verification email' };

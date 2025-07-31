@@ -110,14 +110,25 @@ export class EmailVerificationService {
         WHERE token = ?
       `).bind(token).run();
 
-      // Update user as verified
-      await this.db.prepare(`
-        UPDATE users 
-        SET email_verified = true, 
-            email_verification_token = NULL, 
-            email_verification_expires_at = NULL
-        WHERE id = ?
-      `).bind(tokenResult.user_id).run();
+      // Update user as verified - handle case where email_verified column might not exist
+      try {
+        await this.db.prepare(`
+          UPDATE users
+          SET email_verified = true,
+              email_verification_token = NULL,
+              email_verification_expires_at = NULL
+          WHERE id = ?
+        `).bind(tokenResult.user_id).run();
+      } catch (dbError) {
+        // If email_verified column doesn't exist, just update the token fields
+        console.log('email_verified column not found, updating available fields only');
+        await this.db.prepare(`
+          UPDATE users
+          SET email_verification_token = NULL,
+              email_verification_expires_at = NULL
+          WHERE id = ?
+        `).bind(tokenResult.user_id).run();
+      }
 
       // Send welcome email
       await this.emailService.sendWelcomeEmail(
@@ -255,13 +266,27 @@ export class EmailVerificationService {
    */
   async resendVerification(email: string): Promise<{ success: boolean; error?: string }> {
     try {
-      // Find user by email
-      const userResult = await this.db.prepare(`
-        SELECT * FROM users WHERE email = ? AND is_active = true AND email_verified = false
-      `).bind(email).first();
+      // Find user by email - first try with email_verified column
+      let userResult;
+      try {
+        userResult = await this.db.prepare(`
+          SELECT * FROM users WHERE email = ? AND is_active = true AND (email_verified = false OR email_verified IS NULL)
+        `).bind(email).first();
+      } catch (dbError) {
+        // If email_verified column doesn't exist, fall back to simpler query
+        console.log('email_verified column not found, using fallback query');
+        userResult = await this.db.prepare(`
+          SELECT * FROM users WHERE email = ? AND is_active = true
+        `).bind(email).first();
+      }
 
       if (!userResult) {
-        return { success: false, error: 'User not found or already verified' };
+        return { success: false, error: 'User not found' };
+      }
+
+      // Check if user is already verified (if column exists)
+      if (userResult.email_verified === true) {
+        return { success: false, error: 'Email is already verified' };
       }
 
       return await this.sendEmailVerification(userResult as unknown as User);

@@ -46,9 +46,18 @@ interface Env {
 const app = new Hono<{ Bindings: Env }>();
 
 // Initialize services (will be done per request to access bindings)
-function initializeServices(env: Env) {
+async function initializeServices(env: Env) {
   console.log('=== INITIALIZING SERVICES ===');
   const databaseService = new DatabaseService(env.DB);
+
+  // Ensure email verification schema exists
+  try {
+    await databaseService.ensureEmailVerificationSchema();
+    console.log('Email verification schema check completed');
+  } catch (error) {
+    console.error('Email verification schema check failed:', error);
+  }
+
   const storageService = new StorageService(env.FILES, env.DB, env.R2_BUCKET_NAME, env.R2_PUBLIC_URL);
   const analyticsService = new AnalyticsService(env.ANALYTICS, env.DB);
   const categoryService = new CategoryService(env.DB);
@@ -98,7 +107,7 @@ app.use("*", cors({
 
 // Middleware to initialize services and add to context
 app.use("*", async (c, next) => {
-  const services = initializeServices(c.env);
+  const services = await initializeServices(c.env);
   c.set('services', services);
 
   // Track page view for analytics

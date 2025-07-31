@@ -37,6 +37,116 @@ export class DatabaseService {
     this.db = database;
   }
 
+  // Ensure email verification columns exist
+  async ensureEmailVerificationSchema(): Promise<void> {
+    try {
+      // Try to add email verification columns if they don't exist
+      await this.db.prepare(`
+        ALTER TABLE users ADD COLUMN email_verified BOOLEAN NOT NULL DEFAULT false
+      `).run();
+      console.log('Added email_verified column');
+    } catch (error) {
+      // Column already exists or other error - this is expected
+      console.log('email_verified column already exists or error:', error);
+    }
+
+    try {
+      await this.db.prepare(`
+        ALTER TABLE users ADD COLUMN email_verification_token TEXT
+      `).run();
+      console.log('Added email_verification_token column');
+    } catch (error) {
+      console.log('email_verification_token column already exists or error:', error);
+    }
+
+    try {
+      await this.db.prepare(`
+        ALTER TABLE users ADD COLUMN email_verification_expires_at DATETIME
+      `).run();
+      console.log('Added email_verification_expires_at column');
+    } catch (error) {
+      console.log('email_verification_expires_at column already exists or error:', error);
+    }
+
+    try {
+      await this.db.prepare(`
+        ALTER TABLE users ADD COLUMN password_reset_token TEXT
+      `).run();
+      console.log('Added password_reset_token column');
+    } catch (error) {
+      console.log('password_reset_token column already exists or error:', error);
+    }
+
+    try {
+      await this.db.prepare(`
+        ALTER TABLE users ADD COLUMN password_reset_expires_at DATETIME
+      `).run();
+      console.log('Added password_reset_expires_at column');
+    } catch (error) {
+      console.log('password_reset_expires_at column already exists or error:', error);
+    }
+
+    // Create email verification tokens table if it doesn't exist
+    try {
+      await this.db.prepare(`
+        CREATE TABLE IF NOT EXISTS email_verification_tokens (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          token TEXT NOT NULL UNIQUE,
+          email TEXT NOT NULL,
+          expires_at DATETIME NOT NULL,
+          used_at DATETIME,
+          created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+      `).run();
+      console.log('Created email_verification_tokens table');
+    } catch (error) {
+      console.log('email_verification_tokens table creation error:', error);
+    }
+
+    // Create password reset tokens table if it doesn't exist
+    try {
+      await this.db.prepare(`
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          token TEXT NOT NULL UNIQUE,
+          email TEXT NOT NULL,
+          expires_at DATETIME NOT NULL,
+          used_at DATETIME,
+          created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+      `).run();
+      console.log('Created password_reset_tokens table');
+    } catch (error) {
+      console.log('password_reset_tokens table creation error:', error);
+    }
+
+    // Create email logs table if it doesn't exist
+    try {
+      await this.db.prepare(`
+        CREATE TABLE IF NOT EXISTS email_logs (
+          id TEXT PRIMARY KEY,
+          user_id TEXT,
+          email_type TEXT NOT NULL CHECK (email_type IN ('verification', 'password_reset', 'welcome', 'notification')),
+          recipient_email TEXT NOT NULL,
+          subject TEXT NOT NULL,
+          resend_message_id TEXT,
+          status TEXT NOT NULL DEFAULT 'sent' CHECK (status IN ('sent', 'delivered', 'failed', 'bounced')),
+          error_message TEXT,
+          sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          delivered_at DATETIME,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+        )
+      `).run();
+      console.log('Created email_logs table');
+    } catch (error) {
+      console.log('email_logs table creation error:', error);
+    }
+  }
+
   // User operations
   async createUser(userData: {
     id: string;

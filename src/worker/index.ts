@@ -659,6 +659,31 @@ app.get("/api/auth/me", authMiddleware, async (c) => {
   return c.json({ user });
 });
 
+// Test endpoint to debug database users
+app.get("/api/test/database-users", authMiddleware, roleMiddleware(['admin']), async (c) => {
+  try {
+    const services = c.get('services');
+    console.log('🔍 Testing database users endpoint...');
+    const users = await services.databaseService.getAllUsers();
+    console.log('📊 Database users result:', users.length, 'users found');
+    return c.json({
+      source: 'databaseService.getAllUsers()',
+      count: users.length,
+      users: users.map((u: any) => ({
+        id: u.id,
+        email: u.email,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        isActive: u.isActive,
+        isActiveType: typeof u.isActive
+      }))
+    });
+  } catch (error) {
+    console.error('❌ Database users test error:', error);
+    return c.json({ error: 'Database users test failed', details: error instanceof Error ? error.message : String(error) }, 500);
+  }
+});
+
 // Admin only route - get all users (removed duplicate - using database version below)
 
 // Admin only route - update user role

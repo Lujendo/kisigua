@@ -24,6 +24,7 @@ export interface DatabaseListing extends Omit<Listing, 'location' | 'contactInfo
   is_certified: boolean;
   certification_details?: string;
   price_range?: string;
+  hide_address: boolean;
   user_id: string;
   created_at: string;
   updated_at: string;
@@ -151,8 +152,8 @@ export class DatabaseService {
         id, user_id, title, description, category, status, latitude, longitude,
         address, street, house_number, city, region, country, postal_code,
         contact_email, contact_phone, contact_website, is_organic, is_certified,
-        certification_details, price_range, operating_hours
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        certification_details, price_range, operating_hours, hide_address
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     // Extract street and house number from location data
@@ -182,7 +183,8 @@ export class DatabaseService {
       listingData.isCertified || false,
       listingData.certificationDetails || null,
       listingData.priceRange || null,
-      listingData.operatingHours ? JSON.stringify(listingData.operatingHours) : null
+      listingData.operatingHours ? JSON.stringify(listingData.operatingHours) : null,
+      listingData.hideAddress || false
     ).run();
 
     // Add tags if provided
@@ -204,12 +206,12 @@ export class DatabaseService {
     return result as DatabaseListing | null;
   }
 
-  async getFullListingById(listingId: string): Promise<Listing | null> {
+  async getFullListingById(listingId: string, userRole: string = 'public'): Promise<Listing | null> {
     const dbListing = await this.getListingById(listingId);
     if (!dbListing) {
       return null;
     }
-    return this.convertDatabaseListingToListing(dbListing);
+    return this.convertDatabaseListingToListing(dbListing, userRole);
   }
 
   async updateListing(listingId: string, updates: Partial<UpdateListingRequest>): Promise<DatabaseListing | null> {
@@ -349,11 +351,11 @@ export class DatabaseService {
 
     console.log(`Admin getAllListings - Found ${result.results.length} listings in database`);
 
-    // Convert each database listing to API format
+    // Convert each database listing to API format (admin view - show all details)
     const listings = [];
     for (const dbListing of result.results) {
       try {
-        const convertedListing = await this.convertDatabaseListingToListing(dbListing as any);
+        const convertedListing = await this.convertDatabaseListingToListing(dbListing as any, 'admin');
         listings.push(convertedListing);
       } catch (error) {
         console.error('Error converting listing:', (dbListing as any).id, error);
@@ -474,7 +476,7 @@ export class DatabaseService {
 
     // Convert listings with images
     const convertedListings = await Promise.all(
-      listings.map(listing => this.convertDatabaseListingToListing(listing))
+      listings.map(listing => this.convertDatabaseListingToListing(listing, 'public'))
     );
 
     return {
@@ -492,9 +494,9 @@ export class DatabaseService {
     const result = await stmt.bind(userId).all();
     const listings = result.results as unknown as DatabaseListing[];
 
-    // Convert listings with images
+    // Convert listings with images (user's own listings - show full address)
     const convertedListings = await Promise.all(
-      listings.map(listing => this.convertDatabaseListingToListing(listing))
+      listings.map(listing => this.convertDatabaseListingToListing(listing, 'owner'))
     );
 
     return convertedListings;
@@ -639,7 +641,7 @@ export class DatabaseService {
   }
 
   // Helper method to convert database listing to API listing format
-  private async convertDatabaseListingToListing(dbListing: DatabaseListing): Promise<Listing> {
+  private async convertDatabaseListingToListing(dbListing: DatabaseListing, userRole?: string): Promise<Listing> {
     // Fetch images for this listing
     const images = await this.getListingImages(dbListing.id);
 
@@ -657,13 +659,14 @@ export class DatabaseService {
       location: {
         latitude: dbListing.latitude,
         longitude: dbListing.longitude,
-        address: dbListing.address,
-        street: dbListing.street || undefined,
-        houseNumber: dbListing.house_number || undefined,
+        // Hide address details if hideAddress is true and user is not admin
+        address: (dbListing.hide_address && userRole !== 'admin') ? `${dbListing.city}, ${dbListing.country}` : dbListing.address,
+        street: (dbListing.hide_address && userRole !== 'admin') ? undefined : (dbListing.street || undefined),
+        houseNumber: (dbListing.hide_address && userRole !== 'admin') ? undefined : (dbListing.house_number || undefined),
         city: dbListing.city,
         region: dbListing.region || undefined,
         country: dbListing.country,
-        postalCode: dbListing.postal_code || undefined
+        postalCode: (dbListing.hide_address && userRole !== 'admin') ? undefined : (dbListing.postal_code || undefined)
       } as any, // Cast to allow additional fields
       contactInfo: {
         email: dbListing.contact_email || undefined,
@@ -677,6 +680,7 @@ export class DatabaseService {
       certificationDetails: dbListing.certification_details || undefined,
       operatingHours: dbListing.operating_hours ? JSON.parse(dbListing.operating_hours) : undefined,
       priceRange: (dbListing.price_range as 'free' | 'low' | 'medium' | 'high') || undefined,
+      hideAddress: dbListing.hide_address || false,
       userId: dbListing.user_id,
       createdAt: dbListing.created_at,
       updatedAt: dbListing.updated_at,

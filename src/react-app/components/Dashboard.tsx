@@ -89,6 +89,30 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
     return R * c; // Distance in kilometers
   };
 
+  // Simple geocoding for major cities (fallback for when no GPS is available)
+  const geocodeLocation = async (locationName: string): Promise<{lat: number, lng: number} | null> => {
+    const cityCoordinates: {[key: string]: {lat: number, lng: number}} = {
+      'berlin': { lat: 52.5200, lng: 13.4050 },
+      'munich': { lat: 48.1351, lng: 11.5820 },
+      'hamburg': { lat: 53.5511, lng: 9.9937 },
+      'cologne': { lat: 50.9375, lng: 6.9603 },
+      'frankfurt': { lat: 50.1109, lng: 8.6821 },
+      'stuttgart': { lat: 48.7758, lng: 9.1829 },
+      'düsseldorf': { lat: 51.2277, lng: 6.7735 },
+      'dortmund': { lat: 51.5136, lng: 7.4653 },
+      'essen': { lat: 51.4556, lng: 7.0116 },
+      'leipzig': { lat: 51.3397, lng: 12.3731 },
+      'bremen': { lat: 53.0793, lng: 8.8017 },
+      'dresden': { lat: 51.0504, lng: 13.7373 },
+      'hannover': { lat: 52.3759, lng: 9.7320 },
+      'nuremberg': { lat: 49.4521, lng: 11.0767 },
+      'duisburg': { lat: 51.4344, lng: 6.7623 }
+    };
+
+    const normalizedLocation = locationName.toLowerCase().trim();
+    return cityCoordinates[normalizedLocation] || null;
+  };
+
   // Get user's current location
   const getCurrentLocation = () => {
     setIsGettingLocation(true);
@@ -111,6 +135,28 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
     } else {
       setIsGettingLocation(false);
       alert('Geolocation is not supported by this browser.');
+    }
+  };
+
+  // Handle location search by city name
+  const handleLocationSearch = async () => {
+    if (!locationSearch.trim()) {
+      setUserLocation(null);
+      handleSearch(searchQuery);
+      return;
+    }
+
+    console.log(`🔍 Searching for location: ${locationSearch}`);
+
+    // Try to geocode the location
+    const coordinates = await geocodeLocation(locationSearch);
+    if (coordinates) {
+      setUserLocation(coordinates);
+      console.log(`✅ Found coordinates for ${locationSearch}:`, coordinates);
+      handleSearch(searchQuery);
+    } else {
+      console.log(`❌ Could not find coordinates for ${locationSearch}`);
+      alert(`Could not find location "${locationSearch}". Try entering a major German city name.`);
     }
   };
 
@@ -204,6 +250,14 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
 
     fetchLocations();
   }, []);
+
+  // Re-run search when location parameters change
+  useEffect(() => {
+    if (locationSearch || userLocation) {
+      console.log(`🔄 Location parameters changed, re-running search...`);
+      handleSearch(searchQuery);
+    }
+  }, [locationSearch, searchRadius, userLocation]);
 
   if (!user) {
     return null;
@@ -497,6 +551,11 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                         placeholder="Enter city, postal code, or address..."
                         value={locationSearch}
                         onChange={(e) => setLocationSearch(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            handleLocationSearch();
+                          }
+                        }}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                       />
                       <button
@@ -534,27 +593,39 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                     </div>
                   </div>
 
-                  {/* Location Status */}
-                  {userLocation && (
-                    <div className="mt-3 flex items-center justify-between text-sm">
-                      <span className="text-green-600 flex items-center">
-                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        Location set: {locationSearch}
-                      </span>
-                      <button
-                        onClick={() => {
-                          setUserLocation(null);
-                          setLocationSearch('');
-                          handleSearch(searchQuery); // Re-run search without location filter
-                        }}
-                        className="text-gray-400 hover:text-red-500"
-                      >
-                        Clear
-                      </button>
-                    </div>
-                  )}
+                  {/* Search Button and Status */}
+                  <div className="mt-3 flex items-center justify-between">
+                    <button
+                      onClick={() => handleLocationSearch()}
+                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center space-x-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      <span>Search</span>
+                    </button>
+
+                    {userLocation && (
+                      <div className="flex items-center space-x-2">
+                        <span className="text-green-600 flex items-center text-sm">
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Location: {locationSearch}
+                        </span>
+                        <button
+                          onClick={() => {
+                            setUserLocation(null);
+                            setLocationSearch('');
+                            handleSearch(searchQuery); // Re-run search without location filter
+                          }}
+                          className="text-gray-400 hover:text-red-500 text-sm"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

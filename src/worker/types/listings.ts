@@ -35,6 +35,7 @@ export interface Listing {
     [key: string]: { open: string; close: string; closed?: boolean };
   };
   priceRange?: 'free' | 'low' | 'medium' | 'high';
+  hideAddress: boolean; // Privacy setting to hide address from public
   userId: string; // Owner of the listing
   createdAt: string;
   updatedAt: string;
@@ -95,6 +96,7 @@ export interface CreateListingRequest {
     [key: string]: { open: string; close: string; closed?: boolean };
   };
   priceRange?: 'free' | 'low' | 'medium' | 'high';
+  hideAddress?: boolean; // Privacy setting to hide address from public
 }
 
 export interface UpdateListingRequest extends Partial<CreateListingRequest> {

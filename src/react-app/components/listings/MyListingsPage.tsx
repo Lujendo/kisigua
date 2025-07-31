@@ -587,7 +587,8 @@ const MyListingsPage: React.FC = () => {
       priceType: (editingListing?.priceType || 'free') as 'free' | 'paid' | 'donation',
       price: editingListing?.price?.toString() || '',
       tags: editingListing?.tags?.join(', ') || '',
-      status: (editingListing?.status || 'active') as 'active' | 'inactive' | 'pending' | 'rejected'
+      status: (editingListing?.status || 'active') as 'active' | 'inactive' | 'pending' | 'rejected',
+      hideAddress: (editingListing as any)?.hideAddress || false
     });
     const [images, setImages] = useState<string[]>([]);
     const [categories, setCategories] = useState<Array<{ id: string; label: string; color?: string; icon?: string }>>([]);
@@ -731,6 +732,7 @@ const MyListingsPage: React.FC = () => {
           isCertified: false, // Could be added as a form field
           priceRange: formData.priceType === 'free' ? 'free' :
                      formData.priceType === 'paid' ? 'medium' : 'low',
+          hideAddress: formData.hideAddress,
           status: formData.status
         };
 
@@ -1040,6 +1042,34 @@ const MyListingsPage: React.FC = () => {
                               <option key={country} value={country}>{country}</option>
                             ))}
                           </select>
+                      </div>
+
+                      {/* Privacy Settings */}
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-start">
+                          <svg className="w-5 h-5 text-gray-600 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                          </svg>
+                          <div className="flex-1">
+                            <h4 className="text-sm font-medium text-gray-900 mb-2">Address Privacy</h4>
+                            <div className="flex items-center">
+                              <input
+                                type="checkbox"
+                                id="hideAddress"
+                                checked={formData.hideAddress}
+                                onChange={(e) => setFormData({ ...formData, hideAddress: e.target.checked })}
+                                className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                              />
+                              <label htmlFor="hideAddress" className="ml-2 text-sm text-gray-700">
+                                Hide detailed address from public view
+                              </label>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2">
+                              When enabled, only city and country will be shown to the public.
+                              Full address remains visible to admins and is used for location-based search.
+                            </p>
+                          </div>
+                        </div>
                       </div>
 
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

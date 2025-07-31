@@ -5,7 +5,7 @@
  * This script tests all image-related functionality to ensure complete recovery
  */
 
-const fetch = require('node-fetch');
+// Using built-in fetch (Node.js 18+)
 
 // Configuration
 const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8787';

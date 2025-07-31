@@ -420,8 +420,27 @@ app.get("/api/listings/:id", async (c) => {
     const services = c.get('services');
     const listingId = c.req.param('id');
 
-    // First try to get from database
-    const listing = await services.databaseService.getFullListingById(listingId);
+    // Determine user role for privacy settings
+    let userRole = 'public';
+    try {
+      const authHeader = c.req.header('Authorization');
+      if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        const decoded = jwt.verify(token, JWT_SECRET) as any;
+        userRole = decoded.role || 'user';
+
+        // Check if user owns this listing
+        const dbListing = await services.databaseService.getListingById(listingId);
+        if (dbListing && dbListing.user_id === decoded.sub) {
+          userRole = 'owner';
+        }
+      }
+    } catch (error) {
+      // Not authenticated or invalid token - keep as 'public'
+    }
+
+    // First try to get from database with appropriate privacy settings
+    const listing = await services.databaseService.getFullListingById(listingId, userRole);
 
     if (!listing) {
       // Fallback to in-memory service

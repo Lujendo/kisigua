@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import ListingDetail from '../listings/ListingDetail';
 
 interface Listing {
   id: string;
@@ -43,6 +44,7 @@ const ListingManagement: React.FC = () => {
   const [sortBy, setSortBy] = useState<'createdAt' | 'title' | 'status'>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showBulkActions, setShowBulkActions] = useState(false);
+  const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
 
   // Fetch all listings and users
   useEffect(() => {
@@ -531,51 +533,59 @@ const ListingManagement: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 text-sm font-medium">
                     <div className="flex space-x-2">
+                      {/* View Details Action */}
+                      <button
+                        onClick={() => setSelectedListingId(listing.id)}
+                        className="text-blue-600 hover:text-blue-900 mr-2"
+                      >
+                        View Details
+                      </button>
+
                       {/* Status Actions */}
                       {listing.status === 'pending' && (
                         <>
                           <button
                             onClick={() => updateListingStatus(listing.id, 'active')}
-                            className="text-green-600 hover:text-green-900"
+                            className="text-green-600 hover:text-green-900 mr-2"
                           >
                             Approve
                           </button>
                           <button
                             onClick={() => updateListingStatus(listing.id, 'rejected')}
-                            className="text-red-600 hover:text-red-900"
+                            className="text-red-600 hover:text-red-900 mr-2"
                           >
                             Reject
                           </button>
                         </>
                       )}
-                      
+
                       {listing.status === 'active' && (
                         <button
                           onClick={() => updateListingStatus(listing.id, 'inactive')}
-                          className="text-yellow-600 hover:text-yellow-900"
+                          className="text-yellow-600 hover:text-yellow-900 mr-2"
                         >
                           Deactivate
                         </button>
                       )}
-                      
+
                       {listing.status === 'inactive' && (
                         <button
                           onClick={() => updateListingStatus(listing.id, 'active')}
-                          className="text-green-600 hover:text-green-900"
+                          className="text-green-600 hover:text-green-900 mr-2"
                         >
                           Activate
                         </button>
                       )}
-                      
+
                       {listing.status === 'rejected' && (
                         <button
                           onClick={() => updateListingStatus(listing.id, 'pending')}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-blue-600 hover:text-blue-900 mr-2"
                         >
                           Review
                         </button>
                       )}
-                      
+
                       {/* Delete Action */}
                       <button
                         onClick={() => deleteListing(listing.id)}
@@ -606,6 +616,18 @@ const ListingManagement: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Listing Detail Modal */}
+      {selectedListingId && (
+        <ListingDetail
+          listingId={selectedListingId}
+          onClose={() => setSelectedListingId(null)}
+          onEdit={() => {
+            // Admin can't edit directly, but can view details
+            setSelectedListingId(null);
+          }}
+        />
+      )}
     </div>
   );
 };

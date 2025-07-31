@@ -4,6 +4,10 @@ import { useFavorites } from '../contexts/FavoritesContext';
 import AdminPanel from './admin/AdminPanel';
 import LocationDetail from './locations/LocationDetail';
 import Map from './Map';
+import LocationSearchInput from './search/LocationSearchInput';
+import LocationFilters from './search/LocationFilters';
+import { GeocodingService } from '../services/geocodingService';
+import { LocationFilters as LocationFiltersType, LocationSearchResult } from '../types/location';
 
 interface Location {
   id: string;
@@ -82,6 +86,13 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
 
+  // Enhanced location filtering state
+  const [locationFilters, setLocationFilters] = useState<LocationFiltersType>({
+    radius: 10,
+    country: 'Germany' // Default to Germany
+  });
+  const [showLocationFilters, setShowLocationFilters] = useState(false);
+
   // Detail card states
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [showDetailCard, setShowDetailCard] = useState(false);
@@ -99,62 +110,23 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
     return R * c; // Distance in kilometers
   };
 
-  // Simple geocoding for German cities (fallback for when no GPS is available)
+  // Enhanced geocoding using the new service
   const geocodeLocation = async (locationName: string): Promise<{lat: number, lng: number} | null> => {
-    const cityCoordinates: {[key: string]: {lat: number, lng: number}} = {
-      // Major cities
-      'berlin': { lat: 52.5200, lng: 13.4050 },
-      'munich': { lat: 48.1351, lng: 11.5820 },
-      'münchen': { lat: 48.1351, lng: 11.5820 },
-      'hamburg': { lat: 53.5511, lng: 9.9937 },
-      'cologne': { lat: 50.9375, lng: 6.9603 },
-      'köln': { lat: 50.9375, lng: 6.9603 },
-      'frankfurt': { lat: 50.1109, lng: 8.6821 },
-      'stuttgart': { lat: 48.7758, lng: 9.1829 },
-      'düsseldorf': { lat: 51.2277, lng: 6.7735 },
-      'dortmund': { lat: 51.5136, lng: 7.4653 },
-      'essen': { lat: 51.4556, lng: 7.0116 },
-      'leipzig': { lat: 51.3397, lng: 12.3731 },
-      'bremen': { lat: 53.0793, lng: 8.8017 },
-      'dresden': { lat: 51.0504, lng: 13.7373 },
-      'hannover': { lat: 52.3759, lng: 9.7320 },
-      'nuremberg': { lat: 49.4521, lng: 11.0767 },
-      'nürnberg': { lat: 49.4521, lng: 11.0767 },
-      'duisburg': { lat: 51.4344, lng: 6.7623 },
+    try {
+      const result = await GeocodingService.geocode(locationName, {
+        preferredCountry: 'Germany',
+        useCache: true
+      });
 
-      // Baden-Württemberg cities
-      'reutlingen': { lat: 48.4919, lng: 9.2041 },
-      'tübingen': { lat: 48.5216, lng: 9.0576 },
-      'ulm': { lat: 48.3984, lng: 9.9915 },
-      'heilbronn': { lat: 49.1427, lng: 9.2109 },
-      'pforzheim': { lat: 48.8918, lng: 8.6942 },
-      'mannheim': { lat: 49.4875, lng: 8.4660 },
-      'karlsruhe': { lat: 49.0069, lng: 8.4037 },
-      'freiburg': { lat: 47.9990, lng: 7.8421 },
-      'heidelberg': { lat: 49.3988, lng: 8.6724 },
+      if (result) {
+        return result.coordinates;
+      }
 
-      // Bavaria cities
-      'augsburg': { lat: 48.3705, lng: 10.8978 },
-      'würzburg': { lat: 49.7913, lng: 9.9534 },
-      'regensburg': { lat: 49.0134, lng: 12.1016 },
-      'ingolstadt': { lat: 48.7665, lng: 11.4257 },
-
-      // North Rhine-Westphalia cities
-      'bonn': { lat: 50.7374, lng: 7.0982 },
-      'münster': { lat: 51.9607, lng: 7.6261 },
-      'aachen': { lat: 50.7753, lng: 6.0839 },
-      'bielefeld': { lat: 52.0302, lng: 8.5325 },
-
-      // Other states
-      'magdeburg': { lat: 52.1205, lng: 11.6276 },
-      'erfurt': { lat: 50.9848, lng: 11.0299 },
-      'mainz': { lat: 49.9929, lng: 8.2473 },
-      'kiel': { lat: 54.3233, lng: 10.1228 },
-      'wiesbaden': { lat: 50.0826, lng: 8.2400 }
-    };
-
-    const normalizedLocation = locationName.toLowerCase().trim();
-    return cityCoordinates[normalizedLocation] || null;
+      return null;
+    } catch (error) {
+      console.error('Geocoding error:', error);
+      return null;
+    }
   };
 
   // Get user's current location
@@ -210,6 +182,46 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
       console.log(`❌ Could not find coordinates for ${locationSearch}`);
       alert(`Could not find location "${locationSearch}". Try entering a major German city name.`);
     }
+  };
+
+  // Enhanced location search handlers
+  const handleEnhancedLocationSelect = (location: LocationSearchResult) => {
+    console.log(`🔍 Enhanced location selected:`, location);
+
+    setUserLocation(location.coordinates);
+    setLocationSearch(location.displayName);
+
+    // Update location filters
+    setLocationFilters(prev => ({
+      ...prev,
+      country: location.hierarchy.country,
+      countryCode: location.hierarchy.countryCode,
+      region: location.hierarchy.region,
+      city: location.hierarchy.city,
+      coordinates: location.coordinates
+    }));
+
+    // Auto-switch to map view for better location search experience
+    setViewMode('map');
+
+    // Trigger search with new location
+    handleSearch(searchQuery);
+  };
+
+  const handleLocationFiltersChange = (filters: LocationFiltersType) => {
+    console.log(`🔍 Location filters changed:`, filters);
+    setLocationFilters(filters);
+
+    // Update search radius for backward compatibility
+    setSearchRadius(filters.radius);
+
+    // If coordinates are set, update user location
+    if (filters.coordinates) {
+      setUserLocation(filters.coordinates);
+    }
+
+    // Trigger search with new filters
+    handleSearch(searchQuery);
   };
 
   // Fetch real data from API
@@ -433,19 +445,42 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
         );
       }
 
-      // Apply location-based filter if location search is active
-      if (locationSearch && locationSearch !== '' && userLocation) {
-        console.log(`🗺️ Applying location filter: ${locationSearch}, radius: ${searchRadius}km`);
-        filtered = filtered.filter(location => {
-          const distance = calculateDistance(
-            userLocation.lat,
-            userLocation.lng,
-            location.location.coordinates.lat,
-            location.location.coordinates.lng
-          );
-          console.log(`📍 Distance to ${location.title}: ${distance.toFixed(1)}km`);
-          return distance <= searchRadius;
-        });
+      // Apply enhanced location-based filters
+      if (locationFilters.coordinates || userLocation) {
+        const searchCoords = locationFilters.coordinates || userLocation;
+        if (searchCoords) {
+          console.log(`🗺️ Applying enhanced location filter: radius: ${locationFilters.radius}km`);
+          filtered = filtered.filter(location => {
+            const distance = calculateDistance(
+              searchCoords.lat,
+              searchCoords.lng,
+              location.location.coordinates.lat,
+              location.location.coordinates.lng
+            );
+            console.log(`📍 Distance to ${location.title}: ${distance.toFixed(1)}km`);
+            return distance <= locationFilters.radius;
+          });
+        }
+      }
+
+      // Apply hierarchical location filters
+      if (locationFilters.country) {
+        filtered = filtered.filter(location =>
+          location.location.country.toLowerCase().includes(locationFilters.country!.toLowerCase())
+        );
+      }
+
+      if (locationFilters.region) {
+        filtered = filtered.filter(location =>
+          location.location.region?.toLowerCase().includes(locationFilters.region!.toLowerCase()) ||
+          location.location.city.toLowerCase().includes(locationFilters.region!.toLowerCase())
+        );
+      }
+
+      if (locationFilters.city) {
+        filtered = filtered.filter(location =>
+          location.location.city.toLowerCase().includes(locationFilters.city!.toLowerCase())
+        );
       }
 
       // Add to search history if there was a text query
@@ -764,37 +799,43 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                 </div>
               </div>
 
-              {/* Location-Based Search */}
+              {/* Enhanced Location-Based Search */}
               <div className="max-w-2xl mx-auto mt-4">
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                  <div className="flex items-center space-x-2 mb-3">
-                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span className="text-sm font-medium text-gray-700">Search by Location</span>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-2">
+                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <span className="text-sm font-medium text-gray-700">Search by Location</span>
+                    </div>
+                    <button
+                      onClick={() => setShowLocationFilters(!showLocationFilters)}
+                      className="text-xs text-green-600 hover:text-green-800 transition-colors flex items-center space-x-1"
+                    >
+                      <span>{showLocationFilters ? 'Hide' : 'Show'} Filters</span>
+                      <svg className={`w-4 h-4 transition-transform ${showLocationFilters ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {/* Location Input */}
+                    {/* Enhanced Location Search Input */}
                     <div className="md:col-span-2 relative">
-                      <input
-                        type="text"
-                        placeholder="Enter city name (e.g., Berlin, Stuttgart, Reutlingen)..."
+                      <LocationSearchInput
+                        placeholder="Enter city, town, or address (e.g., Berlin, Stuttgart, Reutlingen)..."
                         value={locationSearch}
-                        onChange={(e) => setLocationSearch(e.target.value)}
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleLocationSearch();
-                          }
-                        }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 bg-white placeholder-gray-500"
+                        onLocationSelect={handleEnhancedLocationSelect}
+                        showSuggestions={true}
+                        includeMinorLocations={true}
+                        className="w-full"
                       />
                       <button
                         onClick={getCurrentLocation}
                         disabled={isGettingLocation}
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-green-600 disabled:opacity-50"
+                        className="absolute right-12 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-green-600 disabled:opacity-50 z-10"
                         title="Use current location"
                       >
                         {isGettingLocation ? (
@@ -811,8 +852,8 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                     <div className="flex items-center space-x-2">
                       <span className="text-sm text-gray-600 whitespace-nowrap">Within</span>
                       <select
-                        value={searchRadius}
-                        onChange={(e) => setSearchRadius(Number(e.target.value))}
+                        value={locationFilters.radius}
+                        onChange={(e) => handleLocationFiltersChange({ ...locationFilters, radius: Number(e.target.value) })}
                         className="flex-1 px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm text-gray-900 bg-white"
                       >
                         <option value={1}>1 km</option>
@@ -826,39 +867,16 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                     </div>
                   </div>
 
-                  {/* Search Button and Status */}
-                  <div className="mt-3 flex items-center justify-between">
-                    <button
-                      onClick={() => handleLocationSearch()}
-                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center space-x-2"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                      <span>Search</span>
-                    </button>
-
-                    {userLocation && (
-                      <div className="flex items-center space-x-2">
-                        <span className="text-green-600 flex items-center text-sm">
-                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          Location: {locationSearch}
-                        </span>
-                        <button
-                          onClick={() => {
-                            setUserLocation(null);
-                            setLocationSearch('');
-                            handleSearch(searchQuery); // Re-run search without location filter
-                          }}
-                          className="text-gray-400 hover:text-red-500 text-sm"
-                        >
-                          Clear
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  {/* Enhanced Location Filters */}
+                  {showLocationFilters && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <LocationFilters
+                        filters={locationFilters}
+                        onFiltersChange={handleLocationFiltersChange}
+                        showAdvanced={true}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

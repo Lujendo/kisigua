@@ -394,7 +394,13 @@ app.post("/api/auth/verify-email", async (c) => {
     const services = c.get('services');
     const body = await c.req.json() as VerifyEmailRequest;
 
+    console.log('📧 Email verification request received:', {
+      hasToken: !!body.token,
+      tokenPreview: body.token ? body.token.substring(0, 10) + '...' : 'MISSING'
+    });
+
     if (!body.token) {
+      console.log('❌ No token provided in request');
       return c.json({
         success: false,
         message: "Verification token is required"

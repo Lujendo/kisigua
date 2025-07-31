@@ -119,22 +119,48 @@ export class EmailVerificationService {
    */
   async verifyEmail(token: string): Promise<{ success: boolean; user?: User; error?: string }> {
     try {
+      console.log('🔍 Verifying email token:', token.substring(0, 10) + '...');
+
       // Find token in database
       const tokenResult = await this.db.prepare(`
-        SELECT * FROM email_verification_tokens 
+        SELECT * FROM email_verification_tokens
         WHERE token = ? AND used_at IS NULL AND expires_at > datetime('now')
       `).bind(token).first();
 
+      console.log('🔍 Token lookup result:', tokenResult ? 'FOUND' : 'NOT_FOUND');
+      if (tokenResult) {
+        console.log('🔍 Token details:', {
+          id: tokenResult.id,
+          user_id: tokenResult.user_id,
+          email: tokenResult.email,
+          expires_at: tokenResult.expires_at,
+          used_at: tokenResult.used_at
+        });
+      }
+
       if (!tokenResult) {
+        console.log('❌ Token not found or expired');
         return { success: false, error: 'Invalid or expired verification token' };
       }
 
       // Get user
+      console.log('🔍 Looking up user with ID:', tokenResult.user_id);
       const userResult = await this.db.prepare(`
         SELECT * FROM users WHERE id = ?
       `).bind(tokenResult.user_id).first();
 
+      console.log('🔍 User lookup result:', userResult ? 'FOUND' : 'NOT_FOUND');
+      if (userResult) {
+        console.log('🔍 User details:', {
+          id: userResult.id,
+          email: userResult.email,
+          first_name: userResult.first_name,
+          is_active: userResult.is_active
+        });
+      }
+
       if (!userResult) {
+        console.log('❌ User not found for ID:', tokenResult.user_id);
         return { success: false, error: 'User not found' };
       }
 

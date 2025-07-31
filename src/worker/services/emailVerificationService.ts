@@ -71,13 +71,23 @@ export class EmailVerificationService {
 
       // Send email
       console.log('📤 Sending verification email...');
+      console.log('📧 Email details:', {
+        to: user.email,
+        firstName: user.firstName,
+        tokenPreview: token.substring(0, 10) + '...'
+      });
+
       const emailResult = await this.emailService.sendVerificationEmail(
         user.email,
         token,
         user.firstName
       );
 
-      console.log('📧 Email result:', emailResult);
+      console.log('📧 Email result:', {
+        success: emailResult.success,
+        messageId: emailResult.messageId,
+        error: emailResult.error
+      });
 
       // Log email
       try {

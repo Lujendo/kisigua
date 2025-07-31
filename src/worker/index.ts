@@ -250,20 +250,36 @@ app.post("/api/auth/register", async (c) => {
 
     const result = await services.authService.register(body);
 
-    if (result.success && result.user) {
-      // Send verification email
-      const emailResult = await services.emailVerificationService.sendEmailVerification(result.user);
+    if (result.success) {
+      // Only send verification email if the user requires email verification
+      if (result.requiresEmailVerification && result.email) {
+        console.log('📧 Sending verification email to:', result.email);
 
-      if (!emailResult.success) {
-        console.error('Failed to send verification email:', emailResult.error);
+        // Create a temporary user object for email sending
+        const tempUser = {
+          id: 'temp-' + Date.now(),
+          email: result.email,
+          firstName: body.firstName,
+          lastName: body.lastName,
+          role: 'user' as const,
+          password: '',
+          isActive: true,
+          emailVerified: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+
+        const emailResult = await services.emailVerificationService.sendEmailVerification(tempUser);
+
+        if (!emailResult.success) {
+          console.error('❌ Failed to send verification email:', emailResult.error);
+          // Don't fail registration if email fails, just log it
+        } else {
+          console.log('✅ Verification email sent successfully');
+        }
+      } else if (result.user && result.token) {
+        console.log('✅ Test user or admin registered and logged in automatically');
       }
-
-      // Return success but indicate email verification is required
-      return c.json({
-        ...result,
-        requiresEmailVerification: true,
-        message: "Registration successful! Please check your email to verify your account."
-      }, 201);
     }
 
     const statusCode = result.success ? 201 : 400;
@@ -770,6 +786,48 @@ app.get("/api/analytics/trending-searches", async (c) => {
   } catch (error) {
     console.error('Trending searches endpoint error:', error);
     return c.json({ error: "Failed to get trending searches" }, 500);
+  }
+});
+
+// Test email service endpoint (for debugging)
+app.post("/api/test/email", authMiddleware, roleMiddleware(['admin']), async (c) => {
+  try {
+    const services = c.get('services');
+    const { email, type = 'verification' } = await c.req.json();
+
+    if (!email) {
+      return c.json({ error: "Email is required" }, 400);
+    }
+
+    let result;
+    if (type === 'verification') {
+      const testUser = {
+        id: 'test-user-' + Date.now(),
+        email: email,
+        firstName: 'Test',
+        lastName: 'User',
+        role: 'user' as const,
+        password: '',
+        isActive: true,
+        emailVerified: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      result = await services.emailVerificationService.sendEmailVerification(testUser);
+    } else {
+      return c.json({ error: "Invalid email type" }, 400);
+    }
+
+    return c.json({
+      success: result.success,
+      messageId: result.messageId,
+      error: result.error,
+      message: result.success ? 'Test email sent successfully' : 'Test email failed'
+    });
+  } catch (error) {
+    console.error('Test email endpoint error:', error);
+    return c.json({ error: "Failed to send test email" }, 500);
   }
 });
 

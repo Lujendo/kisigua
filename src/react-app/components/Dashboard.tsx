@@ -139,8 +139,8 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
           setLocationSearch('Current Location');
           setIsGettingLocation(false);
 
-          // Auto-switch to map view for better location search experience
-          setViewMode('map');
+          // Keep current view mode - don't force map view
+          // Users can choose their preferred view (list, grid, map)
 
           console.log(`📍 Got user location: ${latitude}, ${longitude}`);
         },

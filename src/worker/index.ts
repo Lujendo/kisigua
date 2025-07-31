@@ -113,7 +113,7 @@ async function initializeServices(env: Env) {
 
 // Enable CORS for all routes
 app.use("*", cors({
-  origin: ['http://localhost:5173', 'http://localhost:8787', 'https://kisura.com', 'https://www.kisura.com'],
+  origin: ['http://localhost:5173', 'http://localhost:8787', 'https://kisigua.com', 'https://www.kisigua.com', 'https://kisura.com', 'https://www.kisura.com'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
   credentials: true,

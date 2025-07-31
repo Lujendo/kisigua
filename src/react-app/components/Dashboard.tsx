@@ -592,11 +592,11 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                       <div className="flex items-start space-x-4">
                         <div className="flex-shrink-0 relative">
                           <img
-                            src={location.thumbnail}
+                            src={location.images?.[0] || location.thumbnail || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=300&fit=crop'}
                             alt={location.title}
                             className="w-24 h-24 object-cover rounded-lg"
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300&h=200&fit=crop';
+                              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=300&fit=crop';
                             }}
                           />
                           <div className="absolute top-2 right-2">
@@ -668,11 +668,11 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                     >
                       <div className="relative">
                         <img
-                          src={location.thumbnail}
+                          src={location.images?.[0] || location.thumbnail || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=300&fit=crop'}
                           alt={location.title}
                           className="w-full h-48 object-cover rounded-t-lg"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300&h=200&fit=crop';
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=300&fit=crop';
                           }}
                         />
                         <div className="absolute top-3 right-3">

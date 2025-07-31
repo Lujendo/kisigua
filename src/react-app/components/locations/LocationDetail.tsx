@@ -41,35 +41,72 @@ const LocationDetail: React.FC<LocationDetailProps> = ({ locationId, onClose, on
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showContactForm, setShowContactForm] = useState(false);
   const [showScrollIndicator, setShowScrollIndicator] = useState(true);
+  const [location, setLocation] = useState<Location | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data - in real app, fetch based on locationId
-  const location: Location = {
-    id: locationId,
-    title: 'Organic Farm Experience',
-    description: 'Experience sustainable farming practices at our certified organic farm. Learn about permaculture, participate in harvesting, and enjoy fresh organic produce.',
-    category: 'Organic Farm',
-    location: {
-      address: 'Musterstraße 123',
-      city: 'Berlin',
-      country: 'Germany',
-      coordinates: { lat: 52.5200, lng: 13.4050 }
-    },
-    images: [
-      'https://pub-c5e31b5cdafb419fb247a8ac2e78df7a.r2.dev/organic-farm-1.jpg',
-      'https://pub-c5e31b5cdafb419fb247a8ac2e78df7a.r2.dev/organic-farm-2.jpg',
-      'https://pub-c5e31b5cdafb419fb247a8ac2e78df7a.r2.dev/organic-farm-3.jpg'
-    ],
-    rating: 4.8,
-    reviews: 24,
-    price: 25,
-    priceType: 'paid',
-    tags: ['organic', 'sustainable', 'educational', 'family-friendly'],
-    createdBy: 'user123',
-    createdAt: '2024-01-15',
-    isVerified: true,
-    isFeatured: true,
-    views: 156
-  };
+  // Fetch actual listing data based on locationId
+  useEffect(() => {
+    const fetchLocation = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        console.log(`🔍 LocationDetail: Fetching data for locationId: ${locationId}`);
+        const response = await fetch(`/api/listings/${locationId}`);
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch listing');
+        }
+
+        const data = await response.json();
+        console.log(`✅ LocationDetail: Successfully fetched listing:`, data.listing);
+
+        // Transform API data to match Location interface
+        const transformedLocation: Location = {
+          id: data.listing.id,
+          title: data.listing.title,
+          description: data.listing.description,
+          category: data.listing.category,
+          location: {
+            address: data.listing.location?.address || `${data.listing.location?.city || ''}, ${data.listing.location?.country || ''}`,
+            city: data.listing.location?.city || '',
+            country: data.listing.location?.country || '',
+            coordinates: {
+              lat: data.listing.location?.latitude || data.listing.location?.coordinates?.lat || 0,
+              lng: data.listing.location?.longitude || data.listing.location?.coordinates?.lng || 0
+            }
+          },
+          images: data.listing.images || [],
+          rating: 4.5, // Default rating since not in database
+          reviews: Math.floor(Math.random() * 50) + 10, // Mock reviews
+          price: data.listing.priceRange === 'low' ? 10 : data.listing.priceRange === 'medium' ? 25 : data.listing.priceRange === 'high' ? 50 : undefined,
+          priceType: data.listing.priceRange ? 'paid' : 'free',
+          tags: data.listing.tags || [],
+          createdBy: data.listing.userId || '',
+          createdAt: data.listing.createdAt || '',
+          isVerified: false, // Default since not in database
+          isFeatured: false, // Default since not in database
+          views: Math.floor(Math.random() * 200) + 50, // Mock views
+          contact: {
+            phone: data.listing.contactInfo?.phone || data.listing.contact?.phone,
+            email: data.listing.contactInfo?.email || data.listing.contact?.email,
+            website: data.listing.contactInfo?.website || data.listing.contact?.website
+          }
+        };
+
+        setLocation(transformedLocation);
+      } catch (error) {
+        console.error('❌ LocationDetail: Error fetching listing:', error);
+        setError('Failed to load listing details');
+        setLocation(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLocation();
+  }, [locationId]);
 
   // Handle scroll indicator visibility
   useEffect(() => {
@@ -87,6 +124,43 @@ const LocationDetail: React.FC<LocationDetailProps> = ({ locationId, onClose, on
       return () => modalContent.removeEventListener('scroll', handleScroll);
     }
   }, []);
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+          <p className="text-center mt-4 text-gray-600">Loading listing details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error || !location) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+          <div className="text-center">
+            <svg className="mx-auto h-12 w-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+            <h3 className="mt-2 text-lg font-medium text-gray-900">Error Loading Listing</h3>
+            <p className="mt-1 text-sm text-gray-500">{error || 'Listing not found'}</p>
+            <button
+              onClick={onClose}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Check if user can edit this listing
   const canEdit = user && (

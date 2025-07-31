@@ -604,7 +604,12 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                             src={location.images?.[0] || location.thumbnail || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=300&fit=crop'}
                             alt={location.title}
                             className="w-24 h-24 object-cover rounded-lg"
+                            onLoad={() => {
+                              console.log(`✅ Dashboard List: Successfully loaded image for ${location.title}:`, location.images?.[0]);
+                            }}
                             onError={(e) => {
+                              console.error(`❌ Dashboard List: Failed to load image for ${location.title}:`, location.images?.[0]);
+                              console.error('Error details:', e);
                               (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=300&fit=crop';
                             }}
                           />
@@ -680,7 +685,12 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                           src={location.images?.[0] || location.thumbnail || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=300&fit=crop'}
                           alt={location.title}
                           className="w-full h-48 object-cover rounded-t-lg"
+                          onLoad={() => {
+                            console.log(`✅ Dashboard Grid: Successfully loaded image for ${location.title}:`, location.images?.[0]);
+                          }}
                           onError={(e) => {
+                            console.error(`❌ Dashboard Grid: Failed to load image for ${location.title}:`, location.images?.[0]);
+                            console.error('Error details:', e);
                             (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=300&fit=crop';
                           }}
                         />

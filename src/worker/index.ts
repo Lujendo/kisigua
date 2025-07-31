@@ -659,12 +659,7 @@ app.get("/api/auth/me", authMiddleware, async (c) => {
   return c.json({ user });
 });
 
-// Admin only route - get all users
-app.get("/api/admin/users", authMiddleware, roleMiddleware(['admin']), async (c) => {
-  const services = c.get('services');
-  const users = await services.authService.getAllUsers();
-  return c.json({ users });
-});
+// Admin only route - get all users (removed duplicate - using database version below)
 
 // Admin only route - update user role
 app.put("/api/admin/users/:id/role", authMiddleware, roleMiddleware(['admin']), async (c) => {

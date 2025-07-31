@@ -315,6 +315,7 @@ function AppContent() {
               <div className="flex items-center space-x-4">
                 <UserDropdown
                   onNavigateToProfile={() => setCurrentPage('profile')}
+                  onNavigateToSearch={() => setCurrentPage('search')}
                 />
               </div>
             </div>

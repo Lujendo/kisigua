@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import * as jwt from "jsonwebtoken";
 import { AuthService } from "./services/authService";
 import { ListingsService } from "./services/listingsService";
 import { SubscriptionService } from "./services/subscriptionService";
@@ -426,7 +427,7 @@ app.get("/api/listings/:id", async (c) => {
       const authHeader = c.req.header('Authorization');
       if (authHeader?.startsWith('Bearer ')) {
         const token = authHeader.substring(7);
-        const decoded = jwt.verify(token, JWT_SECRET) as any;
+        const decoded = jwt.verify(token, c.env.JWT_SECRET || 'your-secret-key-change-in-production') as any;
         userRole = decoded.role || 'user';
 
         // Check if user owns this listing

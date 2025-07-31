@@ -469,8 +469,46 @@ export class AuthService {
   }
 
   async getUserById(userId: string): Promise<UserProfile | null> {
-    const user = this.users.get(userId);
-    return user ? this.toUserProfile(user) : null;
+    // First check in-memory users (test users)
+    const memoryUser = this.users.get(userId);
+    if (memoryUser) {
+      return this.toUserProfile(memoryUser);
+    }
+
+    // Then check database users
+    try {
+      const dbUser = await this.databaseService.getUserById(userId);
+      if (dbUser) {
+        // Convert database user to User format and store in memory for future requests
+        const user: User = {
+          id: dbUser.id,
+          email: dbUser.email,
+          firstName: dbUser.firstName,
+          lastName: dbUser.lastName,
+          role: dbUser.role as UserRole,
+          password: dbUser.password_hash,
+          isActive: Boolean(dbUser.isActive),
+          emailVerified: Boolean(dbUser.emailVerified),
+          createdAt: dbUser.createdAt,
+          updatedAt: dbUser.updatedAt
+        };
+
+        // Store in memory for future requests
+        this.users.set(userId, user);
+        console.log('✅ Database user loaded by ID and stored in memory:', {
+          id: user.id,
+          email: user.email,
+          emailVerified: user.emailVerified,
+          isActive: user.isActive
+        });
+
+        return this.toUserProfile(user);
+      }
+    } catch (error) {
+      console.error('❌ Error loading user by ID from database:', error);
+    }
+
+    return null;
   }
 
   async getUserByEmail(email: string): Promise<UserProfile | null> {

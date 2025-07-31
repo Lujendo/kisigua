@@ -1,5 +1,6 @@
 import { EmbeddingService } from './embeddingService';
 import { DatabaseService } from './databaseService';
+import { UserBehaviorService } from './userBehaviorService';
 import { Env } from '../types/env';
 
 export interface SemanticSearchQuery {
@@ -43,16 +44,63 @@ export interface HybridSearchResult {
 export class SemanticSearchService {
   private embeddingService: EmbeddingService;
   private databaseService: DatabaseService;
+  private userBehaviorService: UserBehaviorService;
 
   constructor(env: Env, databaseService: DatabaseService) {
     this.embeddingService = new EmbeddingService(env);
     this.databaseService = databaseService;
+    this.userBehaviorService = new UserBehaviorService(databaseService);
+  }
+
+  /**
+   * Initialize user behavior tracking tables
+   */
+  async initializeUserBehaviorTables(): Promise<void> {
+    await this.userBehaviorService.initializeTables();
+  }
+
+  /**
+   * Record search behavior for analytics and recommendations
+   */
+  async recordSearchBehavior(
+    userId: string | null,
+    searchQuery: string,
+    searchType: 'semantic' | 'hybrid',
+    resultsCount: number,
+    searchFilters: any = {}
+  ): Promise<void> {
+    if (userId) {
+      await this.userBehaviorService.recordSearch(
+        userId,
+        searchQuery,
+        searchType,
+        resultsCount,
+        searchFilters
+      );
+    }
+  }
+
+  /**
+   * Record user interaction with a listing
+   */
+  async recordListingInteraction(
+    userId: string,
+    listingId: string,
+    interactionType: 'view' | 'favorite' | 'unfavorite' | 'contact' | 'share',
+    durationSeconds?: number
+  ): Promise<void> {
+    await this.userBehaviorService.recordInteraction(
+      userId,
+      listingId,
+      interactionType,
+      durationSeconds
+    );
   }
 
   /**
    * Perform semantic search using vector similarity
    */
-  async semanticSearch(searchQuery: SemanticSearchQuery): Promise<SemanticSearchResult[]> {
+  async semanticSearch(searchQuery: SemanticSearchQuery, userId?: string): Promise<SemanticSearchResult[]> {
     const startTime = Date.now();
     
     try {
@@ -119,6 +167,22 @@ export class SemanticSearchService {
       const searchTime = Date.now() - startTime;
       console.log(`✅ Semantic search completed in ${searchTime}ms, found ${tagFilteredResults.length} results`);
 
+      // Record search behavior for analytics and recommendations
+      if (userId) {
+        await this.recordSearchBehavior(
+          userId,
+          searchQuery.query,
+          'semantic',
+          tagFilteredResults.length,
+          {
+            category: searchQuery.category,
+            minScore: searchQuery.minScore,
+            location: searchQuery.location,
+            tags: searchQuery.tags
+          }
+        );
+      }
+
       return tagFilteredResults;
     } catch (error) {
       console.error('Error in semantic search:', error);
@@ -129,21 +193,37 @@ export class SemanticSearchService {
   /**
    * Perform hybrid search combining semantic and keyword search
    */
-  async hybridSearch(searchQuery: SemanticSearchQuery): Promise<HybridSearchResult> {
+  async hybridSearch(searchQuery: SemanticSearchQuery, userId?: string): Promise<HybridSearchResult> {
     const startTime = Date.now();
     
     try {
       // Perform semantic search
-      const semanticResults = await this.semanticSearch(searchQuery);
-      
+      const semanticResults = await this.semanticSearch(searchQuery, userId);
+
       // Perform traditional keyword search
       const keywordResults = await this.keywordSearch(searchQuery);
-      
+
       // Combine and deduplicate results
       const combinedResults = this.combineSearchResults(semanticResults, keywordResults);
-      
+
       const searchTime = Date.now() - startTime;
-      
+
+      // Record hybrid search behavior
+      if (userId) {
+        await this.recordSearchBehavior(
+          userId,
+          searchQuery.query,
+          'hybrid',
+          combinedResults.length,
+          {
+            category: searchQuery.category,
+            minScore: searchQuery.minScore,
+            location: searchQuery.location,
+            tags: searchQuery.tags
+          }
+        );
+      }
+
       return {
         semanticResults,
         keywordResults,
@@ -345,18 +425,71 @@ export class SemanticSearchService {
   /**
    * Get user preferences for recommendations
    */
-  private async getUserPreferences(_userId: string): Promise<{searchTerms: string[], favoriteCategories: string[]}> {
-    // This would analyze user's search history and favorites
-    // For now, return empty preferences
-    return { searchTerms: [], favoriteCategories: [] };
+  private async getUserPreferences(userId: string): Promise<{searchTerms: string[], favoriteCategories: string[]}> {
+    try {
+      const preferences = await this.userBehaviorService.getUserPreferences(userId);
+      return {
+        searchTerms: preferences.searchTerms,
+        favoriteCategories: preferences.favoriteCategories
+      };
+    } catch (error) {
+      console.error('Error getting user preferences:', error);
+      return { searchTerms: [], favoriteCategories: [] };
+    }
   }
 
   /**
    * Get popular listings
    */
-  private async getPopularListings(_limit: number): Promise<SemanticSearchResult[]> {
-    // This would return popular/trending listings
-    // For now, return empty array
-    return [];
+  private async getPopularListings(limit: number): Promise<SemanticSearchResult[]> {
+    try {
+      const popularListingIds = await this.userBehaviorService.getPopularListings(limit);
+
+      if (popularListingIds.length === 0) {
+        // Fallback to recent listings if no popular ones
+        const recentListings = await (this.databaseService as any).db.prepare(`
+          SELECT * FROM listings
+          WHERE is_active = true
+          ORDER BY created_at DESC
+          LIMIT ?
+        `).bind(limit).all();
+
+        return (recentListings.results || []).map((listing: any) => ({
+          id: listing.id,
+          title: listing.title,
+          description: listing.description,
+          category: listing.category,
+          location: listing.location ? JSON.parse(listing.location) : null,
+          tags: listing.tags ? JSON.parse(listing.tags) : [],
+          images: listing.images ? JSON.parse(listing.images) : [],
+          score: 0.8, // Default score for popular listings
+          relevanceScore: 0.8,
+          created_at: listing.created_at,
+          updated_at: listing.updated_at,
+          user_id: listing.user_id,
+          is_active: listing.is_active
+        }));
+      }
+
+      const listings = await this.getListingsByIds(popularListingIds);
+      return listings.map((listing: any) => ({
+        id: listing.id,
+        title: listing.title,
+        description: listing.description,
+        category: listing.category,
+        location: listing.location ? JSON.parse(listing.location) : null,
+        tags: listing.tags ? JSON.parse(listing.tags) : [],
+        images: listing.images ? JSON.parse(listing.images) : [],
+        score: 0.9, // High score for popular listings
+        relevanceScore: 0.9,
+        created_at: listing.created_at,
+        updated_at: listing.updated_at,
+        user_id: listing.user_id,
+        is_active: listing.is_active
+      }));
+    } catch (error) {
+      console.error('Error getting popular listings:', error);
+      return [];
+    }
   }
 }

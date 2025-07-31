@@ -15,6 +15,7 @@ import { DuplicateDetectionService } from "./services/duplicateDetectionService"
 import { EmailVerificationService } from "./services/emailVerificationService";
 import { EmbeddingService } from "./services/embeddingService";
 import { SemanticSearchService } from "./services/semanticSearchService";
+import { UserBehaviorService } from "./services/userBehaviorService";
 import {
   createAuthMiddleware,
   createRoleMiddleware
@@ -77,6 +78,18 @@ async function initializeServices(env: Env) {
   const semanticSearchService = new SemanticSearchService(env, databaseService);
   console.log('SemanticSearchService created successfully');
 
+  console.log('Creating UserBehaviorService...');
+  const userBehaviorService = new UserBehaviorService(databaseService);
+  console.log('UserBehaviorService created successfully');
+
+  // Initialize user behavior tables
+  try {
+    await semanticSearchService.initializeUserBehaviorTables();
+    console.log('User behavior tables initialized');
+  } catch (error) {
+    console.error('Failed to initialize user behavior tables:', error);
+  }
+
   console.log('=== SERVICES INITIALIZED ===');
 
   return {
@@ -93,7 +106,8 @@ async function initializeServices(env: Env) {
     duplicateDetectionService,
     subscriptionService,
     embeddingService,
-    semanticSearchService
+    semanticSearchService,
+    userBehaviorService
   };
 }
 
@@ -611,7 +625,17 @@ app.post("/api/listings/semantic-search", async (c) => {
   try {
     const services = c.get('services');
     const searchQuery = await c.req.json();
-    const result = await services.semanticSearchService.semanticSearch(searchQuery);
+
+    // Get user ID if authenticated
+    let userId = null;
+    try {
+      const auth = c.get('auth');
+      userId = auth?.userId || null;
+    } catch {
+      // Not authenticated, continue without user ID
+    }
+
+    const result = await services.semanticSearchService.semanticSearch(searchQuery, userId);
     return c.json({
       results: result,
       count: result.length,
@@ -628,7 +652,17 @@ app.post("/api/listings/hybrid-search", async (c) => {
   try {
     const services = c.get('services');
     const searchQuery = await c.req.json();
-    const result = await services.semanticSearchService.hybridSearch(searchQuery);
+
+    // Get user ID if authenticated
+    let userId = null;
+    try {
+      const auth = c.get('auth');
+      userId = auth?.userId || null;
+    } catch {
+      // Not authenticated, continue without user ID
+    }
+
+    const result = await services.semanticSearchService.hybridSearch(searchQuery, userId);
     return c.json(result);
   } catch (error) {
     console.error('Hybrid search endpoint error:', error);
@@ -671,6 +705,77 @@ app.get("/api/listings/recommendations", authMiddleware, async (c) => {
   } catch (error) {
     console.error('Recommendations endpoint error:', error);
     return c.json({ error: "Failed to get recommendations" }, 500);
+  }
+});
+
+// Record user interaction endpoint
+app.post("/api/listings/:id/interaction", authMiddleware, async (c) => {
+  try {
+    const services = c.get('services');
+    const auth = c.get('auth');
+    const listingId = c.req.param('id');
+    const { interactionType, durationSeconds } = await c.req.json();
+
+    // Validate interaction type
+    const validTypes = ['view', 'favorite', 'unfavorite', 'contact', 'share'];
+    if (!validTypes.includes(interactionType)) {
+      return c.json({ error: "Invalid interaction type" }, 400);
+    }
+
+    await services.semanticSearchService.recordListingInteraction(
+      auth.userId,
+      listingId,
+      interactionType,
+      durationSeconds
+    );
+
+    return c.json({
+      success: true,
+      message: `${interactionType} interaction recorded`,
+      listingId,
+      userId: auth.userId
+    });
+  } catch (error) {
+    console.error('Record interaction endpoint error:', error);
+    return c.json({ error: "Failed to record interaction" }, 500);
+  }
+});
+
+// Get user behavior analytics endpoint (admin only)
+app.get("/api/admin/user-behavior/:userId", authMiddleware, roleMiddleware(['admin']), async (c) => {
+  try {
+    const services = c.get('services');
+    const userId = c.req.param('userId');
+
+    const preferences = await services.userBehaviorService.getUserPreferences(userId);
+    const activitySummary = await services.userBehaviorService.getUserActivitySummary(userId);
+
+    return c.json({
+      userId,
+      preferences,
+      activitySummary
+    });
+  } catch (error) {
+    console.error('User behavior analytics endpoint error:', error);
+    return c.json({ error: "Failed to get user behavior analytics" }, 500);
+  }
+});
+
+// Get trending search terms endpoint
+app.get("/api/analytics/trending-searches", async (c) => {
+  try {
+    const services = c.get('services');
+    const limit = parseInt(c.req.query('limit') || '10');
+
+    const trendingTerms = await services.userBehaviorService.getTrendingSearchTerms(limit);
+
+    return c.json({
+      trendingSearches: trendingTerms,
+      count: trendingTerms.length
+    });
+  } catch (error) {
+    console.error('Trending searches endpoint error:', error);
+    return c.json({ error: "Failed to get trending searches" }, 500);
   }
 });
 

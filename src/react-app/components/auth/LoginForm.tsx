@@ -34,12 +34,11 @@ const LoginForm = ({
   const handleResendVerification = async () => {
     const emailToUse = userEmail || email;
 
-    console.log('🔄 Resend verification debug:', {
-      userEmail: userEmail,
-      formEmail: email,
-      emailToUse: emailToUse,
-      requiresEmailVerification: requiresEmailVerification
-    });
+    console.log('🔄 Resend verification debug:');
+    console.log('  - userEmail:', userEmail);
+    console.log('  - formEmail:', email);
+    console.log('  - emailToUse:', emailToUse);
+    console.log('  - requiresEmailVerification:', requiresEmailVerification);
 
     if (!emailToUse) {
       setVerificationMessage('Please enter your email address');
@@ -60,10 +59,17 @@ const LoginForm = ({
 
       const data = await response.json();
 
+      console.log('📧 Resend verification response:');
+      console.log('  - status:', response.status);
+      console.log('  - success:', data.success);
+      console.log('  - message:', data.message);
+      console.log('  - error:', data.error);
+      console.log('  - fullResponse:', data);
+
       if (data.success) {
         setVerificationMessage('Verification email sent! Please check your inbox.');
       } else {
-        setVerificationMessage(data.message || 'Failed to resend verification email');
+        setVerificationMessage(data.message || data.error || 'Failed to resend verification email');
       }
     } catch (error) {
       console.error('Resend verification error:', error);

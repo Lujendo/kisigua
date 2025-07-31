@@ -6,7 +6,7 @@ export class EmailService {
   private fromEmail: string;
   private apiKey: string;
 
-  constructor(apiKey: string, fromEmail: string = 'Kisigua <noreply@kisigua.com>') {
+  constructor(apiKey: string, fromEmail: string = 'Kisigua <onboarding@resend.dev>') {
     this.apiKey = apiKey;
     this.resend = new Resend(apiKey);
     this.fromEmail = fromEmail;

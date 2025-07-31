@@ -123,12 +123,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUserEmail(null);
         console.log('Login successful, token stored');
       } else if (data.requiresEmailVerification) {
-        console.log('📧 Email verification required debug:', {
-          dataEmail: data.email,
-          loginEmail: email,
-          finalEmail: data.email || email,
-          fullResponse: data
-        });
+        console.log('📧 Email verification required debug:');
+        console.log('  - dataEmail:', data.email);
+        console.log('  - loginEmail:', email);
+        console.log('  - finalEmail:', data.email || email);
+        console.log('  - fullResponse:', data);
 
         setRequiresEmailVerification(true);
         setUserEmail(data.email || email);

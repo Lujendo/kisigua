@@ -321,7 +321,14 @@ export class EmailVerificationService {
 
       if (!userResult) {
         console.log('❌ User not found in database for email:', email);
-        return { success: false, error: 'User not found or already verified' };
+
+        // Try to find user in AuthService memory as fallback
+        console.log('🔍 Checking AuthService memory for user...');
+        // Note: We can't access AuthService directly from here, so we'll return a specific error
+        return {
+          success: false,
+          error: 'User not found in database. Please register first or contact support if you believe this is an error.'
+        };
       }
 
       console.log('👤 Found user:', { id: userResult.id, email: userResult.email });

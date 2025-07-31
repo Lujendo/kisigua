@@ -448,6 +448,8 @@ app.post("/api/auth/resend-verification", async (c) => {
     const services = c.get('services');
     const body = await c.req.json() as ResendVerificationRequest;
 
+    console.log('🔄 Resend verification request for:', body.email);
+
     if (!body.email) {
       return c.json({
         success: false,
@@ -456,6 +458,12 @@ app.post("/api/auth/resend-verification", async (c) => {
     }
 
     const result = await services.emailVerificationService.resendVerification(body.email);
+
+    console.log('📧 Resend verification result:', {
+      success: result.success,
+      error: result.error,
+      email: body.email
+    });
 
     if (!result.success) {
       return c.json({
@@ -469,7 +477,7 @@ app.post("/api/auth/resend-verification", async (c) => {
       message: "Verification email sent successfully"
     });
   } catch (error) {
-    console.error('Resend verification error:', error);
+    console.error('❌ Resend verification error:', error);
     return c.json({
       success: false,
       message: "Failed to resend verification email"
@@ -875,6 +883,73 @@ app.post("/api/test/resend-connection", authMiddleware, roleMiddleware(['admin']
       error: "Failed to test Resend connection",
       details: error instanceof Error ? error.message : 'Unknown error'
     }, 500);
+  }
+});
+
+// Debug endpoint to check if user exists in database
+app.post("/api/test/check-user", authMiddleware, roleMiddleware(['admin']), async (c) => {
+  try {
+    const services = c.get('services');
+    const { email } = await c.req.json();
+
+    if (!email) {
+      return c.json({ error: "Email is required" }, 400);
+    }
+
+    // Check if user exists in database
+    let dbUser = null;
+    try {
+      dbUser = await services.databaseService.getUserByEmail(email);
+    } catch (dbError) {
+      console.error('Database lookup error:', dbError);
+    }
+
+    // Check if user exists in memory (AuthService) - simplified check
+    let memoryUserExists = false;
+    let memoryUserInfo = null;
+
+    try {
+      // Access the users map from AuthService
+      const users = (services.authService as any).users;
+      if (users) {
+        for (const [, user] of users.entries()) {
+          if ((user as any).email === email) {
+            memoryUserExists = true;
+            memoryUserInfo = {
+              id: (user as any).id,
+              email: (user as any).email,
+              role: (user as any).role,
+              isActive: (user as any).isActive,
+              emailVerified: (user as any).emailVerified
+            };
+            break;
+          }
+        }
+      }
+    } catch (memoryError) {
+      console.error('Error checking memory users:', memoryError);
+    }
+
+    return c.json({
+      email,
+      existsInDatabase: !!dbUser,
+      existsInMemory: memoryUserExists,
+      databaseUser: dbUser ? {
+        id: dbUser.id,
+        email: dbUser.email,
+        role: dbUser.role,
+        isActive: dbUser.isActive,
+        emailVerified: dbUser.email_verified
+      } : null,
+      memoryUser: memoryUserInfo,
+      message: !dbUser && !memoryUserExists ? 'User not found in database or memory' :
+               dbUser && memoryUserExists ? 'User exists in both database and memory' :
+               dbUser ? 'User exists in database only' :
+               'User exists in memory only'
+    });
+  } catch (error) {
+    console.error('Check user endpoint error:', error);
+    return c.json({ error: "Failed to check user" }, 500);
   }
 });
 

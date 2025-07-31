@@ -89,13 +89,16 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
     return R * c; // Distance in kilometers
   };
 
-  // Simple geocoding for major cities (fallback for when no GPS is available)
+  // Simple geocoding for German cities (fallback for when no GPS is available)
   const geocodeLocation = async (locationName: string): Promise<{lat: number, lng: number} | null> => {
     const cityCoordinates: {[key: string]: {lat: number, lng: number}} = {
+      // Major cities
       'berlin': { lat: 52.5200, lng: 13.4050 },
       'munich': { lat: 48.1351, lng: 11.5820 },
+      'münchen': { lat: 48.1351, lng: 11.5820 },
       'hamburg': { lat: 53.5511, lng: 9.9937 },
       'cologne': { lat: 50.9375, lng: 6.9603 },
+      'köln': { lat: 50.9375, lng: 6.9603 },
       'frankfurt': { lat: 50.1109, lng: 8.6821 },
       'stuttgart': { lat: 48.7758, lng: 9.1829 },
       'düsseldorf': { lat: 51.2277, lng: 6.7735 },
@@ -106,7 +109,38 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
       'dresden': { lat: 51.0504, lng: 13.7373 },
       'hannover': { lat: 52.3759, lng: 9.7320 },
       'nuremberg': { lat: 49.4521, lng: 11.0767 },
-      'duisburg': { lat: 51.4344, lng: 6.7623 }
+      'nürnberg': { lat: 49.4521, lng: 11.0767 },
+      'duisburg': { lat: 51.4344, lng: 6.7623 },
+
+      // Baden-Württemberg cities
+      'reutlingen': { lat: 48.4919, lng: 9.2041 },
+      'tübingen': { lat: 48.5216, lng: 9.0576 },
+      'ulm': { lat: 48.3984, lng: 9.9915 },
+      'heilbronn': { lat: 49.1427, lng: 9.2109 },
+      'pforzheim': { lat: 48.8918, lng: 8.6942 },
+      'mannheim': { lat: 49.4875, lng: 8.4660 },
+      'karlsruhe': { lat: 49.0069, lng: 8.4037 },
+      'freiburg': { lat: 47.9990, lng: 7.8421 },
+      'heidelberg': { lat: 49.3988, lng: 8.6724 },
+
+      // Bavaria cities
+      'augsburg': { lat: 48.3705, lng: 10.8978 },
+      'würzburg': { lat: 49.7913, lng: 9.9534 },
+      'regensburg': { lat: 49.0134, lng: 12.1016 },
+      'ingolstadt': { lat: 48.7665, lng: 11.4257 },
+
+      // North Rhine-Westphalia cities
+      'bonn': { lat: 50.7374, lng: 7.0982 },
+      'münster': { lat: 51.9607, lng: 7.6261 },
+      'aachen': { lat: 50.7753, lng: 6.0839 },
+      'bielefeld': { lat: 52.0302, lng: 8.5325 },
+
+      // Other states
+      'magdeburg': { lat: 52.1205, lng: 11.6276 },
+      'erfurt': { lat: 50.9848, lng: 11.0299 },
+      'mainz': { lat: 49.9929, lng: 8.2473 },
+      'kiel': { lat: 54.3233, lng: 10.1228 },
+      'wiesbaden': { lat: 50.0826, lng: 8.2400 }
     };
 
     const normalizedLocation = locationName.toLowerCase().trim();
@@ -259,13 +293,13 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
     fetchLocations();
   }, []);
 
-  // Re-run search when location parameters change
+  // Re-run search when location parameters change (but avoid infinite loops)
   useEffect(() => {
-    if (locationSearch || userLocation) {
+    if (userLocation) {
       console.log(`🔄 Location parameters changed, re-running search...`);
       handleSearch(searchQuery);
     }
-  }, [locationSearch, searchRadius, userLocation]);
+  }, [searchRadius]); // Only trigger on radius change, not location change
 
   if (!user) {
     return null;
@@ -556,11 +590,12 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                     <div className="md:col-span-2 relative">
                       <input
                         type="text"
-                        placeholder="Enter city, postal code, or address..."
+                        placeholder="Enter city name (e.g., Berlin, Stuttgart, Reutlingen)..."
                         value={locationSearch}
                         onChange={(e) => setLocationSearch(e.target.value)}
                         onKeyPress={(e) => {
                           if (e.key === 'Enter') {
+                            e.preventDefault();
                             handleLocationSearch();
                           }
                         }}

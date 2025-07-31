@@ -179,7 +179,7 @@ const Map: React.FC<MapProps> = ({
       }
       markersRef.current = [];
     };
-  }, [center, zoom, markers, onMarkerClick, searchLocation, searchRadius, onMapClick]);
+  }, [center[0], center[1], zoom, markers.length, searchLocation?.lat, searchLocation?.lng, searchRadius]); // Optimize dependencies
 
   // Update map view when center changes
   useEffect(() => {

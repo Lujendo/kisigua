@@ -1331,8 +1331,8 @@ const MyListingsPage: React.FC = () => {
                     </div>
 
                     <div className="flex space-x-3">
-                      {/* Save Changes button - available on all tabs when editing */}
-                      {isEditing && (
+                      {/* Save Changes button - available on all tabs except pricing when editing */}
+                      {isEditing && activeTab !== 'pricing' && (
                         <button
                           type="submit"
                           disabled={isSubmitting}

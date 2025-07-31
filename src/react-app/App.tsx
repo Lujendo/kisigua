@@ -17,7 +17,7 @@ import Imprint from './components/legal/Imprint';
 
 import SubscriptionPage from './components/subscription/SubscriptionPage';
 import Sidebar from './components/Sidebar';
-import EnhancedSearchPage from './components/search/EnhancedSearchPage';
+import AdvancedSearchPage from './components/search/AdvancedSearchPage';
 import MyListingsPage from './components/listings/MyListingsPage';
 import FavoritesPage from './components/favorites/FavoritesPage';
 import AdminPanel from './components/admin/AdminPanel';
@@ -331,7 +331,7 @@ function AppContent() {
             />
           )}
 
-          {currentPage === 'search' && <EnhancedSearchPage />}
+          {currentPage === 'search' && <AdvancedSearchPage />}
 
           {currentPage === 'listings' && <MyListingsPage />}
 

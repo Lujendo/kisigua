@@ -353,10 +353,10 @@ export class DatabaseService {
     const listings = [];
     for (const dbListing of result.results) {
       try {
-        const convertedListing = await this.convertDatabaseListingToListing(dbListing);
+        const convertedListing = await this.convertDatabaseListingToListing(dbListing as any);
         listings.push(convertedListing);
       } catch (error) {
-        console.error('Error converting listing:', dbListing.id, error);
+        console.error('Error converting listing:', (dbListing as any).id, error);
       }
     }
 

@@ -409,14 +409,7 @@ const MyListingsPage: React.FC = () => {
     }));
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'published': return 'bg-green-100 text-green-800';
-      case 'draft': return 'bg-yellow-100 text-yellow-800';
-      case 'archived': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+
 
   const ListingCard: React.FC<{ listing: Listing }> = ({ listing }) => (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-visible">
@@ -1766,7 +1759,7 @@ const MyListingsPage: React.FC = () => {
                   We found {duplicateWarning.duplicates.length} similar listing{duplicateWarning.duplicates.length > 1 ? 's' : ''} that might be duplicates:
                 </p>
 
-                {duplicateWarning.duplicates.map((duplicate, index) => (
+                {duplicateWarning.duplicates.map((duplicate) => (
                   <div key={duplicate.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">

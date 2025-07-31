@@ -455,11 +455,11 @@ app.post("/api/listings", authMiddleware, async (c) => {
     const duplicates = await services.duplicateDetectionService.checkForDuplicates(data, auth.userId);
 
     // If high-confidence duplicates found, return warning
-    const highConfidenceDuplicates = duplicates.filter(d => d.confidence >= 80);
+    const highConfidenceDuplicates = duplicates.filter((d: any) => d.confidence >= 80);
     if (highConfidenceDuplicates.length > 0) {
       return c.json({
         error: "Potential duplicate listing detected",
-        duplicates: highConfidenceDuplicates.map(d => ({
+        duplicates: highConfidenceDuplicates.map((d: any) => ({
           id: d.listingId,
           title: d.title,
           address: d.address,
@@ -632,7 +632,7 @@ app.post("/api/listings/check-duplicates", authMiddleware, async (c) => {
     const duplicates = await services.duplicateDetectionService.checkForDuplicates(data, auth.userId);
 
     return c.json({
-      duplicates: duplicates.map(d => ({
+      duplicates: duplicates.map((d: any) => ({
         id: d.listingId,
         title: d.title,
         address: d.address,

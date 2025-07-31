@@ -66,6 +66,22 @@ const MyListingsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Helper function to get status badge colors
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-100 text-green-800';
+      case 'inactive':
+        return 'bg-gray-100 text-gray-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'rejected':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   // Fetch user's listings from API
   useEffect(() => {
     const fetchUserListings = async () => {
@@ -567,7 +583,8 @@ const MyListingsPage: React.FC = () => {
       linkedin: editingListing?.contact?.socials?.linkedin || '',
       priceType: (editingListing?.priceType || 'free') as 'free' | 'paid' | 'donation',
       price: editingListing?.price?.toString() || '',
-      tags: editingListing?.tags?.join(', ') || ''
+      tags: editingListing?.tags?.join(', ') || '',
+      status: (editingListing?.status || 'active') as 'active' | 'inactive' | 'pending' | 'rejected'
     });
     const [images, setImages] = useState<string[]>([]);
     const [categories, setCategories] = useState<Array<{ id: string; label: string; color?: string; icon?: string }>>([]);
@@ -710,7 +727,8 @@ const MyListingsPage: React.FC = () => {
           isOrganic: false, // Could be added as a form field
           isCertified: false, // Could be added as a form field
           priceRange: formData.priceType === 'free' ? 'free' :
-                     formData.priceType === 'paid' ? 'medium' : 'low'
+                     formData.priceType === 'paid' ? 'medium' : 'low',
+          status: formData.status
         };
 
         console.log(`Submitting listing data for ${isEditing ? 'update' : 'create'}:`, listingData);
@@ -1263,6 +1281,70 @@ const MyListingsPage: React.FC = () => {
                           />
                         </div>
                       )}
+
+                      {/* Status Management Section */}
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-4">Listing Status</label>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {[
+                              {
+                                value: 'active',
+                                label: 'Active',
+                                description: 'Visible to all users in search results',
+                                icon: (
+                                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                ),
+                                color: 'green'
+                              },
+                              {
+                                value: 'inactive',
+                                label: 'Inactive',
+                                description: 'Hidden from search but not deleted',
+                                icon: (
+                                  <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
+                                  </svg>
+                                ),
+                                color: 'gray'
+                              }
+                            ].map((option) => (
+                              <label
+                                key={option.value}
+                                className={`relative flex flex-col p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                                  formData.status === option.value
+                                    ? `border-${option.color}-500 bg-${option.color}-50`
+                                    : 'border-gray-200 hover:border-gray-300'
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name="status"
+                                  value={option.value}
+                                  checked={formData.status === option.value}
+                                  onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' | 'pending' | 'rejected' })}
+                                  className="sr-only"
+                                />
+                                <div className="flex items-center justify-between mb-2">
+                                  {option.icon}
+                                  {formData.status === option.value && (
+                                    <svg className={`w-5 h-5 text-${option.color}-600`} fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                    </svg>
+                                  )}
+                                </div>
+                                <span className="font-medium text-gray-900">{option.label}</span>
+                                <span className="text-sm text-gray-500">{option.description}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Admin-only status options */}
+                        {/* TODO: Show pending/rejected options only for admins */}
+                      </div>
 
                       <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                         <div className="flex items-start">

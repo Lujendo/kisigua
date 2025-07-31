@@ -33,6 +33,14 @@ const LoginForm = ({
 
   const handleResendVerification = async () => {
     const emailToUse = userEmail || email;
+
+    console.log('🔄 Resend verification debug:', {
+      userEmail: userEmail,
+      formEmail: email,
+      emailToUse: emailToUse,
+      requiresEmailVerification: requiresEmailVerification
+    });
+
     if (!emailToUse) {
       setVerificationMessage('Please enter your email address');
       return;

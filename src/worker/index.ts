@@ -12,11 +12,20 @@ import { FavoritesService } from "./services/favoritesService";
 import { ActivityService } from "./services/activityService";
 import { StatsService } from "./services/statsService";
 import { DuplicateDetectionService } from "./services/duplicateDetectionService";
+import { EmailVerificationService } from "./services/emailVerificationService";
 import {
   createAuthMiddleware,
   createRoleMiddleware
 } from "./middleware/auth";
-import { LoginRequest, RegisterRequest, UserRole } from "./types/auth";
+import {
+  LoginRequest,
+  RegisterRequest,
+  UserRole,
+  VerifyEmailRequest,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
+  ResendVerificationRequest
+} from "./types/auth";
 import { SearchQuery, CreateListingRequest, UpdateListingRequest } from "./types/listings";
 import { CreateCheckoutSessionRequest } from "./types/subscription";
 
@@ -27,6 +36,7 @@ interface Env {
   CACHE: KVNamespace;
   JWT_SECRET: string;
   STRIPE_SECRET_KEY: string;
+  RESEND_API_KEY: string;
   ENVIRONMENT: string;
   APP_URL: string;
   R2_BUCKET_NAME: string;
@@ -50,6 +60,13 @@ function initializeServices(env: Env) {
   const authService = new AuthService(env.JWT_SECRET || 'your-secret-key-change-in-production', databaseService);
   console.log('AuthService created successfully');
 
+  console.log('Creating EmailVerificationService with RESEND_API_KEY:', env.RESEND_API_KEY ? 'SET' : 'USING FALLBACK');
+  const emailVerificationService = new EmailVerificationService(
+    env.DB,
+    env.RESEND_API_KEY || 're_F6JhDUHU_4eTP4noKar5kvSqmCUN13ZHA'
+  );
+  console.log('EmailVerificationService created successfully');
+
   const listingsService = new ListingsService(databaseService);
   const duplicateDetectionService = new DuplicateDetectionService(databaseService);
   const subscriptionService = new SubscriptionService(env.STRIPE_SECRET_KEY || 'sk_test_your_stripe_secret_key');
@@ -64,6 +81,7 @@ function initializeServices(env: Env) {
     activityService,
     statsService,
     authService,
+    emailVerificationService,
     listingsService,
     duplicateDetectionService,
     subscriptionService
@@ -179,8 +197,18 @@ app.post("/api/auth/login", async (c) => {
     }
 
     const result = await services.authService.login(body);
-    const statusCode = result.success ? 200 : 401;
 
+    // Check if login was successful but email is not verified
+    if (result.success && result.user && !result.user.emailVerified) {
+      return c.json({
+        success: false,
+        message: "Please verify your email address before logging in. Check your inbox for a verification link.",
+        requiresEmailVerification: true,
+        email: result.user.email
+      }, 403);
+    }
+
+    const statusCode = result.success ? 200 : 401;
     return c.json(result, statusCode);
   } catch (error) {
     console.error('Login endpoint error:', error);
@@ -204,8 +232,24 @@ app.post("/api/auth/register", async (c) => {
     }
 
     const result = await services.authService.register(body);
-    const statusCode = result.success ? 201 : 400;
 
+    if (result.success && result.user) {
+      // Send verification email
+      const emailResult = await services.emailVerificationService.sendEmailVerification(result.user);
+
+      if (!emailResult.success) {
+        console.error('Failed to send verification email:', emailResult.error);
+      }
+
+      // Return success but indicate email verification is required
+      return c.json({
+        ...result,
+        requiresEmailVerification: true,
+        message: "Registration successful! Please check your email to verify your account."
+      }, 201);
+    }
+
+    const statusCode = result.success ? 201 : 400;
     return c.json(result, statusCode);
   } catch (error) {
     console.error('Register endpoint error:', error);
@@ -259,6 +303,144 @@ app.post("/api/auth/verify", async (c) => {
       success: false,
       message: "Token verification failed"
     }, 401);
+  }
+});
+
+// Email verification endpoints
+app.post("/api/auth/verify-email", async (c) => {
+  try {
+    const services = c.get('services');
+    const body = await c.req.json() as VerifyEmailRequest;
+
+    if (!body.token) {
+      return c.json({
+        success: false,
+        message: "Verification token is required"
+      }, 400);
+    }
+
+    const result = await services.emailVerificationService.verifyEmail(body.token);
+
+    if (!result.success) {
+      return c.json({
+        success: false,
+        message: result.error || "Email verification failed"
+      }, 400);
+    }
+
+    return c.json({
+      success: true,
+      message: "Email verified successfully",
+      user: result.user
+    });
+  } catch (error) {
+    console.error('Email verification error:', error);
+    return c.json({
+      success: false,
+      message: "Email verification failed"
+    }, 500);
+  }
+});
+
+app.post("/api/auth/forgot-password", async (c) => {
+  try {
+    const services = c.get('services');
+    const body = await c.req.json() as ForgotPasswordRequest;
+
+    if (!body.email) {
+      return c.json({
+        success: false,
+        message: "Email is required"
+      }, 400);
+    }
+
+    const result = await services.emailVerificationService.sendPasswordReset(body.email);
+
+    return c.json({
+      success: true,
+      message: "If an account with that email exists, a password reset link has been sent"
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    return c.json({
+      success: false,
+      message: "Failed to send password reset email"
+    }, 500);
+  }
+});
+
+app.post("/api/auth/reset-password", async (c) => {
+  try {
+    const services = c.get('services');
+    const body = await c.req.json() as ResetPasswordRequest;
+
+    if (!body.token || !body.newPassword) {
+      return c.json({
+        success: false,
+        message: "Reset token and new password are required"
+      }, 400);
+    }
+
+    if (body.newPassword.length < 8) {
+      return c.json({
+        success: false,
+        message: "Password must be at least 8 characters long"
+      }, 400);
+    }
+
+    const result = await services.emailVerificationService.resetPassword(body.token, body.newPassword);
+
+    if (!result.success) {
+      return c.json({
+        success: false,
+        message: result.error || "Password reset failed"
+      }, 400);
+    }
+
+    return c.json({
+      success: true,
+      message: "Password reset successfully"
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    return c.json({
+      success: false,
+      message: "Password reset failed"
+    }, 500);
+  }
+});
+
+app.post("/api/auth/resend-verification", async (c) => {
+  try {
+    const services = c.get('services');
+    const body = await c.req.json() as ResendVerificationRequest;
+
+    if (!body.email) {
+      return c.json({
+        success: false,
+        message: "Email is required"
+      }, 400);
+    }
+
+    const result = await services.emailVerificationService.resendVerification(body.email);
+
+    if (!result.success) {
+      return c.json({
+        success: false,
+        message: result.error || "Failed to resend verification email"
+      }, 400);
+    }
+
+    return c.json({
+      success: true,
+      message: "Verification email sent successfully"
+    });
+  } catch (error) {
+    console.error('Resend verification error:', error);
+    return c.json({
+      success: false,
+      message: "Failed to resend verification email"
+    }, 500);
   }
 });
 

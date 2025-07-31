@@ -3,9 +3,21 @@ import { useAuth } from '../../contexts/AuthContext';
 import LoginForm from './LoginForm';
 import RegisterForm from './RegisterForm';
 
-const AuthPage = () => {
+interface AuthPageProps {
+  onNavigateToPasswordReset?: () => void;
+}
+
+const AuthPage = ({ onNavigateToPasswordReset }: AuthPageProps) => {
   const [isLogin, setIsLogin] = useState(true);
-  const { login, register, isLoading, error, clearError } = useAuth();
+  const {
+    login,
+    register,
+    isLoading,
+    error,
+    clearError,
+    requiresEmailVerification,
+    userEmail
+  } = useAuth();
 
   const handleLogin = async (email: string, password: string) => {
     clearError();
@@ -32,8 +44,11 @@ const AuthPage = () => {
       <LoginForm
         onLogin={handleLogin}
         onSwitchToRegister={switchToRegister}
+        onNavigateToPasswordReset={onNavigateToPasswordReset}
         loading={isLoading}
         error={error || undefined}
+        requiresEmailVerification={requiresEmailVerification}
+        userEmail={userEmail || undefined}
       />
     );
   }

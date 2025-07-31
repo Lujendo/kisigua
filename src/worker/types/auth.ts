@@ -8,6 +8,11 @@ export interface User {
   firstName: string;
   lastName: string;
   isActive: boolean;
+  emailVerified: boolean;
+  emailVerificationToken?: string;
+  emailVerificationExpiresAt?: string;
+  passwordResetToken?: string;
+  passwordResetExpiresAt?: string;
   createdAt: string;
   updatedAt: string;
   lastLoginAt?: string;
@@ -20,6 +25,7 @@ export interface UserProfile {
   firstName: string;
   lastName: string;
   isActive: boolean;
+  emailVerified: boolean;
   createdAt: string;
   lastLoginAt?: string;
   profileImageUrl?: string;
@@ -51,6 +57,57 @@ export interface AuthResponse {
   token?: string;
   user?: UserProfile;
   message?: string;
+  requiresEmailVerification?: boolean;
+}
+
+export interface EmailVerificationToken {
+  id: string;
+  userId: string;
+  token: string;
+  email: string;
+  expiresAt: string;
+  usedAt?: string;
+  createdAt: string;
+}
+
+export interface PasswordResetToken {
+  id: string;
+  userId: string;
+  token: string;
+  email: string;
+  expiresAt: string;
+  usedAt?: string;
+  createdAt: string;
+}
+
+export interface EmailLog {
+  id: string;
+  userId?: string;
+  emailType: 'verification' | 'password_reset' | 'welcome' | 'notification';
+  recipientEmail: string;
+  subject: string;
+  resendMessageId?: string;
+  status: 'sent' | 'delivered' | 'failed' | 'bounced';
+  errorMessage?: string;
+  sentAt: string;
+  deliveredAt?: string;
+}
+
+export interface VerifyEmailRequest {
+  token: string;
+}
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+}
+
+export interface ResendVerificationRequest {
+  email: string;
 }
 
 export interface RolePermissions {

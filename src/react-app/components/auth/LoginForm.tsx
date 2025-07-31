@@ -1,20 +1,67 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface LoginFormProps {
   onLogin: (email: string, password: string) => Promise<void>;
   onSwitchToRegister: () => void;
+  onNavigateToPasswordReset?: () => void;
   loading?: boolean;
   error?: string;
+  requiresEmailVerification?: boolean;
+  userEmail?: string;
 }
 
-const LoginForm = ({ onLogin, onSwitchToRegister, loading = false, error }: LoginFormProps) => {
+const LoginForm = ({
+  onLogin,
+  onSwitchToRegister,
+  onNavigateToPasswordReset,
+  loading = false,
+  error,
+  requiresEmailVerification = false,
+  userEmail = ''
+}: LoginFormProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
+  const [verificationMessage, setVerificationMessage] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (email && password) {
       await onLogin(email, password);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    const emailToUse = userEmail || email;
+    if (!emailToUse) {
+      setVerificationMessage('Please enter your email address');
+      return;
+    }
+
+    setIsResendingVerification(true);
+    setVerificationMessage('');
+
+    try {
+      const response = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: emailToUse }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setVerificationMessage('Verification email sent! Please check your inbox.');
+      } else {
+        setVerificationMessage(data.message || 'Failed to resend verification email');
+      }
+    } catch (error) {
+      console.error('Resend verification error:', error);
+      setVerificationMessage('An error occurred. Please try again.');
+    } finally {
+      setIsResendingVerification(false);
     }
   };
 
@@ -39,6 +86,36 @@ const LoginForm = ({ onLogin, onSwitchToRegister, loading = false, error }: Logi
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
               {error}
+            </div>
+          )}
+
+          {/* Email Verification Required */}
+          {requiresEmailVerification && (
+            <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg">
+              <div className="flex items-start">
+                <svg className="h-5 w-5 text-yellow-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <div className="flex-1">
+                  <h3 className="text-sm font-medium">Email verification required</h3>
+                  <p className="text-sm mt-1">
+                    Please verify your email address before logging in. Check your inbox for a verification link.
+                  </p>
+                  <div className="mt-3">
+                    <button
+                      type="button"
+                      onClick={handleResendVerification}
+                      disabled={isResendingVerification}
+                      className="text-sm text-yellow-800 hover:text-yellow-900 underline disabled:opacity-50"
+                    >
+                      {isResendingVerification ? 'Sending...' : 'Resend verification email'}
+                    </button>
+                  </div>
+                  {verificationMessage && (
+                    <p className="text-sm mt-2 text-yellow-700">{verificationMessage}</p>
+                  )}
+                </div>
+              </div>
             </div>
           )}
           
@@ -98,14 +175,25 @@ const LoginForm = ({ onLogin, onSwitchToRegister, loading = false, error }: Logi
             </button>
           </div>
 
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={onSwitchToRegister}
-              className="text-green-600 hover:text-green-500 text-sm font-medium"
-            >
-              Don't have an account? Sign up
-            </button>
+          <div className="text-center space-y-2">
+            <div>
+              <button
+                type="button"
+                onClick={onNavigateToPasswordReset}
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                Forgot your password?
+              </button>
+            </div>
+            <div>
+              <button
+                type="button"
+                onClick={onSwitchToRegister}
+                className="text-green-600 hover:text-green-500 text-sm font-medium"
+              >
+                Don't have an account? Sign up
+              </button>
+            </div>
           </div>
         </form>
 

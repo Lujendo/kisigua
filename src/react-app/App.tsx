@@ -3,6 +3,8 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { FavoritesProvider } from './contexts/FavoritesContext';
 import LandingPage from './components/LandingPage';
 import AuthPage from './components/auth/AuthPage';
+import EmailVerification from './components/auth/EmailVerification';
+import PasswordReset from './components/auth/PasswordReset';
 import Dashboard from './components/Dashboard';
 
 import SubscriptionPage from './components/subscription/SubscriptionPage';
@@ -16,7 +18,7 @@ import ListingManagement from './components/admin/ListingManagement';
 
 function AppContent() {
   const { isAuthenticated, isLoading, user } = useAuth();
-  const [currentPage, setCurrentPage] = useState<'landing' | 'auth' | 'app' | 'search' | 'subscription' | 'dashboard' | 'listings' | 'favorites' | 'profile' | 'messages' | 'admin' | 'users' | 'admin-listings' | 'analytics'>('landing');
+  const [currentPage, setCurrentPage] = useState<'landing' | 'auth' | 'verify-email' | 'reset-password' | 'app' | 'search' | 'subscription' | 'dashboard' | 'listings' | 'favorites' | 'profile' | 'messages' | 'admin' | 'users' | 'admin-listings' | 'analytics'>('landing');
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Auto-navigate after successful login
@@ -51,6 +53,58 @@ function AppContent() {
     }
   }, [isAuthenticated]);
 
+  // Handle URL-based routing for email verification and password reset
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const pathname = window.location.pathname;
+
+    // Check for email verification
+    if (pathname === '/verify-email' || urlParams.get('token')) {
+      setCurrentPage('verify-email');
+    }
+    // Check for password reset
+    else if (pathname === '/reset-password' || pathname === '/forgot-password') {
+      setCurrentPage('reset-password');
+    }
+    // Check for other URL patterns
+    else if (pathname === '/auth' || pathname === '/login' || pathname === '/register') {
+      setCurrentPage('auth');
+    }
+    else if (pathname === '/dashboard') {
+      setCurrentPage('dashboard');
+    }
+    else if (pathname === '/search') {
+      setCurrentPage('search');
+    }
+    else if (pathname === '/subscription') {
+      setCurrentPage('subscription');
+    }
+  }, []);
+
+  // Update URL when page changes (simple history management)
+  useEffect(() => {
+    const updateURL = () => {
+      const newPath = (() => {
+        switch (currentPage) {
+          case 'verify-email': return '/verify-email';
+          case 'reset-password': return '/reset-password';
+          case 'auth': return '/auth';
+          case 'dashboard': return '/dashboard';
+          case 'search': return '/search';
+          case 'subscription': return '/subscription';
+          case 'admin': return '/admin';
+          default: return '/';
+        }
+      })();
+
+      if (window.location.pathname !== newPath) {
+        window.history.pushState({}, '', newPath + window.location.search);
+      }
+    };
+
+    updateURL();
+  }, [currentPage]);
+
   const handleNavigation = (page: string) => {
     setCurrentPage(page as 'dashboard' | 'search' | 'listings' | 'favorites' | 'subscription' | 'profile');
     // Only close sidebar on mobile devices after navigation
@@ -80,7 +134,29 @@ function AppContent() {
   // Unauthenticated pages (no sidebar)
   if (!isAuthenticated) {
     if (currentPage === 'auth') {
-      return <AuthPage />;
+      return (
+        <AuthPage
+          onNavigateToPasswordReset={() => setCurrentPage('reset-password')}
+        />
+      );
+    }
+    if (currentPage === 'verify-email') {
+      return (
+        <EmailVerification
+          onVerificationSuccess={() => {
+            // After successful verification, redirect to login
+            setCurrentPage('auth');
+          }}
+          onNavigateToLogin={() => setCurrentPage('auth')}
+        />
+      );
+    }
+    if (currentPage === 'reset-password') {
+      return (
+        <PasswordReset
+          onNavigateToLogin={() => setCurrentPage('auth')}
+        />
+      );
     }
     return (
       <LandingPage

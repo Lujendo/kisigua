@@ -9,6 +9,7 @@ export interface User {
   firstName: string;
   lastName: string;
   isActive: boolean;
+  emailVerified: boolean;
   createdAt: string;
   lastLoginAt?: string;
 }
@@ -23,6 +24,8 @@ export interface AuthContextType {
   logout: () => void;
   error: string | null;
   clearError: () => void;
+  requiresEmailVerification: boolean;
+  userEmail: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -44,6 +47,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [requiresEmailVerification, setRequiresEmailVerification] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   const isAuthenticated = !!user && !!token;
 
@@ -114,9 +119,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setToken(data.token);
         setUser(data.user);
         localStorage.setItem('kisigua_token', data.token);
+        setRequiresEmailVerification(false);
+        setUserEmail(null);
         console.log('Login successful, token stored');
+      } else if (data.requiresEmailVerification) {
+        console.log('Email verification required');
+        setRequiresEmailVerification(true);
+        setUserEmail(data.email || email);
+        setError(data.message || 'Please verify your email address before logging in.');
       } else {
         console.log('Login failed:', data.message);
+        setRequiresEmailVerification(false);
+        setUserEmail(null);
         setError(data.message || 'Login failed');
       }
     } catch (error) {
@@ -142,11 +156,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       const data = await response.json();
 
-      if (data.success && data.token && data.user) {
-        setToken(data.token);
-        setUser(data.user);
-        localStorage.setItem('kisigua_token', data.token);
+      if (data.success) {
+        if (data.requiresEmailVerification) {
+          // Registration successful but needs email verification
+          setRequiresEmailVerification(true);
+          setUserEmail(email);
+          setError(null);
+          // Show success message instead of error
+          console.log('Registration successful, email verification required');
+        } else if (data.token && data.user) {
+          // Registration successful and user is logged in
+          setToken(data.token);
+          setUser(data.user);
+          localStorage.setItem('kisigua_token', data.token);
+          setRequiresEmailVerification(false);
+          setUserEmail(null);
+        }
       } else {
+        setRequiresEmailVerification(false);
+        setUserEmail(null);
         setError(data.message || 'Registration failed');
       }
     } catch (error) {
@@ -163,6 +191,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setToken(null);
     localStorage.removeItem('kisigua_token');
     setError(null);
+    setRequiresEmailVerification(false);
+    setUserEmail(null);
 
     // Clear any other stored data
     localStorage.removeItem('kisigua_favorites');
@@ -172,6 +202,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const clearError = () => {
     setError(null);
+    setRequiresEmailVerification(false);
+    setUserEmail(null);
   };
 
   const value: AuthContextType = {
@@ -184,6 +216,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     error,
     clearError,
+    requiresEmailVerification,
+    userEmail,
   };
 
   return (

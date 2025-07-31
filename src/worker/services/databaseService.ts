@@ -183,6 +183,7 @@ export class DatabaseService {
         first_name as firstName,
         last_name as lastName,
         is_active as isActive,
+        email_verified,
         profile_image_url as profileImageUrl,
         created_at as createdAt,
         updated_at as updatedAt,

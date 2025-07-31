@@ -659,6 +659,40 @@ app.get("/api/auth/me", authMiddleware, async (c) => {
   return c.json({ user });
 });
 
+// Test endpoint to reset user password (for debugging)
+app.post("/api/test/reset-password", authMiddleware, roleMiddleware(['admin']), async (c) => {
+  try {
+    const { email, newPassword } = await c.req.json();
+
+    if (!email || !newPassword) {
+      return c.json({ error: 'Email and newPassword are required' }, 400);
+    }
+
+    const services = c.get('services');
+    console.log('🔧 Admin resetting password for user:', email);
+
+    // Hash the new password
+    const bcrypt = await import('bcryptjs');
+    const hashedPassword = bcrypt.hashSync(newPassword, 10);
+
+    // Update password in database
+    await services.databaseService.db.prepare(`
+      UPDATE users SET password_hash = ? WHERE email = ?
+    `).bind(hashedPassword, email).run();
+
+    console.log('✅ Password updated for user:', email);
+
+    return c.json({
+      success: true,
+      message: `Password updated for ${email}`,
+      newPassword: newPassword // Only for testing - remove in production
+    });
+  } catch (error) {
+    console.error('❌ Password reset error:', error);
+    return c.json({ error: 'Password reset failed' }, 500);
+  }
+});
+
 // Test endpoint to debug database users
 app.get("/api/test/database-users", authMiddleware, roleMiddleware(['admin']), async (c) => {
   try {

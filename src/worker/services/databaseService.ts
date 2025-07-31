@@ -148,11 +148,11 @@ export class DatabaseService {
 
     const stmt = this.db.prepare(`
       INSERT INTO listings (
-        id, user_id, title, description, category, latitude, longitude,
+        id, user_id, title, description, category, status, latitude, longitude,
         address, street, house_number, city, region, country, postal_code,
         contact_email, contact_phone, contact_website, is_organic, is_certified,
         certification_details, price_range, operating_hours
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     // Extract street and house number from location data
@@ -165,6 +165,7 @@ export class DatabaseService {
       listingData.title,
       listingData.description,
       dbCategory,
+      (listingData as any).status || 'active', // Default to active if not specified
       listingData.location.latitude,
       listingData.location.longitude,
       listingData.location.address,
@@ -231,6 +232,10 @@ export class DatabaseService {
         ? updates.category
         : `cat_${updates.category}`;
       values.push(dbCategory);
+    }
+    if ((updates as any).status) {
+      updateFields.push('status = ?');
+      values.push((updates as any).status);
     }
     if (updates.location) {
       updateFields.push('latitude = ?', 'longitude = ?', 'address = ?', 'city = ?', 'country = ?');

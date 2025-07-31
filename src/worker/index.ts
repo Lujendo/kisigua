@@ -470,7 +470,8 @@ app.post("/api/listings", authMiddleware, async (c) => {
       ...data,
       id: listingId,
       user_id: auth.userId,
-      location: transformedLocation
+      location: transformedLocation,
+      status: 'active' // Set new listings as active for immediate visibility
     };
 
     console.log('Prepared listing data for database:', listingData);

@@ -488,12 +488,20 @@ app.post("/api/listings", authMiddleware, async (c) => {
       postalCode: data.location.postalCode
     };
 
+    // Add default images if none provided
+    const defaultImages = data.images && data.images.length > 0 ? data.images : [
+      'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=600&fit=crop',
+      'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800&h=600&fit=crop',
+      'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&h=600&fit=crop'
+    ];
+
     const listingData = {
       ...data,
       id: listingId,
       user_id: auth.userId,
       location: transformedLocation,
-      status: 'active' // Set new listings as active for immediate visibility
+      status: 'active', // Set new listings as active for immediate visibility
+      images: defaultImages
     };
 
     console.log('Prepared listing data for database:', listingData);

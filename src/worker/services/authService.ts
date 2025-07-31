@@ -205,6 +205,21 @@ export class AuthService {
       user.lastLoginAt = now;
       user.updatedAt = now;
 
+      // Check if email verification is required (exclude test users and admin)
+      const isTestUser = this.isTestUser(user.email);
+      const isAdmin = user.role === 'admin';
+      const requiresEmailVerification = !user.emailVerified && !isTestUser && !isAdmin;
+
+      if (requiresEmailVerification) {
+        console.log('Email verification required for user:', user.email);
+        return {
+          success: false,
+          requiresEmailVerification: true,
+          email: user.email,
+          message: 'Please verify your email address before logging in. Check your inbox for a verification link.'
+        };
+      }
+
       // Generate JWT token with longer expiration
       const payload: JWTPayload = {
         sub: user.id,
@@ -215,6 +230,8 @@ export class AuthService {
       };
 
       const token = await sign(payload, this.jwtSecret);
+
+      console.log('Login successful for user:', user.email, 'Test user:', isTestUser, 'Admin:', isAdmin);
 
       return {
         success: true,
@@ -293,23 +310,54 @@ export class AuthService {
       // Also store in memory for immediate access
       this.users.set(userId, newUser);
 
-      // Generate JWT token with longer expiration
-      const payload: JWTPayload = {
-        sub: newUser.id,
-        email: newUser.email,
-        role: newUser.role,
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 7 days
-      };
+      // Check if this is a test user or admin (bypass email verification)
+      const isTestUser = this.isTestUser(userData.email);
+      const isAdmin = newUser.role === 'admin';
 
-      const token = await sign(payload, this.jwtSecret);
+      if (isTestUser || isAdmin) {
+        // For test users and admins, mark as verified and log them in immediately
+        newUser.emailVerified = true;
 
-      return {
-        success: true,
-        token,
-        user: this.toUserProfile(newUser),
-        message: 'Registration successful'
-      };
+        // Update in database if possible
+        try {
+          await (this.databaseService as any).db.prepare(`
+            UPDATE users SET email_verified = true WHERE id = ?
+          `).bind(userId).run();
+          console.log('✅ Test user marked as verified in database');
+        } catch (dbError) {
+          console.log('⚠️ Could not update verification status in database:', dbError);
+        }
+
+        // Generate JWT token and log them in
+        const payload: JWTPayload = {
+          sub: newUser.id,
+          email: newUser.email,
+          role: newUser.role,
+          iat: Math.floor(Date.now() / 1000),
+          exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 7 days
+        };
+
+        const token = await sign(payload, this.jwtSecret);
+
+        console.log('✅ Test user registered and logged in automatically:', userData.email);
+
+        return {
+          success: true,
+          token,
+          user: this.toUserProfile(newUser),
+          message: 'Registration successful - logged in automatically (test user)'
+        };
+      } else {
+        // For regular users, require email verification
+        console.log('📧 Regular user registered, email verification required:', userData.email);
+
+        return {
+          success: true,
+          requiresEmailVerification: true,
+          email: userData.email,
+          message: 'Registration successful! Please check your email to verify your account before logging in.'
+        };
+      }
     } catch (error) {
       console.error('Registration error:', error);
       return {
@@ -424,6 +472,33 @@ export class AuthService {
 
   async getAllUsers(): Promise<UserProfile[]> {
     return Array.from(this.users.values()).map(user => this.toUserProfile(user));
+  }
+
+  /**
+   * Check if a user is a test user (should bypass email verification)
+   */
+  private isTestUser(email: string): boolean {
+    const testUserEmails = [
+      'test@example.com',
+      'user@example.com',
+      'producer@example.com',
+      'admin@example.com',
+      'test1@example.com',
+      'test2@example.com',
+      'test3@example.com',
+      'developer@kisigua.com',
+      'dev@kisigua.com',
+      'test@kisigua.com'
+    ];
+
+    // Check if email is in test user list or matches test patterns
+    const isTestEmail = testUserEmails.includes(email.toLowerCase()) ||
+                       email.toLowerCase().includes('test') ||
+                       email.toLowerCase().includes('example.com') ||
+                       email.toLowerCase().includes('dev');
+
+    console.log('Checking if test user:', email, 'Result:', isTestEmail);
+    return isTestEmail;
   }
 
   private toUserProfile(user: User): UserProfile {

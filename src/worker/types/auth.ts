@@ -58,6 +58,7 @@ export interface AuthResponse {
   user?: UserProfile;
   message?: string;
   requiresEmailVerification?: boolean;
+  email?: string; // Email for verification purposes
 }
 
 export interface EmailVerificationToken {

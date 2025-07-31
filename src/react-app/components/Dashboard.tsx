@@ -70,6 +70,52 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
   // View Mode State
   const [viewMode, setViewMode] = useState<'list' | 'cards' | 'map'>('list');
 
+  // Location-based search states
+  const [locationSearch, setLocationSearch] = useState('');
+  const [searchRadius, setSearchRadius] = useState(10); // km
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+
+  // Calculate distance between two coordinates using Haversine formula
+  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a =
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; // Distance in kilometers
+  };
+
+  // Get user's current location
+  const getCurrentLocation = () => {
+    setIsGettingLocation(true);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLocation({ lat: latitude, lng: longitude });
+          setLocationSearch('Current Location');
+          setIsGettingLocation(false);
+          console.log(`📍 Got user location: ${latitude}, ${longitude}`);
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          setIsGettingLocation(false);
+          alert('Unable to get your location. Please enter a location manually.');
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+      );
+    } else {
+      setIsGettingLocation(false);
+      alert('Geolocation is not supported by this browser.');
+    }
+  };
+
   // Fetch real data from API
   useEffect(() => {
     const fetchLocations = async () => {
@@ -265,6 +311,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
     setTimeout(() => {
       let filtered: Location[];
 
+      // First apply text search filter
       if (!query.trim()) {
         filtered = locations;
       } else {
@@ -274,11 +321,29 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
           location.tags.some(tag => tag.toLowerCase().includes(query.toLowerCase())) ||
           location.location.city.toLowerCase().includes(query.toLowerCase())
         );
+      }
 
-        // Add to search history
+      // Apply location-based filter if location search is active
+      if (locationSearch && locationSearch !== '' && userLocation) {
+        console.log(`🗺️ Applying location filter: ${locationSearch}, radius: ${searchRadius}km`);
+        filtered = filtered.filter(location => {
+          const distance = calculateDistance(
+            userLocation.lat,
+            userLocation.lng,
+            location.location.coordinates.lat,
+            location.location.coordinates.lng
+          );
+          console.log(`📍 Distance to ${location.title}: ${distance.toFixed(1)}km`);
+          return distance <= searchRadius;
+        });
+      }
+
+      // Add to search history if there was a text query
+      if (query.trim()) {
+        const searchText = locationSearch ? `"${query}" near ${locationSearch} (${searchRadius}km)` : query.trim();
         const newHistoryItem: SearchHistory = {
           id: Date.now().toString(),
-          query: query.trim(),
+          query: searchText,
           timestamp: new Date().toISOString(),
           results: filtered.length
         };
@@ -412,6 +477,86 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                   <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
+                </div>
+              </div>
+
+              {/* Location-Based Search */}
+              <div className="max-w-2xl mx-auto mt-4">
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span className="text-sm font-medium text-gray-700">Search by Location</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {/* Location Input */}
+                    <div className="md:col-span-2 relative">
+                      <input
+                        type="text"
+                        placeholder="Enter city, postal code, or address..."
+                        value={locationSearch}
+                        onChange={(e) => setLocationSearch(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      />
+                      <button
+                        onClick={getCurrentLocation}
+                        disabled={isGettingLocation}
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-green-600 disabled:opacity-50"
+                        title="Use current location"
+                      >
+                        {isGettingLocation ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Distance Range */}
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-gray-600 whitespace-nowrap">Within</span>
+                      <select
+                        value={searchRadius}
+                        onChange={(e) => setSearchRadius(Number(e.target.value))}
+                        className="flex-1 px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
+                      >
+                        <option value={1}>1 km</option>
+                        <option value={2}>2 km</option>
+                        <option value={5}>5 km</option>
+                        <option value={10}>10 km</option>
+                        <option value={20}>20 km</option>
+                        <option value={50}>50 km</option>
+                        <option value={100}>100 km</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Location Status */}
+                  {userLocation && (
+                    <div className="mt-3 flex items-center justify-between text-sm">
+                      <span className="text-green-600 flex items-center">
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Location set: {locationSearch}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setUserLocation(null);
+                          setLocationSearch('');
+                          handleSearch(searchQuery); // Re-run search without location filter
+                        }}
+                        className="text-gray-400 hover:text-red-500"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -658,12 +803,24 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                                 </span>
                               </div>
 
-                              <div className="flex items-center text-sm text-gray-500">
-                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                {location.location.city}, {location.location.country}
+                              <div className="flex items-center justify-between text-sm text-gray-500">
+                                <div className="flex items-center">
+                                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  </svg>
+                                  {location.location.city}, {location.location.country}
+                                </div>
+                                {userLocation && (
+                                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">
+                                    {calculateDistance(
+                                      userLocation.lat,
+                                      userLocation.lng,
+                                      location.location.coordinates.lat,
+                                      location.location.coordinates.lng
+                                    ).toFixed(1)} km away
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -734,12 +891,24 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                           </span>
                         </div>
 
-                        <div className="flex items-center text-sm text-gray-500">
-                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                          {location.location.city}, {location.location.country}
+                        <div className="flex items-center justify-between text-sm text-gray-500">
+                          <div className="flex items-center">
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            {location.location.city}, {location.location.country}
+                          </div>
+                          {userLocation && (
+                            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">
+                              {calculateDistance(
+                                userLocation.lat,
+                                userLocation.lng,
+                                location.location.coordinates.lat,
+                                location.location.coordinates.lng
+                              ).toFixed(1)} km
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>

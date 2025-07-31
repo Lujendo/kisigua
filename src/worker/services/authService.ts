@@ -132,14 +132,27 @@ export class AuthService {
             email: dbUser.email,
             password: dbUser.password_hash,
             role: dbUser.role as UserRole,
-            firstName: dbUser.firstName,
-            lastName: dbUser.lastName,
+            firstName: (dbUser as any).first_name || dbUser.firstName || '',
+            lastName: (dbUser as any).last_name || dbUser.lastName || '',
             emailVerified: Boolean((dbUser as any).email_verified),
             isActive: isActive,
-            createdAt: dbUser.createdAt,
-            updatedAt: dbUser.updatedAt,
+            createdAt: dbUser.createdAt || new Date().toISOString(),
+            updatedAt: dbUser.updatedAt || new Date().toISOString(),
             lastLoginAt: dbUser.lastLoginAt
           };
+
+          console.log('✅ User loaded from database:', {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            emailVerified: user.emailVerified,
+            isActive: user.isActive
+          });
+
+          // Store user in memory for future requests
+          this.users.set(user.id, user);
+          console.log('✅ User stored in memory for future requests');
         }
       } catch (dbError) {
         console.warn('Database lookup failed, falling back to in-memory users:', dbError);

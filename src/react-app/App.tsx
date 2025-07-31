@@ -8,6 +8,12 @@ import PasswordReset from './components/auth/PasswordReset';
 import Dashboard from './components/Dashboard';
 import UserDropdown from './components/header/UserDropdown';
 import UserSettings from './components/settings/UserSettings';
+import Footer from './components/Footer';
+import PrivacyPolicy from './components/legal/PrivacyPolicy';
+import TermsOfService from './components/legal/TermsOfService';
+import CookiePolicy from './components/legal/CookiePolicy';
+import DataProtection from './components/legal/DataProtection';
+import Imprint from './components/legal/Imprint';
 
 import SubscriptionPage from './components/subscription/SubscriptionPage';
 import Sidebar from './components/Sidebar';
@@ -20,7 +26,21 @@ import ListingManagement from './components/admin/ListingManagement';
 
 function AppContent() {
   const { isAuthenticated, isLoading, user } = useAuth();
-  const [currentPage, setCurrentPage] = useState<'landing' | 'auth' | 'verify-email' | 'reset-password' | 'app' | 'search' | 'subscription' | 'dashboard' | 'listings' | 'favorites' | 'profile' | 'settings' | 'messages' | 'admin' | 'users' | 'admin-listings' | 'analytics'>('landing');
+  type PageType = 'landing' | 'auth' | 'verify-email' | 'reset-password' | 'app' | 'search' | 'subscription' | 'dashboard' | 'listings' | 'favorites' | 'profile' | 'settings' | 'messages' | 'admin' | 'users' | 'admin-listings' | 'analytics' | 'privacy-policy' | 'terms-of-service' | 'cookie-policy' | 'data-protection' | 'imprint';
+
+  const [currentPage, setCurrentPage] = useState<PageType>('landing');
+
+  // Navigation helper function for Footer
+  const handlePageNavigation = (page: string) => {
+    if (isValidPageType(page)) {
+      setCurrentPage(page);
+    }
+  };
+
+  const isValidPageType = (page: string): page is PageType => {
+    const validPages: PageType[] = ['landing', 'auth', 'verify-email', 'reset-password', 'app', 'search', 'subscription', 'dashboard', 'listings', 'favorites', 'profile', 'settings', 'messages', 'admin', 'users', 'admin-listings', 'analytics', 'privacy-policy', 'terms-of-service', 'cookie-policy', 'data-protection', 'imprint'];
+    return validPages.includes(page as PageType);
+  };
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Auto-navigate after successful login
@@ -81,6 +101,21 @@ function AppContent() {
     else if (pathname === '/subscription') {
       setCurrentPage('subscription');
     }
+    else if (pathname === '/privacy-policy') {
+      setCurrentPage('privacy-policy');
+    }
+    else if (pathname === '/terms-of-service') {
+      setCurrentPage('terms-of-service');
+    }
+    else if (pathname === '/cookie-policy') {
+      setCurrentPage('cookie-policy');
+    }
+    else if (pathname === '/data-protection') {
+      setCurrentPage('data-protection');
+    }
+    else if (pathname === '/imprint') {
+      setCurrentPage('imprint');
+    }
   }, []);
 
   // Update URL when page changes (simple history management)
@@ -95,6 +130,11 @@ function AppContent() {
           case 'search': return '/search';
           case 'subscription': return '/subscription';
           case 'admin': return '/admin';
+          case 'privacy-policy': return '/privacy-policy';
+          case 'terms-of-service': return '/terms-of-service';
+          case 'cookie-policy': return '/cookie-policy';
+          case 'data-protection': return '/data-protection';
+          case 'imprint': return '/imprint';
           default: return '/';
         }
       })();
@@ -139,6 +179,8 @@ function AppContent() {
       return (
         <AuthPage
           onNavigateToPasswordReset={() => setCurrentPage('reset-password')}
+          onNavigateToTerms={() => setCurrentPage('terms-of-service')}
+          onNavigateToPrivacy={() => setCurrentPage('privacy-policy')}
         />
       );
     }
@@ -160,12 +202,56 @@ function AppContent() {
         />
       );
     }
+    // Legal pages (accessible without authentication)
+    if (currentPage === 'privacy-policy') {
+      return (
+        <div className="min-h-screen flex flex-col">
+          <PrivacyPolicy />
+          <Footer onNavigateToPage={handlePageNavigation} />
+        </div>
+      );
+    }
+    if (currentPage === 'terms-of-service') {
+      return (
+        <div className="min-h-screen flex flex-col">
+          <TermsOfService />
+          <Footer onNavigateToPage={handlePageNavigation} />
+        </div>
+      );
+    }
+    if (currentPage === 'cookie-policy') {
+      return (
+        <div className="min-h-screen flex flex-col">
+          <CookiePolicy />
+          <Footer onNavigateToPage={handlePageNavigation} />
+        </div>
+      );
+    }
+    if (currentPage === 'data-protection') {
+      return (
+        <div className="min-h-screen flex flex-col">
+          <DataProtection />
+          <Footer onNavigateToPage={handlePageNavigation} />
+        </div>
+      );
+    }
+    if (currentPage === 'imprint') {
+      return (
+        <div className="min-h-screen flex flex-col">
+          <Imprint />
+          <Footer onNavigateToPage={handlePageNavigation} />
+        </div>
+      );
+    }
     return (
-      <LandingPage
-        onNavigateToAuth={() => setCurrentPage('auth')}
-        onNavigateToApp={() => setCurrentPage('app')}
-        onNavigateToSearch={() => setCurrentPage('search')}
-      />
+      <div className="min-h-screen flex flex-col">
+        <LandingPage
+          onNavigateToAuth={() => setCurrentPage('auth')}
+          onNavigateToApp={() => setCurrentPage('app')}
+          onNavigateToSearch={() => setCurrentPage('search')}
+        />
+        <Footer onNavigateToPage={handlePageNavigation} />
+      </div>
     );
   }
 
@@ -292,6 +378,9 @@ function AppContent() {
 
           {currentPage === 'subscription' && <SubscriptionPage />}
         </main>
+
+        {/* Footer */}
+        <Footer onNavigateToPage={handlePageNavigation} />
       </div>
     </div>
   );

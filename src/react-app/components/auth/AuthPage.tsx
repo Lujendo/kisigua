@@ -5,9 +5,15 @@ import RegisterForm from './RegisterForm';
 
 interface AuthPageProps {
   onNavigateToPasswordReset?: () => void;
+  onNavigateToTerms?: () => void;
+  onNavigateToPrivacy?: () => void;
 }
 
-const AuthPage = ({ onNavigateToPasswordReset }: AuthPageProps) => {
+const AuthPage = ({
+  onNavigateToPasswordReset,
+  onNavigateToTerms,
+  onNavigateToPrivacy
+}: AuthPageProps) => {
   const [isLogin, setIsLogin] = useState(true);
   const {
     login,
@@ -57,6 +63,8 @@ const AuthPage = ({ onNavigateToPasswordReset }: AuthPageProps) => {
     <RegisterForm
       onRegister={handleRegister}
       onSwitchToLogin={switchToLogin}
+      onNavigateToTerms={onNavigateToTerms}
+      onNavigateToPrivacy={onNavigateToPrivacy}
       loading={isLoading}
       error={error || undefined}
     />

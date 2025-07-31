@@ -3,11 +3,20 @@ import { useState } from 'react';
 interface RegisterFormProps {
   onRegister: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
   onSwitchToLogin: () => void;
+  onNavigateToTerms?: () => void;
+  onNavigateToPrivacy?: () => void;
   loading?: boolean;
   error?: string;
 }
 
-const RegisterForm = ({ onRegister, onSwitchToLogin, loading = false, error }: RegisterFormProps) => {
+const RegisterForm = ({
+  onRegister,
+  onSwitchToLogin,
+  onNavigateToTerms,
+  onNavigateToPrivacy,
+  loading = false,
+  error
+}: RegisterFormProps) => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -15,6 +24,8 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, loading = false, error }: R
     firstName: '',
     lastName: '',
   });
+
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
@@ -43,6 +54,10 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, loading = false, error }: R
 
     if (!formData.lastName) {
       errors.lastName = 'Last name is required';
+    }
+
+    if (!termsAccepted) {
+      errors.terms = 'You must accept the Terms of Service and Privacy Policy to continue';
     }
 
     setValidationErrors(errors);
@@ -189,6 +204,45 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, loading = false, error }: R
                 <p className="mt-1 text-sm text-red-600">{validationErrors.confirmPassword}</p>
               )}
             </div>
+          </div>
+
+          {/* Terms and Privacy Agreement */}
+          <div className="space-y-3">
+            <div className="flex items-start">
+              <div className="flex items-center h-5">
+                <input
+                  id="terms-agreement"
+                  name="terms-agreement"
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                  className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                />
+              </div>
+              <div className="ml-3 text-sm">
+                <label htmlFor="terms-agreement" className="text-gray-700">
+                  I agree to the{' '}
+                  <button
+                    type="button"
+                    onClick={onNavigateToTerms}
+                    className="text-green-600 hover:text-green-700 underline font-medium"
+                  >
+                    Terms of Service
+                  </button>
+                  {' '}and{' '}
+                  <button
+                    type="button"
+                    onClick={onNavigateToPrivacy}
+                    className="text-green-600 hover:text-green-700 underline font-medium"
+                  >
+                    Privacy Policy
+                  </button>
+                </label>
+              </div>
+            </div>
+            {validationErrors.terms && (
+              <p className="text-sm text-red-600">{validationErrors.terms}</p>
+            )}
           </div>
 
           <div>

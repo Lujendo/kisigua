@@ -823,11 +823,58 @@ app.post("/api/test/email", authMiddleware, roleMiddleware(['admin']), async (c)
       success: result.success,
       messageId: result.messageId,
       error: result.error,
-      message: result.success ? 'Test email sent successfully' : 'Test email failed'
+      message: result.success ? 'Test email sent successfully' : 'Test email failed',
+      apiKeyStatus: c.env.RESEND_API_KEY ? (c.env.RESEND_API_KEY.startsWith('re_') ? 'VALID_FORMAT' : 'INVALID_FORMAT') : 'MISSING'
     });
   } catch (error) {
     console.error('Test email endpoint error:', error);
     return c.json({ error: "Failed to send test email" }, 500);
+  }
+});
+
+// Simple Resend connection test endpoint
+app.get("/api/test/resend-status", authMiddleware, roleMiddleware(['admin']), async (c) => {
+  try {
+    const apiKey = c.env.RESEND_API_KEY;
+
+    return c.json({
+      hasApiKey: !!apiKey,
+      apiKeyFormat: apiKey ? (apiKey.startsWith('re_') ? 'VALID' : 'INVALID') : 'MISSING',
+      apiKeyPreview: apiKey ? apiKey.substring(0, 10) + '...' : 'NOT_SET',
+      isPlaceholder: apiKey?.includes('PLACEHOLDER') || apiKey?.includes('development') || false,
+      message: !apiKey ? 'No API key set' :
+               !apiKey.startsWith('re_') ? 'Invalid API key format' :
+               apiKey.includes('PLACEHOLDER') ? 'Using placeholder key - emails will be simulated' :
+               'API key looks valid - ready to send emails'
+    });
+  } catch (error) {
+    console.error('Resend status check error:', error);
+    return c.json({ error: "Failed to check Resend status" }, 500);
+  }
+});
+
+// Test Resend API connection with actual API call
+app.post("/api/test/resend-connection", authMiddleware, roleMiddleware(['admin']), async (c) => {
+  try {
+    const services = c.get('services');
+
+    // Test the connection using the email service
+    const connectionTest = await services.emailVerificationService.emailService.testConnection();
+
+    return c.json({
+      connectionTest,
+      timestamp: new Date().toISOString(),
+      message: connectionTest.success ?
+        'Resend API connection is working! Check your Resend dashboard for the test email.' :
+        'Resend API connection failed. Please check your API key.'
+    });
+  } catch (error) {
+    console.error('Resend connection test error:', error);
+    return c.json({
+      success: false,
+      error: "Failed to test Resend connection",
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, 500);
   }
 });
 

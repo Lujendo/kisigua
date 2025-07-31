@@ -166,6 +166,58 @@ export class EmailService {
   }
 
   /**
+   * Test Resend API connection
+   */
+  async testConnection(): Promise<{ success: boolean; error?: string; details?: any }> {
+    try {
+      // Check API key format
+      if (!this.apiKey || !this.apiKey.startsWith('re_')) {
+        return {
+          success: false,
+          error: 'Invalid or missing API key format',
+          details: {
+            hasApiKey: !!this.apiKey,
+            correctFormat: this.apiKey?.startsWith('re_') || false,
+            isPlaceholder: this.apiKey?.includes('PLACEHOLDER') || false
+          }
+        };
+      }
+
+      // Try to send a test email to a test address
+      const testResult = await this.resend.emails.send({
+        from: this.fromEmail,
+        to: ['test@resend.dev'], // Resend's test email address
+        subject: 'Kisigua API Connection Test',
+        html: '<p>This is a test email to verify the Resend API connection is working.</p>'
+      });
+
+      if (testResult.error) {
+        return {
+          success: false,
+          error: testResult.error.message,
+          details: testResult.error
+        };
+      }
+
+      return {
+        success: true,
+        details: {
+          messageId: testResult.data?.id,
+          apiKeyValid: true,
+          connectionWorking: true
+        }
+      };
+    } catch (error) {
+      console.error('Resend connection test error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown connection error',
+        details: { error }
+      };
+    }
+  }
+
+  /**
    * Retrieve email status
    */
   async getEmailStatus(emailId: string): Promise<{ success: boolean; data?: any; error?: string }> {

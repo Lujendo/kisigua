@@ -10,6 +10,7 @@ import { CategoryService } from "./services/categoryService";
 import { FavoritesService } from "./services/favoritesService";
 import { ActivityService } from "./services/activityService";
 import { StatsService } from "./services/statsService";
+import { DuplicateDetectionService } from "./services/duplicateDetectionService";
 import {
   createAuthMiddleware,
   createRoleMiddleware
@@ -49,6 +50,7 @@ function initializeServices(env: Env) {
   console.log('AuthService created successfully');
 
   const listingsService = new ListingsService(databaseService);
+  const duplicateDetectionService = new DuplicateDetectionService(databaseService);
   const subscriptionService = new SubscriptionService(env.STRIPE_SECRET_KEY || 'sk_test_your_stripe_secret_key');
   console.log('=== SERVICES INITIALIZED ===');
 
@@ -62,6 +64,7 @@ function initializeServices(env: Env) {
     statsService,
     authService,
     listingsService,
+    duplicateDetectionService,
     subscriptionService
   };
 }
@@ -448,6 +451,25 @@ app.post("/api/listings", authMiddleware, async (c) => {
 
     console.log('Creating listing with data:', data);
 
+    // Check for potential duplicates
+    const duplicates = await services.duplicateDetectionService.checkForDuplicates(data, auth.userId);
+
+    // If high-confidence duplicates found, return warning
+    const highConfidenceDuplicates = duplicates.filter(d => d.confidence >= 80);
+    if (highConfidenceDuplicates.length > 0) {
+      return c.json({
+        error: "Potential duplicate listing detected",
+        duplicates: highConfidenceDuplicates.map(d => ({
+          id: d.listingId,
+          title: d.title,
+          address: d.address,
+          reason: d.reason,
+          confidence: d.confidence
+        })),
+        message: "A similar listing already exists. Please check if this is a duplicate before proceeding."
+      }, 409); // 409 Conflict
+    }
+
     // Prepare data for database service (needs id and user_id)
     const listingId = `listing-${Date.now()}`;
 
@@ -590,6 +612,86 @@ app.get("/api/admin/listings", authMiddleware, roleMiddleware(['admin']), async 
   const services = c.get('services');
   const listings = await services.listingsService.getAllListings();
   return c.json({ listings });
+});
+
+// Check for duplicates without creating (authenticated)
+app.post("/api/listings/check-duplicates", authMiddleware, async (c) => {
+  try {
+    const services = c.get('services');
+    const auth = c.get('auth');
+    const data = await c.req.json() as CreateListingRequest;
+
+    const duplicates = await services.duplicateDetectionService.checkForDuplicates(data, auth.userId);
+
+    return c.json({
+      duplicates: duplicates.map(d => ({
+        id: d.listingId,
+        title: d.title,
+        address: d.address,
+        reason: d.reason,
+        confidence: d.confidence,
+        matchType: d.matchType
+      }))
+    });
+  } catch (error) {
+    console.error('Check duplicates error:', error);
+    return c.json({ error: "Failed to check for duplicates" }, 500);
+  }
+});
+
+// Admin: Force create listing (bypass duplicate detection)
+app.post("/api/admin/listings/force-create", authMiddleware, roleMiddleware(['admin']), async (c) => {
+  try {
+    const services = c.get('services');
+    const auth = c.get('auth');
+    const data = await c.req.json() as CreateListingRequest & { originalUserId?: string };
+
+    console.log('Admin force creating listing with data:', data);
+
+    // Use original user ID if provided, otherwise use admin's ID
+    const userId = data.originalUserId || auth.userId;
+
+    // Prepare data for database service (needs id and user_id)
+    const listingId = `listing-${Date.now()}`;
+
+    // Transform frontend location format to database format
+    const transformedLocation = {
+      latitude: (data.location as any).coordinates?.lat || data.location.latitude || 0,
+      longitude: (data.location as any).coordinates?.lng || data.location.longitude || 0,
+      address: (data.location as any).street && (data.location as any).houseNumber
+        ? `${(data.location as any).street} ${(data.location as any).houseNumber}`.trim()
+        : data.location.address || '',
+      street: (data.location as any).street || null,
+      houseNumber: (data.location as any).houseNumber || null,
+      city: data.location.city,
+      region: data.location.region,
+      country: data.location.country,
+      postalCode: data.location.postalCode
+    };
+
+    const listingData = {
+      ...data,
+      id: listingId,
+      user_id: userId,
+      location: transformedLocation,
+      status: 'active' // Set new listings as active for immediate visibility
+    };
+
+    console.log('Prepared listing data for database (admin force create):', listingData);
+
+    // Use database service to create and persist the listing (bypass duplicate detection)
+    const dbListing = await services.databaseService.createListing(listingData);
+    console.log('Listing force created by admin:', dbListing);
+
+    // Get the full listing with proper format
+    const listing = await services.databaseService.getFullListingById(listingId);
+    console.log('Retrieved full listing for API response:', listing);
+
+    return c.json({ listing }, 201);
+  } catch (error) {
+    console.error('Admin force create listing error:', error);
+    return c.json({ error: "Invalid listing data" }, 400);
+  }
 });
 
 // ===== CATEGORY ENDPOINTS =====

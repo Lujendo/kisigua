@@ -65,6 +65,16 @@ const MyListingsPage: React.FC = () => {
   const [showDropdownId, setShowDropdownId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<{
+    duplicates: Array<{
+      id: string;
+      title: string;
+      address: string;
+      reason: string;
+      confidence: number;
+    }>;
+    message: string;
+  } | null>(null);
 
   // Helper function to get status badge colors
   const getStatusColor = (status: string) => {
@@ -756,7 +766,16 @@ const MyListingsPage: React.FC = () => {
         } else {
           const error = await response.json();
           console.error(`Failed to ${isEditing ? 'update' : 'create'} listing:`, error);
-          alert(`Failed to ${isEditing ? 'update' : 'create'} listing: ${error.error || 'Unknown error'}`);
+
+          // Handle duplicate detection
+          if (response.status === 409 && error.duplicates) {
+            setDuplicateWarning({
+              duplicates: error.duplicates,
+              message: error.message
+            });
+          } else {
+            alert(`Failed to ${isEditing ? 'update' : 'create'} listing: ${error.error || 'Unknown error'}`);
+          }
         }
       } catch (error) {
         console.error(`Error ${isEditing ? 'updating' : 'creating'} listing:`, error);
@@ -1723,6 +1742,70 @@ const MyListingsPage: React.FC = () => {
           className="fixed inset-0 z-0"
           onClick={() => setShowDropdownId(null)}
         />
+      )}
+
+      {/* Duplicate Warning Modal */}
+      {duplicateWarning && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                <div className="flex-shrink-0">
+                  <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-lg font-semibold text-gray-900">Potential Duplicate Detected</h3>
+                  <p className="text-sm text-gray-600 mt-1">{duplicateWarning.message}</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-sm text-gray-700">
+                  We found {duplicateWarning.duplicates.length} similar listing{duplicateWarning.duplicates.length > 1 ? 's' : ''} that might be duplicates:
+                </p>
+
+                {duplicateWarning.duplicates.map((duplicate, index) => (
+                  <div key={duplicate.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900">{duplicate.title}</h4>
+                        <p className="text-sm text-gray-600 mt-1">{duplicate.address}</p>
+                        <p className="text-sm text-yellow-700 mt-2">{duplicate.reason}</p>
+                      </div>
+                      <div className="ml-4 flex-shrink-0">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          {duplicate.confidence}% match
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => setDuplicateWarning(null)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    // Force create by adding a bypass flag
+                    setDuplicateWarning(null);
+                    // You could implement a force create option here
+                    alert('Please modify your listing to make it more unique, or contact support if you believe this is not a duplicate.');
+                  }}
+                  className="flex-1 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors"
+                >
+                  Review & Modify
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

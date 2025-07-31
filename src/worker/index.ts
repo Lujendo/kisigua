@@ -261,6 +261,8 @@ app.post("/api/auth/login", async (c) => {
     const services = c.get('services');
     const body = await c.req.json() as LoginRequest;
 
+    console.log('🔍 LOGIN ENDPOINT: Request received for email:', body.email);
+
     if (!body.email || !body.password) {
       return c.json({
         success: false,
@@ -268,7 +270,15 @@ app.post("/api/auth/login", async (c) => {
       }, 400);
     }
 
+    console.log('🔍 LOGIN ENDPOINT: Calling authService.login for:', body.email);
     const result = await services.authService.login(body);
+
+    console.log('🔍 LOGIN ENDPOINT: AuthService result:', {
+      success: result.success,
+      requiresEmailVerification: result.requiresEmailVerification,
+      hasToken: !!result.token,
+      message: result.message
+    });
 
     // The AuthService now handles email verification logic internally,
     // including bypassing verification for test users and admins.

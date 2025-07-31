@@ -125,7 +125,16 @@ export class AuthService {
         if (dbUser) {
           // Convert SQLite boolean (0/1) to JavaScript boolean
           const isActive = Boolean(dbUser.isActive);
-          console.log('User isActive status:', dbUser.isActive, 'converted to:', isActive);
+          const emailVerified = Boolean((dbUser as any).email_verified);
+
+          console.log('🔍 Database user field conversion:', {
+            email: dbUser.email,
+            raw_is_active: dbUser.isActive,
+            converted_isActive: isActive,
+            raw_email_verified: (dbUser as any).email_verified,
+            converted_emailVerified: emailVerified,
+            email_verified_type: typeof (dbUser as any).email_verified
+          });
 
           user = {
             id: dbUser.id,
@@ -134,7 +143,7 @@ export class AuthService {
             role: dbUser.role as UserRole,
             firstName: (dbUser as any).first_name || dbUser.firstName || '',
             lastName: (dbUser as any).last_name || dbUser.lastName || '',
-            emailVerified: Boolean((dbUser as any).email_verified),
+            emailVerified: emailVerified,
             isActive: isActive,
             createdAt: dbUser.createdAt || new Date().toISOString(),
             updatedAt: dbUser.updatedAt || new Date().toISOString(),
@@ -223,8 +232,16 @@ export class AuthService {
       const isAdmin = user.role === 'admin';
       const requiresEmailVerification = !user.emailVerified && !isTestUser && !isAdmin;
 
+      console.log('🔍 Email verification check for user:', user.email, {
+        emailVerified: user.emailVerified,
+        emailVerifiedType: typeof user.emailVerified,
+        isTestUser: isTestUser,
+        isAdmin: isAdmin,
+        requiresEmailVerification: requiresEmailVerification
+      });
+
       if (requiresEmailVerification) {
-        console.log('Email verification required for user:', user.email);
+        console.log('❌ Email verification required for user:', user.email);
         return {
           success: false,
           requiresEmailVerification: true,

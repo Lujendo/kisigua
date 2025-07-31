@@ -669,6 +669,36 @@ app.get("/api/auth/me", authMiddleware, async (c) => {
   return c.json({ user });
 });
 
+// Test endpoint to manually verify user email (for debugging)
+app.post("/api/test/verify-user-email", authMiddleware, roleMiddleware(['admin']), async (c) => {
+  try {
+    const { email } = await c.req.json();
+
+    if (!email) {
+      return c.json({ error: 'Email is required' }, 400);
+    }
+
+    const services = c.get('services');
+    console.log('🔧 Admin manually verifying email for user:', email);
+
+    // Update email_verified status in database
+    await services.databaseService.db.prepare(`
+      UPDATE users SET email_verified = 1 WHERE email = ?
+    `).bind(email).run();
+
+    console.log('✅ Email verification status updated for user:', email);
+
+    return c.json({
+      success: true,
+      message: `Email verification status updated for ${email}`,
+      email_verified: true
+    });
+  } catch (error) {
+    console.error('❌ Email verification update error:', error);
+    return c.json({ error: 'Email verification update failed' }, 500);
+  }
+});
+
 // Test endpoint to reset user password (for debugging)
 app.post("/api/test/reset-password", authMiddleware, roleMiddleware(['admin']), async (c) => {
   try {

@@ -488,12 +488,47 @@ app.post("/api/listings", authMiddleware, async (c) => {
       postalCode: data.location.postalCode
     };
 
-    // Add default images if none provided
-    const defaultImages = data.images && data.images.length > 0 ? data.images : [
-      'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=600&fit=crop',
-      'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800&h=600&fit=crop',
-      'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&h=600&fit=crop'
-    ];
+    // Add category-specific default images if none provided
+    const getDefaultImagesForCategory = (category: string) => {
+      const imagesByCategory: { [key: string]: string[] } = {
+        'organic_farm': [
+          'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&h=600&fit=crop'
+        ],
+        'local_product': [
+          'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&h=600&fit=crop'
+        ],
+        'water_source': [
+          'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1439066615861-d1af74d74000?w=800&h=600&fit=crop'
+        ],
+        'vending_machine': [
+          'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=600&fit=crop'
+        ],
+        'craft': [
+          'https://images.unsplash.com/photo-1452860606245-08befc0ff44b?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1581833971358-2c8b550f87b3?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=800&h=600&fit=crop'
+        ],
+        'sustainable_good': [
+          'https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1584464491033-06628f3a6b7b?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800&h=600&fit=crop'
+        ]
+      };
+
+      return imagesByCategory[category] || imagesByCategory['local_product'];
+    };
+
+    const defaultImages = data.images && data.images.length > 0
+      ? data.images
+      : getDefaultImagesForCategory(data.category);
 
     const listingData = {
       ...data,

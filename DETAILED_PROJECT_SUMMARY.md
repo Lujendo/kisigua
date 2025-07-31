@@ -4,7 +4,7 @@
 
 **Mission**: Supporting local producers and promoting sustainable living through community connections.
 
-**Live URL**: https://kisigua.info-eac.workers.dev (deployed on Cloudflare Workers)
+**Live URL**: https://kisigua.com (production) | https://kisigua.info-eac.workers.dev (deployed on Cloudflare Workers)
 **Repository**: https://github.com/Lujendo/kisigua
 
 ## 🏗️ Architecture & Tech Stack
@@ -64,20 +64,29 @@
 - Smooth transitions and mobile-friendly design
 - Language switcher for 5 supported languages
 
-### 2. Search Engine
-- **Advanced search** with real-time filtering
+### 2. Advanced Search Engine with Location-Based Features ⭐ **ENHANCED**
+- **Google-style location search** with city name geocoding (40+ German cities)
+- **Interactive map integration** with search radius visualization
+- **Distance-based filtering** with 1km to 100km radius selection
+- **GPS location detection** for current position search
+- **Click-to-search on map** - set search location by clicking anywhere
+- **Real-time distance display** showing "X km away" on all listings
 - **Multiple view modes**: Card, List, and Interactive Map views
 - **Smart filtering**: Category, location, price, rating, organic status
 - **Sorting options**: Relevance, rating, price, distance, newest, popularity
 - **Search history** and recently viewed locations
-- **AI-powered suggestions** and personalized recommendations
+- **Auto-switch to map view** when location search is performed
 
-### 3. Listings Management
-- **Create/Edit listings** with rich form interface
+### 3. Enhanced Listings Management ⭐ **UPGRADED**
+- **Card-style detail views** matching MyListings design consistency
+- **Privacy controls** - users can hide detailed address from public view
+- **Admin review system** with "View Details" buttons for moderation
+- **Create/Edit listings** with rich form interface and privacy settings
 - **Image upload** with drag & drop, thumbnails, and galleries
-- **Location mapping** with Leaflet integration
+- **Location mapping** with Leaflet integration and click-to-set coordinates
 - **Category system**: Organic farms, local products, water sources, vending machines, crafts
 - **Certification tracking** for organic/sustainable products
+- **Contact information display** with email, phone, and website links
 
 ### 4. Complete File Management System ✅ FULLY WORKING
 - **R2 Storage Integration** with kisigua-files bucket (public access with correct URLs)
@@ -196,45 +205,74 @@ npm run logs:production        # View production logs
 - Storage accessibility tests
 - Real-time analytics and reporting
 
-## 🔧 Recent Major Changes (Last 3 Days)
+## 🔧 Recent Major Changes (Last 7 Days)
 
-### Latest Critical Fixes (July 30, 2025 - Evening)
-1. **🔥 CRITICAL IMAGE FIX** - Resolved image display issues by correcting R2 public URL configuration
+### Latest Major Features (January 31, 2025)
+1. **🗺️ GOOGLE-STYLE LOCATION SEARCH** - Complete location-based search system like Kleinanzeigen.de
+   - **Location input with geocoding** for 40+ German cities (Berlin, Munich, Stuttgart, Reutlingen, etc.)
+   - **Interactive map integration** with search radius visualization (red circle)
+   - **Distance-based filtering** with 1km to 100km radius selection
+   - **GPS location detection** with automatic map centering
+   - **Click-to-search on map** - set new search location by clicking anywhere
+   - **Real-time distance display** showing "X km away" on all listings
+   - **Auto-switch to map view** when location search is performed
+   - **Performance optimized** - fixed infinite re-rendering issues
+
+2. **🎨 CARD-STYLE LISTING DETAILS** - Consistent design like MyListings
+   - **Replaced modal with card interface** for better UX consistency
+   - **Professional contact information** display with email, phone, website
+   - **Enhanced image galleries** with proper aspect ratios
+   - **Distance badges** when location search is active
+   - **Smooth animations** and responsive design
+   - **Close button and scroll-to-top** functionality
+
+3. **🔒 PRIVACY & ADMIN ENHANCEMENTS** - User control and admin oversight
+   - **Address privacy controls** - users can hide detailed address from public
+   - **Role-based data visibility** (public sees city/country, admins see full address)
+   - **Admin listing review** with "View Details" buttons in management panel
+   - **Location search compatibility** - privacy doesn't break distance calculations
+   - **Database schema updates** with hideAddress field and proper defaults
+
+### Previous Critical Fixes (July 30, 2025)
+4. **🔥 CRITICAL IMAGE FIX** - Resolved image display issues by correcting R2 public URL configuration
    - Fixed development wrangler.json using incorrect domain (files.kisigua.com)
    - Production now uses correct R2 URL: https://pub-49c315845edf402b9841432c6b1083f1.r2.dev
    - All image uploads, display, and cover image functionality now working perfectly
    - Redeployed with proper production configuration
 
-2. **Database Schema Improvements** - Enhanced category constraints and data integrity
+5. **Database Schema Improvements** - Enhanced category constraints and data integrity
    - Updated category foreign key constraints for better data consistency
    - Improved error handling for category-related operations
    - Fixed category management system with proper validation
 
-### Latest Updates (July 29-30, 2025)
-3. **Complete File Upload System** (ffd549a6, 0c48874f) - R2 Storage integration with database tracking
-4. **Real Data Integration** (2764681b) - Favorites system and admin dashboard with live data
-5. **Rich Text Editor** (f838b2e1) - Enhanced listing creation with formatting capabilities
-6. **Region Field Addition** (d7f45bd2) - Location categorization with region support
-7. **Frontend Listings Import** (0b1aea2f) - 15 total listings with diverse categories
-8. **File Upload Domain Fix** (f57ddd99) - Resolved DNS issues for image/document uploads
-9. **Admin Panel Simplification** (8fa418e1, 71b5239c) - Streamlined admin interface
-10. **Category Management System** (71b5239c) - Dynamic categories with database integration
+### Previous Updates (July 29-30, 2025)
+6. **Complete File Upload System** (ffd549a6, 0c48874f) - R2 Storage integration with database tracking
+7. **Real Data Integration** (2764681b) - Favorites system and admin dashboard with live data
+8. **Rich Text Editor** (f838b2e1) - Enhanced listing creation with formatting capabilities
+9. **Region Field Addition** (d7f45bd2) - Location categorization with region support
+10. **Frontend Listings Import** (0b1aea2f) - 15 total listings with diverse categories
+11. **File Upload Domain Fix** (f57ddd99) - Resolved DNS issues for image/document uploads
+12. **Admin Panel Simplification** (8fa418e1, 71b5239c) - Streamlined admin interface
+13. **Category Management System** (71b5239c) - Dynamic categories with database integration
 
 ### Previous Major Features (July 28, 2025)
-11. **Complete Application Implementation** (d1ee589a) - Full-featured platform with all core functionality
-12. **Custom Favicon** (a776a295) - Brand-consistent green "K" favicon
-13. **Enhanced Search Engine** (bdb25d4185) - Comprehensive search with multiple views and filtering
-14. **Sidebar Architecture** (57385279) - Global sidebar with role-based navigation
-15. **Authentication Improvements** (1f2b31a5) - Extended JWT expiration, token verification/refresh
+14. **Complete Application Implementation** (d1ee589a) - Full-featured platform with all core functionality
+15. **Custom Favicon** (a776a295) - Brand-consistent green "K" favicon
+16. **Enhanced Search Engine** (bdb25d4185) - Comprehensive search with multiple views and filtering
+17. **Sidebar Architecture** (57385279) - Global sidebar with role-based navigation
+18. **Authentication Improvements** (1f2b31a5) - Extended JWT expiration, token verification/refresh
 
 ## 🎯 Current Status
 
-**✅ FULLY OPERATIONAL** - The Kisigua application is completely implemented, deployed, and running in production at https://kisigua.info-eac.workers.dev
+**✅ FULLY OPERATIONAL** - The Kisigua application is completely implemented, deployed, and running in production at https://kisigua.com
 
 ### ✅ Implemented & Working Features
 - ✅ **Clean landing page** with multilingual support (5 languages)
 - ✅ **Complete authentication system** with role-based access (Admin, Premium, Supporter, User)
+- ✅ **🗺️ Google-style location search** with distance-based filtering and interactive maps ⭐ **NEW**
 - ✅ **Advanced search functionality** with card, list, and map views
+- ✅ **🎨 Card-style listing details** matching MyListings design consistency ⭐ **NEW**
+- ✅ **🔒 Privacy controls** for address visibility with admin oversight ⭐ **NEW**
 - ✅ **Role-specific dashboards** with appropriate permissions and real data
 - ✅ **Stripe integration** for subscription management and payments
 - ✅ **Complete file management system** with R2 storage integration ⭐ **FULLY WORKING**
@@ -257,6 +295,19 @@ npm run logs:production        # View production logs
 - ✅ **Production deployment** configuration with health monitoring
 
 ### 🔧 Recent Fixes & Improvements (All Working)
+- ✅ **🗺️ LOCATION SEARCH SYSTEM** - Complete Google-style location search implementation ⭐ **NEW**
+  - Interactive map with search radius visualization and click-to-search
+  - Geocoding for 40+ German cities with GPS location detection
+  - Real-time distance display and auto-switch to map view
+  - Performance optimized with fixed infinite re-rendering issues
+- ✅ **🎨 CARD-STYLE DETAILS** - Professional listing detail cards like MyListings ⭐ **NEW**
+  - Replaced modal interface with consistent card design
+  - Enhanced contact information display and image galleries
+  - Smooth animations and responsive mobile design
+- ✅ **🔒 PRIVACY & ADMIN FEATURES** - User privacy controls with admin oversight ⭐ **NEW**
+  - Address privacy settings with role-based visibility
+  - Admin review system with "View Details" functionality
+  - Database schema updates with hideAddress field
 - ✅ **🔥 CRITICAL IMAGE SYSTEM FIX** - All image functionality now working perfectly
   - Fixed R2 public URL configuration (was using non-existent files.kisigua.com)
   - Corrected to proper R2 domain: https://pub-49c315845edf402b9841432c6b1083f1.r2.dev
@@ -269,15 +320,16 @@ npm run logs:production        # View production logs
 - ✅ **Password system** fixed for all test users
 
 ### 🚀 Next Steps for Enhancement
-1. **Group Interaction Improvements**: Modify group window behavior (no main page graying, direct contact list filtering)
-2. **Email Integration**: Notification system for user activities
-3. **Advanced Analytics**: Enhanced user behavior tracking and reporting
-4. **Mobile App**: React Native implementation for iOS/Android
-5. **API Documentation**: OpenAPI/Swagger documentation
-6. **Content Moderation**: Admin tools for managing user-generated content
-7. **Internationalization**: Additional language support beyond current 5
-8. **Performance Optimization**: Further bundle size reduction and caching
-9. **Social Features**: User profiles, reviews, and community interactions
+1. **Enhanced Geocoding**: Integration with Google Maps API or OpenStreetMap for global city coverage
+2. **Advanced Location Features**: Saved search locations, location alerts, and favorite areas
+3. **Mobile Optimization**: Enhanced mobile experience for location search and map interaction
+4. **Email Integration**: Notification system for user activities and location-based alerts
+5. **Advanced Analytics**: Enhanced user behavior tracking and location search analytics
+6. **API Documentation**: OpenAPI/Swagger documentation for location search endpoints
+7. **Content Moderation**: Enhanced admin tools for managing user-generated content
+8. **Internationalization**: Additional language support beyond current 5 languages
+9. **Performance Optimization**: Further bundle size reduction and caching improvements
+10. **Social Features**: User profiles, reviews, and community location sharing
 
 ## 💡 Development Notes
 
@@ -345,6 +397,10 @@ npm run logs:production        # View production logs
 
 **🌟 The Kisigua platform is FULLY OPERATIONAL and successfully connects communities with local resources! 🌱**
 
-**🚀 Live at https://kisigua.info-eac.workers.dev with complete functionality, real data, and ALL IMAGE FEATURES working perfectly! ✨**
+**🚀 Live at https://kisigua.com with complete functionality, real data, and ALL FEATURES working perfectly! ✨**
 
-**🔥 LATEST UPDATE: Critical image display issues RESOLVED - all file management features now working flawlessly! 📸**
+**🗺️ LATEST MAJOR UPDATE: Google-style location search with interactive maps - find sustainable businesses by distance like Kleinanzeigen.de! 📍**
+
+**🎨 NEW: Card-style listing details with privacy controls and admin oversight for professional user experience! 🔒**
+
+**🔥 ALL SYSTEMS OPERATIONAL: Location search, image management, privacy controls, and admin features working flawlessly! 🚀**

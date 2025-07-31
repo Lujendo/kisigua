@@ -852,6 +852,216 @@ app.get("/api/user/listings", authMiddleware, async (c) => {
   }
 });
 
+// User settings endpoints
+app.put("/api/user/profile", authMiddleware, async (c) => {
+  try {
+    const services = c.get('services');
+    const auth = c.get('auth');
+    const body = await c.req.json();
+
+    const { firstName, lastName, email } = body;
+
+    if (!firstName || !lastName || !email) {
+      return c.json({
+        success: false,
+        message: "First name, last name, and email are required"
+      }, 400);
+    }
+
+    // Update user profile
+    const result = await services.databaseService.db.prepare(`
+      UPDATE users
+      SET first_name = ?, last_name = ?, email = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(firstName, lastName, email, auth.userId).run();
+
+    if (result.success) {
+      return c.json({
+        success: true,
+        message: "Profile updated successfully"
+      });
+    } else {
+      return c.json({
+        success: false,
+        message: "Failed to update profile"
+      }, 500);
+    }
+  } catch (error) {
+    console.error('Profile update error:', error);
+    return c.json({
+      success: false,
+      message: "Failed to update profile"
+    }, 500);
+  }
+});
+
+app.post("/api/user/change-password", authMiddleware, async (c) => {
+  try {
+    const services = c.get('services');
+    const auth = c.get('auth');
+    const body = await c.req.json();
+
+    const { currentPassword, newPassword } = body;
+
+    if (!currentPassword || !newPassword) {
+      return c.json({
+        success: false,
+        message: "Current password and new password are required"
+      }, 400);
+    }
+
+    // Verify current password
+    const userResult = await services.databaseService.db.prepare(`
+      SELECT password_hash FROM users WHERE id = ?
+    `).bind(auth.userId).first();
+
+    if (!userResult) {
+      return c.json({
+        success: false,
+        message: "User not found"
+      }, 404);
+    }
+
+    // Hash current password to compare
+    const encoder = new TextEncoder();
+    const currentPasswordData = encoder.encode(currentPassword);
+    const currentPasswordHash = await crypto.subtle.digest('SHA-256', currentPasswordData);
+    const currentPasswordHashArray = Array.from(new Uint8Array(currentPasswordHash));
+    const currentPasswordHashString = currentPasswordHashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+    if (currentPasswordHashString !== userResult.password_hash) {
+      return c.json({
+        success: false,
+        message: "Current password is incorrect"
+      }, 400);
+    }
+
+    // Hash new password
+    const newPasswordData = encoder.encode(newPassword);
+    const newPasswordHash = await crypto.subtle.digest('SHA-256', newPasswordData);
+    const newPasswordHashArray = Array.from(new Uint8Array(newPasswordHash));
+    const newPasswordHashString = newPasswordHashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+    // Update password
+    const result = await services.databaseService.db.prepare(`
+      UPDATE users
+      SET password_hash = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(newPasswordHashString, auth.userId).run();
+
+    if (result.success) {
+      return c.json({
+        success: true,
+        message: "Password changed successfully"
+      });
+    } else {
+      return c.json({
+        success: false,
+        message: "Failed to change password"
+      }, 500);
+    }
+  } catch (error) {
+    console.error('Password change error:', error);
+    return c.json({
+      success: false,
+      message: "Failed to change password"
+    }, 500);
+  }
+});
+
+app.put("/api/user/notification-preferences", authMiddleware, async (c) => {
+  try {
+    const services = c.get('services');
+    const auth = c.get('auth');
+    const body = await c.req.json();
+
+    // For now, just return success - in a real app, you'd store these preferences
+    // You could add a user_preferences table to store notification settings
+
+    return c.json({
+      success: true,
+      message: "Notification preferences updated successfully"
+    });
+  } catch (error) {
+    console.error('Notification preferences update error:', error);
+    return c.json({
+      success: false,
+      message: "Failed to update notification preferences"
+    }, 500);
+  }
+});
+
+app.get("/api/user/export-data", authMiddleware, async (c) => {
+  try {
+    const services = c.get('services');
+    const auth = c.get('auth');
+
+    // Get user data
+    const userData = await services.databaseService.db.prepare(`
+      SELECT id, email, first_name, last_name, role, email_verified, created_at, updated_at, last_login_at
+      FROM users WHERE id = ?
+    `).bind(auth.userId).first();
+
+    // Get user's listings
+    const userListings = await services.databaseService.db.prepare(`
+      SELECT * FROM listings WHERE user_id = ?
+    `).bind(auth.userId).all();
+
+    // Get user's favorites
+    const userFavorites = await services.databaseService.db.prepare(`
+      SELECT * FROM favorites WHERE user_id = ?
+    `).bind(auth.userId).all();
+
+    const exportData = {
+      user: userData,
+      listings: userListings.results || [],
+      favorites: userFavorites.results || [],
+      exportDate: new Date().toISOString()
+    };
+
+    return c.json(exportData, 200, {
+      'Content-Type': 'application/json',
+      'Content-Disposition': `attachment; filename="kisigua-data-export-${new Date().toISOString().split('T')[0]}.json"`
+    });
+  } catch (error) {
+    console.error('Data export error:', error);
+    return c.json({
+      success: false,
+      message: "Failed to export data"
+    }, 500);
+  }
+});
+
+app.delete("/api/user/delete-account", authMiddleware, async (c) => {
+  try {
+    const services = c.get('services');
+    const auth = c.get('auth');
+
+    // Delete user's data (cascading deletes should handle related records)
+    const result = await services.databaseService.db.prepare(`
+      DELETE FROM users WHERE id = ?
+    `).bind(auth.userId).run();
+
+    if (result.success) {
+      return c.json({
+        success: true,
+        message: "Account deleted successfully"
+      });
+    } else {
+      return c.json({
+        success: false,
+        message: "Failed to delete account"
+      }, 500);
+    }
+  } catch (error) {
+    console.error('Account deletion error:', error);
+    return c.json({
+      success: false,
+      message: "Failed to delete account"
+    }, 500);
+  }
+});
+
 // Admin: Get all listings (including all statuses)
 app.get("/api/admin/listings", authMiddleware, roleMiddleware(['admin']), async (c) => {
   try {

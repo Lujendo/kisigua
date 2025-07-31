@@ -6,6 +6,8 @@ import AuthPage from './components/auth/AuthPage';
 import EmailVerification from './components/auth/EmailVerification';
 import PasswordReset from './components/auth/PasswordReset';
 import Dashboard from './components/Dashboard';
+import UserDropdown from './components/header/UserDropdown';
+import UserSettings from './components/settings/UserSettings';
 
 import SubscriptionPage from './components/subscription/SubscriptionPage';
 import Sidebar from './components/Sidebar';
@@ -18,7 +20,7 @@ import ListingManagement from './components/admin/ListingManagement';
 
 function AppContent() {
   const { isAuthenticated, isLoading, user } = useAuth();
-  const [currentPage, setCurrentPage] = useState<'landing' | 'auth' | 'verify-email' | 'reset-password' | 'app' | 'search' | 'subscription' | 'dashboard' | 'listings' | 'favorites' | 'profile' | 'messages' | 'admin' | 'users' | 'admin-listings' | 'analytics'>('landing');
+  const [currentPage, setCurrentPage] = useState<'landing' | 'auth' | 'verify-email' | 'reset-password' | 'app' | 'search' | 'subscription' | 'dashboard' | 'listings' | 'favorites' | 'profile' | 'settings' | 'messages' | 'admin' | 'users' | 'admin-listings' | 'analytics'>('landing');
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Auto-navigate after successful login
@@ -212,6 +214,7 @@ function AppContent() {
                      currentPage === 'listings' ? 'My Listings' :
                      currentPage === 'favorites' ? 'My Favorites' :
                      currentPage === 'profile' ? 'My Profile' :
+                     currentPage === 'settings' ? 'Settings' :
                      currentPage === 'messages' ? 'Messages' :
                      currentPage === 'admin' ? 'Admin Panel' :
                      currentPage === 'users' ? 'User Management' :
@@ -224,10 +227,9 @@ function AppContent() {
               </div>
 
               <div className="flex items-center space-x-4">
-                <div className="text-right hidden sm:block">
-                  <p className="text-sm font-medium text-gray-900">{user?.firstName} {user?.lastName}</p>
-                  <p className="text-xs text-gray-500 capitalize">{user?.role} Account</p>
-                </div>
+                <UserDropdown
+                  onNavigateToProfile={() => setCurrentPage('profile')}
+                />
               </div>
             </div>
           </div>
@@ -253,6 +255,12 @@ function AppContent() {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">My Profile</h2>
               <p className="text-gray-600">Profile management coming soon...</p>
+            </div>
+          )}
+
+          {currentPage === 'settings' && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <UserSettings onClose={() => setCurrentPage('dashboard')} />
             </div>
           )}
 

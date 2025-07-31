@@ -27,22 +27,21 @@ export class EmailService {
       // Check if API key is properly configured
       if (!this.apiKey || !this.apiKey.startsWith('re_')) {
         console.error('❌ Invalid or missing Resend API key:', this.apiKey ? 'INVALID_FORMAT' : 'MISSING');
-
-        // For development, simulate success to avoid blocking
-        if (this.apiKey?.includes('PLACEHOLDER') || this.apiKey?.includes('development')) {
-          console.log('🧪 Development mode: Simulating email send success');
-          console.log('📧 Would send verification email to:', to);
-          console.log('🔗 Verification URL would be: https://kisigua.com/verify-email?token=' + verificationToken);
-          return {
-            success: true,
-            messageId: 'dev-simulation-' + Date.now(),
-            error: undefined
-          };
-        }
-
         return {
           success: false,
           error: 'Email service not properly configured. Please contact support.'
+        };
+      }
+
+      // Check if this is still a placeholder key
+      if (this.apiKey.includes('PLACEHOLDER') || this.apiKey.includes('development')) {
+        console.log('🧪 Development mode: Simulating email send success');
+        console.log('📧 Would send verification email to:', to);
+        console.log('🔗 Verification URL would be: https://kisigua.com/verify-email?token=' + verificationToken);
+        return {
+          success: true,
+          messageId: 'dev-simulation-' + Date.now(),
+          error: undefined
         };
       }
 

@@ -6,6 +6,13 @@ Kisigua is a multilingual web application serving as a search engine for essenti
 
 🌱 **Mission**: Supporting local producers and promoting sustainable living through community connections.
 
+## Latest Updates (2025-01-31)
+- ✅ Complete Email Verification System with Resend API
+- ✅ Comprehensive User Settings with Header Dropdown
+- ✅ Password Management & Security Features
+- ✅ GDPR-Compliant Data Export & Account Management
+- ✅ Professional UI/UX with Mobile Responsiveness
+
 <!-- dash-content-start -->
 
 ## 🌍 Features

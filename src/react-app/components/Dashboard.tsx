@@ -545,13 +545,19 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
               ) : viewMode === 'map' ? (
                 <div className="h-96 rounded-lg overflow-hidden">
                   {(() => {
-                    // Filter locations with valid coordinates
+                    // Filter locations with valid coordinates (allow 0 coordinates as they might be valid)
                     const validLocations = currentItems.filter(location =>
-                      location.location.coordinates.lat !== 0 &&
-                      location.location.coordinates.lng !== 0 &&
+                      location.location.coordinates &&
+                      typeof location.location.coordinates.lat === 'number' &&
+                      typeof location.location.coordinates.lng === 'number' &&
                       !isNaN(location.location.coordinates.lat) &&
-                      !isNaN(location.location.coordinates.lng)
+                      !isNaN(location.location.coordinates.lng) &&
+                      // Only filter out obviously invalid coordinates
+                      Math.abs(location.location.coordinates.lat) <= 90 &&
+                      Math.abs(location.location.coordinates.lng) <= 180
                     );
+
+                    console.log(`Dashboard Map: Found ${validLocations.length} locations with valid coordinates out of ${currentItems.length} total`);
 
                     // Calculate center point from valid locations
                     let mapCenter: [number, number] = [52.5200, 13.4050]; // Default to Berlin
@@ -559,6 +565,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                       const avgLat = validLocations.reduce((sum, loc) => sum + loc.location.coordinates.lat, 0) / validLocations.length;
                       const avgLng = validLocations.reduce((sum, loc) => sum + loc.location.coordinates.lng, 0) / validLocations.length;
                       mapCenter = [avgLat, avgLng];
+                      console.log(`Dashboard Map: Calculated center at [${avgLat}, ${avgLng}]`);
                     }
 
                     const markers = validLocations.map(location => ({
@@ -567,11 +574,13 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                       description: location.description
                     }));
 
+                    console.log(`Dashboard Map: Created ${markers.length} markers`);
+
                     return (
                       <Map
                         center={mapCenter}
                         zoom={validLocations.length > 1 ? 10 : 13}
-                        height="100%"
+                        height="384px"
                         markers={markers}
                         onMarkerClick={(marker) => {
                           const location = validLocations.find(loc => loc.title === marker.title);

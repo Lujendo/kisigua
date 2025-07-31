@@ -556,7 +556,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                             handleLocationSearch();
                           }
                         }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 bg-white placeholder-gray-500"
                       />
                       <button
                         onClick={getCurrentLocation}
@@ -580,7 +580,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                       <select
                         value={searchRadius}
                         onChange={(e) => setSearchRadius(Number(e.target.value))}
-                        className="flex-1 px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
+                        className="flex-1 px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm text-gray-900 bg-white"
                       >
                         <option value={1}>1 km</option>
                         <option value={2}>2 km</option>

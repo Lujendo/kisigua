@@ -10,6 +10,8 @@ export interface DatabaseListing extends Omit<Listing, 'location' | 'contactInfo
   latitude: number;
   longitude: number;
   address: string;
+  street?: string;
+  house_number?: string;
   city: string;
   region?: string;
   country: string;
@@ -147,11 +149,15 @@ export class DatabaseService {
     const stmt = this.db.prepare(`
       INSERT INTO listings (
         id, user_id, title, description, category, latitude, longitude,
-        address, city, region, country, postal_code, contact_email, contact_phone,
-        contact_website, is_organic, is_certified, certification_details,
-        price_range, operating_hours
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        address, street, house_number, city, region, country, postal_code,
+        contact_email, contact_phone, contact_website, is_organic, is_certified,
+        certification_details, price_range, operating_hours
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
+
+    // Extract street and house number from location data
+    const street = (listingData.location as any).street || null;
+    const houseNumber = (listingData.location as any).houseNumber || null;
 
     await stmt.bind(
       listingData.id,
@@ -162,6 +168,8 @@ export class DatabaseService {
       listingData.location.latitude,
       listingData.location.longitude,
       listingData.location.address,
+      street,
+      houseNumber,
       listingData.location.city,
       listingData.location.region || null,
       listingData.location.country,
@@ -233,6 +241,17 @@ export class DatabaseService {
         updates.location.city,
         updates.location.country
       );
+
+      // Handle street and house number fields
+      if ((updates.location as any).street !== undefined) {
+        updateFields.push('street = ?');
+        values.push((updates.location as any).street);
+      }
+      if ((updates.location as any).houseNumber !== undefined) {
+        updateFields.push('house_number = ?');
+        values.push((updates.location as any).houseNumber);
+      }
+
       if (updates.location.postalCode !== undefined) {
         updateFields.push('postal_code = ?');
         values.push(updates.location.postalCode);
@@ -602,11 +621,13 @@ export class DatabaseService {
         latitude: dbListing.latitude,
         longitude: dbListing.longitude,
         address: dbListing.address,
+        street: dbListing.street || undefined,
+        houseNumber: dbListing.house_number || undefined,
         city: dbListing.city,
         region: dbListing.region || undefined,
         country: dbListing.country,
         postalCode: dbListing.postal_code || undefined
-      },
+      } as any, // Cast to allow additional fields
       contactInfo: {
         email: dbListing.contact_email || undefined,
         phone: dbListing.contact_phone || undefined,

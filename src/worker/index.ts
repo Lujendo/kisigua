@@ -458,6 +458,8 @@ app.post("/api/listings", authMiddleware, async (c) => {
       address: (data.location as any).street && (data.location as any).houseNumber
         ? `${(data.location as any).street} ${(data.location as any).houseNumber}`.trim()
         : data.location.address || '',
+      street: (data.location as any).street || null,
+      houseNumber: (data.location as any).houseNumber || null,
       city: data.location.city,
       region: data.location.region,
       country: data.location.country,
@@ -520,6 +522,8 @@ app.put("/api/listings/:id", authMiddleware, async (c) => {
         address: (data.location as any).street && (data.location as any).houseNumber
           ? `${(data.location as any).street} ${(data.location as any).houseNumber}`.trim()
           : data.location.address || '',
+        street: (data.location as any).street || null,
+        houseNumber: (data.location as any).houseNumber || null,
         city: data.location.city,
         region: data.location.region,
         country: data.location.country,

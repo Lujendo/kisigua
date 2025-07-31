@@ -817,7 +817,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                         zoom={userLocation ? 12 : (validLocations.length > 1 ? 10 : 13)}
                         height="384px"
                         markers={markers}
-                        searchLocation={userLocation}
+                        searchLocation={userLocation || undefined}
                         searchRadius={searchRadius}
                         onMarkerClick={(marker) => {
                           const location = validLocations.find(loc => loc.title === marker.title);

@@ -1870,35 +1870,26 @@ app.get("/api/user/stats", authMiddleware, async (c) => {
 app.get("/api/listings", async (c) => {
   try {
     const services = c.get('services');
-    console.log('Public requesting all listings for dashboard...');
+    console.log('Public requesting active listings for dashboard...');
 
-    // Use the database method directly to get all listings like admin does
-    const listings = await services.databaseService.getAllListingsForAdmin();
-    console.log(`Public listings endpoint returning ${listings.length} listings`);
+    // Use the search method that filters by status = 'active' for public view
+    const searchResult = await services.databaseService.searchListings({
+      query: '',
+      filters: {},
+      page: 1,
+      limit: 100 // Get all active listings
+    });
 
-    return c.json({ listings });
+    console.log(`Public listings endpoint returning ${searchResult.listings.length} active listings`);
+
+    return c.json({ listings: searchResult.listings });
   } catch (error) {
     console.error('Error fetching listings:', error);
     return c.json({ error: "Failed to fetch listings" }, 500);
   }
 });
 
-// Get all listings for authenticated users (includes all statuses for better dashboard experience)
-app.get("/api/listings/all", authMiddleware, async (c) => {
-  try {
-    const services = c.get('services');
-    console.log('Authenticated user requesting all listings for dashboard...');
 
-    // Use the admin method that shows all statuses - authenticated users should see everything
-    const listings = await services.databaseService.getAllListingsForAdmin();
-    console.log(`Dashboard endpoint returning ${listings.length} listings`);
-
-    return c.json({ listings });
-  } catch (error) {
-    console.error('Error fetching all listings for dashboard:', error);
-    return c.json({ error: "Failed to fetch listings" }, 500);
-  }
-});
 
 // Serve static files for non-API routes
 app.get("*", async (c) => {

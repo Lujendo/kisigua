@@ -330,10 +330,11 @@ export class EmailVerificationService {
       console.log('🔄 Resending verification for email:', email);
 
       // Find user by email - allow resending even if already verified
+      // Handle different boolean representations in SQLite (true, 1, "true")
       let userResult;
       try {
         userResult = await this.db.prepare(`
-          SELECT * FROM users WHERE email = ? AND is_active = true
+          SELECT * FROM users WHERE email = ? AND (is_active = true OR is_active = 1 OR is_active = '1')
         `).bind(email).first();
         console.log('✅ User lookup result:', userResult ? 'FOUND' : 'NOT_FOUND');
         if (userResult) {

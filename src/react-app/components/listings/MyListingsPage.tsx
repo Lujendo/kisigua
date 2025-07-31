@@ -660,6 +660,27 @@ const MyListingsPage: React.FC = () => {
         return;
       }
 
+      // Basic validation for required fields
+      if (!formData.title.trim()) {
+        alert('Please enter a title for your listing');
+        return;
+      }
+
+      if (!formData.description.trim()) {
+        alert('Please enter a description for your listing');
+        return;
+      }
+
+      if (!formData.category) {
+        alert('Please select a category for your listing');
+        return;
+      }
+
+      if (!formData.city.trim()) {
+        alert('Please enter a city for your listing');
+        return;
+      }
+
       setIsSubmitting(true);
 
       try {
@@ -671,7 +692,9 @@ const MyListingsPage: React.FC = () => {
           location: {
             latitude: 52.5200, // Default coordinates - in a real app, you'd geocode the address
             longitude: 13.4050,
-            address: `${formData.street} ${formData.houseNumber}`,
+            address: `${formData.street} ${formData.houseNumber}`.trim(),
+            street: formData.street || undefined,
+            houseNumber: formData.houseNumber || undefined,
             city: formData.city,
             region: formData.region || undefined,
             country: formData.country,
@@ -1308,6 +1331,26 @@ const MyListingsPage: React.FC = () => {
                     </div>
 
                     <div className="flex space-x-3">
+                      {/* Save Changes button - available on all tabs when editing */}
+                      {isEditing && (
+                        <button
+                          type="submit"
+                          disabled={isSubmitting}
+                          className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl"
+                        >
+                          {isSubmitting && (
+                            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          )}
+                          <span>
+                            {isSubmitting ? 'Saving...' : '💾 Save Changes'}
+                          </span>
+                        </button>
+                      )}
+
+                      {/* Next button for non-pricing tabs */}
                       {activeTab !== 'pricing' ? (
                         <button
                           type="button"
@@ -1326,6 +1369,7 @@ const MyListingsPage: React.FC = () => {
                           </svg>
                         </button>
                       ) : (
+                        /* Final submit button for pricing tab or create new listing */
                         <button
                           type="submit"
                           disabled={isSubmitting}

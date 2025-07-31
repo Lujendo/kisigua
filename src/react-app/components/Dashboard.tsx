@@ -123,6 +123,10 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
           setUserLocation({ lat: latitude, lng: longitude });
           setLocationSearch('Current Location');
           setIsGettingLocation(false);
+
+          // Auto-switch to map view for better location search experience
+          setViewMode('map');
+
           console.log(`📍 Got user location: ${latitude}, ${longitude}`);
         },
         (error) => {
@@ -153,6 +157,10 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
     if (coordinates) {
       setUserLocation(coordinates);
       console.log(`✅ Found coordinates for ${locationSearch}:`, coordinates);
+
+      // Auto-switch to map view for better location search experience
+      setViewMode('map');
+
       handleSearch(searchQuery);
     } else {
       console.log(`❌ Could not find coordinates for ${locationSearch}`);
@@ -661,7 +669,20 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                   </h2>
                   <p className="text-sm text-gray-600 mt-1">
                     {filteredLocations.length} {filteredLocations.length === 1 ? 'location' : 'locations'} found
+                    {userLocation && (
+                      <span className="ml-2 text-green-600 font-medium">
+                        • within {searchRadius} km of {locationSearch}
+                      </span>
+                    )}
                   </p>
+                  {userLocation && viewMode === 'map' && (
+                    <p className="text-xs text-blue-600 mt-1 flex items-center">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Click anywhere on the map to set a new search location
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex items-center space-x-4">
@@ -792,13 +813,22 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
 
                     return (
                       <Map
-                        center={mapCenter}
-                        zoom={validLocations.length > 1 ? 10 : 13}
+                        center={userLocation ? [userLocation.lat, userLocation.lng] : mapCenter}
+                        zoom={userLocation ? 12 : (validLocations.length > 1 ? 10 : 13)}
                         height="384px"
                         markers={markers}
+                        searchLocation={userLocation}
+                        searchRadius={searchRadius}
                         onMarkerClick={(marker) => {
                           const location = validLocations.find(loc => loc.title === marker.title);
                           if (location) handleLocationClick(location.id);
+                        }}
+                        onMapClick={async (lat, lng) => {
+                          console.log(`🗺️ Map clicked at: ${lat}, ${lng}`);
+                          setUserLocation({ lat, lng });
+                          setLocationSearch(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+                          // Trigger search with new location
+                          handleSearch(searchQuery);
                         }}
                       />
                     );

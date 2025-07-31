@@ -24,6 +24,9 @@ interface MapProps {
   markers?: MapMarker[];
   onMarkerClick?: (marker: MapMarker) => void;
   className?: string;
+  searchLocation?: { lat: number; lng: number };
+  searchRadius?: number; // in kilometers
+  onMapClick?: (lat: number, lng: number) => void;
 }
 
 const Map: React.FC<MapProps> = ({
@@ -32,7 +35,10 @@ const Map: React.FC<MapProps> = ({
   height = '400px',
   markers = [],
   onMarkerClick,
-  className = ''
+  className = '',
+  searchLocation,
+  searchRadius,
+  onMapClick
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -104,15 +110,76 @@ const Map: React.FC<MapProps> = ({
       }
     }
 
+    // Add search location circle if provided
+    let searchCircle: L.Circle | null = null;
+    let searchMarker: L.Marker | null = null;
+
+    if (searchLocation && searchRadius) {
+      // Add search center marker
+      const searchIcon = L.divIcon({
+        className: 'search-location-marker',
+        html: `
+          <div class="relative">
+            <div class="bg-red-500 w-6 h-6 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
+              <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+            </div>
+            <div class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+          </div>
+        `,
+        iconSize: [24, 24],
+        iconAnchor: [12, 24],
+        popupAnchor: [0, -24],
+      });
+
+      searchMarker = L.marker([searchLocation.lat, searchLocation.lng], {
+        icon: searchIcon
+      }).addTo(map);
+
+      searchMarker.bindPopup(`
+        <div class="p-2">
+          <h3 class="font-semibold text-red-600 mb-1">Search Center</h3>
+          <p class="text-sm text-gray-600">Searching within ${searchRadius} km</p>
+        </div>
+      `);
+
+      // Add search radius circle
+      searchCircle = L.circle([searchLocation.lat, searchLocation.lng], {
+        color: '#ef4444',
+        fillColor: '#ef4444',
+        fillOpacity: 0.1,
+        radius: searchRadius * 1000, // Convert km to meters
+        weight: 2,
+        dashArray: '5, 5'
+      }).addTo(map);
+
+      // Center map on search location
+      map.setView([searchLocation.lat, searchLocation.lng], Math.max(zoom, 12));
+    }
+
+    // Add map click handler
+    if (onMapClick) {
+      map.on('click', (e: L.LeafletMouseEvent) => {
+        onMapClick(e.latlng.lat, e.latlng.lng);
+      });
+    }
+
     // Cleanup function
     return () => {
+      if (searchCircle) {
+        searchCircle.remove();
+      }
+      if (searchMarker) {
+        searchMarker.remove();
+      }
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
       }
       markersRef.current = [];
     };
-  }, [center, zoom, markers, onMarkerClick]);
+  }, [center, zoom, markers, onMarkerClick, searchLocation, searchRadius, onMapClick]);
 
   // Update map view when center changes
   useEffect(() => {

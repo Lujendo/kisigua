@@ -329,20 +329,24 @@ export class EmailVerificationService {
     try {
       console.log('🔄 Resending verification for email:', email);
 
-      // Find user by email - first try with email_verified column
+      // Find user by email - allow resending even if already verified
       let userResult;
       try {
         userResult = await this.db.prepare(`
-          SELECT * FROM users WHERE email = ? AND is_active = true AND (email_verified = false OR email_verified IS NULL)
-        `).bind(email).first();
-        console.log('✅ User found with email_verified query');
-      } catch (dbError) {
-        // If email_verified column doesn't exist, fall back to simpler query
-        console.log('⚠️ email_verified column not found, using fallback query');
-        userResult = await this.db.prepare(`
           SELECT * FROM users WHERE email = ? AND is_active = true
         `).bind(email).first();
-        console.log('✅ User found with fallback query');
+        console.log('✅ User lookup result:', userResult ? 'FOUND' : 'NOT_FOUND');
+        if (userResult) {
+          console.log('✅ User details:', {
+            id: userResult.id,
+            email: userResult.email,
+            email_verified: userResult.email_verified,
+            is_active: userResult.is_active
+          });
+        }
+      } catch (dbError) {
+        console.error('❌ Database error during user lookup:', dbError);
+        userResult = null;
       }
 
       if (!userResult) {
@@ -359,10 +363,10 @@ export class EmailVerificationService {
 
       console.log('👤 Found user:', { id: userResult.id, email: userResult.email });
 
-      // Check if user is already verified (if column exists)
+      // Allow resending verification even if user appears to be verified
+      // (in case there was an error or the user needs to re-verify)
       if (userResult.email_verified === true) {
-        console.log('⚠️ User email is already verified');
-        return { success: false, error: 'Email is already verified' };
+        console.log('⚠️ User email appears to be verified, but allowing resend');
       }
 
       // Convert database user to User type

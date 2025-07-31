@@ -410,11 +410,14 @@ app.post("/api/auth/verify-email", async (c) => {
     const result = await services.emailVerificationService.verifyEmail(body.token);
 
     if (!result.success) {
+      console.log('❌ Email verification failed:', result.error);
       return c.json({
         success: false,
         message: result.error || "Email verification failed"
       }, 400);
     }
+
+    console.log('✅ Email verification successful for user:', result.user?.email);
 
     return c.json({
       success: true,

@@ -221,17 +221,11 @@ app.post("/api/auth/login", async (c) => {
 
     const result = await services.authService.login(body);
 
-    // Check if login was successful but email is not verified
-    if (result.success && result.user && !result.user.emailVerified) {
-      return c.json({
-        success: false,
-        message: "Please verify your email address before logging in. Check your inbox for a verification link.",
-        requiresEmailVerification: true,
-        email: result.user.email
-      }, 403);
-    }
+    // The AuthService now handles email verification logic internally,
+    // including bypassing verification for test users and admins.
+    // We should trust the AuthService result and not override it here.
 
-    const statusCode = result.success ? 200 : 401;
+    const statusCode = result.success ? 200 : (result.requiresEmailVerification ? 403 : 401);
     return c.json(result, statusCode);
   } catch (error) {
     console.error('Login endpoint error:', error);

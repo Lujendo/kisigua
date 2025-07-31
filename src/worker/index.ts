@@ -657,6 +657,18 @@ app.get("/api/admin/listings", authMiddleware, roleMiddleware(['admin']), async 
   return c.json({ listings });
 });
 
+// Admin: Get all users
+app.get("/api/admin/users", authMiddleware, roleMiddleware(['admin']), async (c) => {
+  try {
+    const services = c.get('services');
+    const users = await services.databaseService.getAllUsers();
+    return c.json({ users });
+  } catch (error) {
+    console.error('Admin get users error:', error);
+    return c.json({ error: "Failed to fetch users" }, 500);
+  }
+});
+
 // Check for duplicates without creating (authenticated)
 app.post("/api/listings/check-duplicates", authMiddleware, async (c) => {
   try {

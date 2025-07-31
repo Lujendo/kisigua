@@ -12,10 +12,11 @@ import MyListingsPage from './components/listings/MyListingsPage';
 import FavoritesPage from './components/favorites/FavoritesPage';
 import AdminPanel from './components/admin/AdminPanel';
 import UserManagement from './components/admin/UserManagement';
+import ListingManagement from './components/admin/ListingManagement';
 
 function AppContent() {
   const { isAuthenticated, isLoading, user } = useAuth();
-  const [currentPage, setCurrentPage] = useState<'landing' | 'auth' | 'app' | 'search' | 'subscription' | 'dashboard' | 'listings' | 'favorites' | 'profile' | 'messages' | 'admin' | 'users' | 'analytics'>('landing');
+  const [currentPage, setCurrentPage] = useState<'landing' | 'auth' | 'app' | 'search' | 'subscription' | 'dashboard' | 'listings' | 'favorites' | 'profile' | 'messages' | 'admin' | 'users' | 'admin-listings' | 'analytics'>('landing');
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Auto-navigate after successful login
@@ -138,6 +139,7 @@ function AppContent() {
                      currentPage === 'messages' ? 'Messages' :
                      currentPage === 'admin' ? 'Admin Panel' :
                      currentPage === 'users' ? 'User Management' :
+                     currentPage === 'admin-listings' ? 'Listing Management' :
                      currentPage === 'analytics' ? 'Analytics' :
                      currentPage.charAt(0).toUpperCase() + currentPage.slice(1)}
                   </h1>
@@ -191,6 +193,10 @@ function AppContent() {
 
           {currentPage === 'users' && user?.role === 'admin' && (
             <UserManagement />
+          )}
+
+          {currentPage === 'admin-listings' && user?.role === 'admin' && (
+            <ListingManagement />
           )}
 
           {currentPage === 'analytics' && user?.role === 'admin' && (

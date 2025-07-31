@@ -78,6 +78,14 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
 
   // View Mode State
   const [viewMode, setViewMode] = useState<'list' | 'cards' | 'map'>('list');
+  const [userSelectedView, setUserSelectedView] = useState(false); // Track if user explicitly selected a view
+
+  // Wrapper function for user-initiated view changes
+  const handleUserViewChange = (newViewMode: 'list' | 'cards' | 'map') => {
+    setViewMode(newViewMode);
+    setUserSelectedView(true); // Mark that user has explicitly chosen a view
+    console.log(`🎯 User explicitly selected view: ${newViewMode}`);
+  };
 
   // Location-based search states
   const [locationSearch, setLocationSearch] = useState('');
@@ -139,8 +147,12 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
           setLocationSearch('Current Location');
           setIsGettingLocation(false);
 
-          // Keep current view mode - don't force map view
-          // Users can choose their preferred view (list, grid, map)
+          // Respect user's explicit view choice - never override it
+          if (!userSelectedView) {
+            console.log(`📍 Got location, no explicit view selected, keeping: ${viewMode}`);
+          } else {
+            console.log(`📍 Got location, user has selected view: ${viewMode}, respecting their choice`);
+          }
 
           console.log(`📍 Got user location: ${latitude}, ${longitude}`);
         },
@@ -200,8 +212,12 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
       coordinates: location.coordinates
     }));
 
-    // Keep current view mode - don't force map view
-    // Users can choose their preferred view (list, grid, map)
+    // Respect user's explicit view choice - never override it
+    if (!userSelectedView) {
+      console.log(`🎯 No explicit view selected, keeping default view: ${viewMode}`);
+    } else {
+      console.log(`🎯 User has selected view: ${viewMode}, respecting their choice`);
+    }
 
     // Trigger search with new location
     handleSearch(searchQuery);
@@ -956,7 +972,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                   {/* View Toggle */}
                   <div className="flex bg-gray-100 rounded-lg p-1">
                     <button
-                      onClick={() => setViewMode('list')}
+                      onClick={() => handleUserViewChange('list')}
                       className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1 ${
                         viewMode === 'list'
                           ? 'bg-white text-gray-900 shadow-sm'
@@ -970,7 +986,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                       <span>List</span>
                     </button>
                     <button
-                      onClick={() => setViewMode('cards')}
+                      onClick={() => handleUserViewChange('cards')}
                       className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1 ${
                         viewMode === 'cards'
                           ? 'bg-white text-gray-900 shadow-sm'
@@ -984,7 +1000,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                       <span>Cards</span>
                     </button>
                     <button
-                      onClick={() => setViewMode('map')}
+                      onClick={() => handleUserViewChange('map')}
                       className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1 ${
                         viewMode === 'map'
                           ? 'bg-white text-gray-900 shadow-sm'

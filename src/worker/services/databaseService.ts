@@ -332,6 +332,38 @@ export class DatabaseService {
     return result.success && (result.meta?.changes || 0) > 0;
   }
 
+  async getAllListingsForAdmin(): Promise<any[]> {
+    // Admin method that returns ALL listings regardless of status
+    const stmt = this.db.prepare(`
+      SELECT DISTINCT l.* FROM listings l
+      ORDER BY l.created_at DESC
+    `);
+
+    const result = await stmt.all();
+    console.log('Admin getAllListings - Raw database result:', result);
+
+    if (!result.results || result.results.length === 0) {
+      console.log('Admin getAllListings - No listings found in database');
+      return [];
+    }
+
+    console.log(`Admin getAllListings - Found ${result.results.length} listings in database`);
+
+    // Convert each database listing to API format
+    const listings = [];
+    for (const dbListing of result.results) {
+      try {
+        const convertedListing = await this.convertDatabaseListingToListing(dbListing);
+        listings.push(convertedListing);
+      } catch (error) {
+        console.error('Error converting listing:', dbListing.id, error);
+      }
+    }
+
+    console.log(`Admin getAllListings - Successfully converted ${listings.length} listings`);
+    return listings;
+  }
+
   async searchListings(searchQuery: SearchQuery): Promise<SearchResult> {
     let sql = `
       SELECT DISTINCT l.* FROM listings l

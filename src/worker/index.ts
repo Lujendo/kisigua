@@ -650,11 +650,21 @@ app.get("/api/user/listings", authMiddleware, async (c) => {
   }
 });
 
-// Admin: Get all listings
+// Admin: Get all listings (including all statuses)
 app.get("/api/admin/listings", authMiddleware, roleMiddleware(['admin']), async (c) => {
-  const services = c.get('services');
-  const listings = await services.listingsService.getAllListings();
-  return c.json({ listings });
+  try {
+    const services = c.get('services');
+    console.log('Admin requesting all listings...');
+
+    // Use the admin-specific method that doesn't filter by status
+    const listings = await services.databaseService.getAllListingsForAdmin();
+    console.log(`Admin endpoint returning ${listings.length} listings`);
+
+    return c.json({ listings });
+  } catch (error) {
+    console.error('Admin get listings error:', error);
+    return c.json({ error: "Failed to fetch listings" }, 500);
+  }
 });
 
 // Admin: Get all users

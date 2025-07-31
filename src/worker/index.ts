@@ -354,7 +354,7 @@ app.post("/api/auth/forgot-password", async (c) => {
       }, 400);
     }
 
-    const result = await services.emailVerificationService.sendPasswordReset(body.email);
+    await services.emailVerificationService.sendPasswordReset(body.email);
 
     return c.json({
       success: true,
@@ -971,10 +971,6 @@ app.post("/api/user/change-password", authMiddleware, async (c) => {
 
 app.put("/api/user/notification-preferences", authMiddleware, async (c) => {
   try {
-    const services = c.get('services');
-    const auth = c.get('auth');
-    const body = await c.req.json();
-
     // For now, just return success - in a real app, you'd store these preferences
     // You could add a user_preferences table to store notification settings
 

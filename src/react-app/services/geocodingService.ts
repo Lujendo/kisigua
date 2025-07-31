@@ -1,10 +1,9 @@
-import { 
-  StaticLocationEntry, 
-  GeocodingResult, 
-  GeocodingOptions, 
-  GeographicCoordinates,
+import {
+  StaticLocationEntry,
+  GeocodingResult,
+  GeocodingOptions,
   LocationHierarchy,
-  LocationSearchResult 
+  LocationSearchResult
 } from '../types/location';
 
 // Comprehensive German location database with 200+ locations
@@ -667,8 +666,8 @@ export class GeocodingService {
    * Static geocoding using the comprehensive German database
    */
   private static staticGeocode(
-    locationName: string, 
-    options: GeocodingOptions = {}
+    locationName: string,
+    _options: GeocodingOptions = {}
   ): GeocodingResult | null {
     const normalizedName = locationName.toLowerCase().trim();
     
@@ -780,7 +779,7 @@ export class GeocodingService {
     // Sort by relevance score and population
     results.sort((a, b) => {
       if (a.relevanceScore !== b.relevanceScore) {
-        return b.relevanceScore - a.relevanceScore;
+        return (b.relevanceScore || 0) - (a.relevanceScore || 0);
       }
       return (b.hierarchy.population || 0) - (a.hierarchy.population || 0);
     });

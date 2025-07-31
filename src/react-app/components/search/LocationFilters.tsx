@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { GeocodingService } from '../../services/geocodingService';
-import { LocationFilters as LocationFiltersType, GERMAN_REGIONS } from '../../types/location';
+import { LocationFilters as LocationFiltersType } from '../../types/location';
 
 interface LocationFiltersProps {
   filters: LocationFiltersType;

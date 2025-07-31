@@ -6,7 +6,6 @@ import LocationDetail from './locations/LocationDetail';
 import Map from './Map';
 import LocationSearchInput from './search/LocationSearchInput';
 import LocationFilters from './search/LocationFilters';
-import { GeocodingService } from '../services/geocodingService';
 import { LocationFilters as LocationFiltersType, LocationSearchResult } from '../types/location';
 
 interface Location {
@@ -111,7 +110,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
   };
 
   // Enhanced geocoding using the new service
-  const geocodeLocation = async (locationName: string): Promise<{lat: number, lng: number} | null> => {
+  /* const geocodeLocation = async (locationName: string): Promise<{lat: number, lng: number} | null> => {
     try {
       const result = await GeocodingService.geocode(locationName, {
         preferredCountry: 'Germany',
@@ -127,7 +126,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
       console.error('Geocoding error:', error);
       return null;
     }
-  };
+  }; */
 
   // Get user's current location
   const getCurrentLocation = () => {
@@ -159,7 +158,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
   };
 
   // Handle location search by city name
-  const handleLocationSearch = async () => {
+  /* const handleLocationSearch = async () => {
     if (!locationSearch.trim()) {
       setUserLocation(null);
       handleSearch(searchQuery);
@@ -182,7 +181,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
       console.log(`❌ Could not find coordinates for ${locationSearch}`);
       alert(`Could not find location "${locationSearch}". Try entering a major German city name.`);
     }
-  };
+  }; */
 
   // Enhanced location search handlers
   const handleEnhancedLocationSelect = (location: LocationSearchResult) => {
@@ -472,7 +471,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
 
       if (locationFilters.region) {
         filtered = filtered.filter(location =>
-          location.location.region?.toLowerCase().includes(locationFilters.region!.toLowerCase()) ||
+          (location.location as any).region?.toLowerCase().includes(locationFilters.region!.toLowerCase()) ||
           location.location.city.toLowerCase().includes(locationFilters.region!.toLowerCase())
         );
       }

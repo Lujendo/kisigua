@@ -19,7 +19,7 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
   onLocationSelect,
   onCoordinatesSelect,
   showSuggestions = true,
-  includeMinorLocations = true,
+  // includeMinorLocations = true,
   className = "",
   disabled = false
 }) => {

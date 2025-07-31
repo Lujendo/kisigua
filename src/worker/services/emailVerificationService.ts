@@ -1,9 +1,7 @@
 import { EmailService } from './emailService';
-import { 
-  EmailVerificationToken, 
-  PasswordResetToken, 
+import {
   EmailLog,
-  User 
+  User
 } from '../types/auth';
 
 export class EmailVerificationService {
@@ -266,7 +264,7 @@ export class EmailVerificationService {
         return { success: false, error: 'User not found or already verified' };
       }
 
-      return await this.sendEmailVerification(userResult as User);
+      return await this.sendEmailVerification(userResult as unknown as User);
     } catch (error) {
       console.error('Resend verification error:', error);
       return { success: false, error: 'Failed to resend verification email' };

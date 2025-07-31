@@ -15,7 +15,7 @@ const EmailVerification: React.FC<EmailVerificationProps> = ({
   const [email, setEmail] = useState('');
 
   // Get token from URL parameters
-  const [token, setToken] = useState<string | null>(null);
+  const [, setToken] = useState<string | null>(null);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);

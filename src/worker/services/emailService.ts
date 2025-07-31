@@ -122,7 +122,7 @@ export class EmailService {
         return { success: false, error: error.message };
       }
 
-      return { success: true, results: data };
+      return { success: true, results: data as unknown as any[] };
     } catch (error) {
       console.error('Batch email service error:', error);
       return { success: false, error: 'Failed to send batch emails' };

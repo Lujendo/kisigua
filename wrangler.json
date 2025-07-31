@@ -44,5 +44,11 @@
       "id": "f8a818ef62ac49829fec3d96cf35cea8",
       "preview_id": "f8a818ef62ac49829fec3d96cf35cea8"
     }
+  ],
+  "vectorize": [
+    {
+      "binding": "VECTORIZE",
+      "index_name": "kisigua-listings-index"
+    }
   ]
 }

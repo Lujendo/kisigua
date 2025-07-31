@@ -13,6 +13,8 @@ import { ActivityService } from "./services/activityService";
 import { StatsService } from "./services/statsService";
 import { DuplicateDetectionService } from "./services/duplicateDetectionService";
 import { EmailVerificationService } from "./services/emailVerificationService";
+import { EmbeddingService } from "./services/embeddingService";
+import { SemanticSearchService } from "./services/semanticSearchService";
 import {
   createAuthMiddleware,
   createRoleMiddleware
@@ -28,20 +30,7 @@ import {
 } from "./types/auth";
 import { SearchQuery, CreateListingRequest, UpdateListingRequest } from "./types/listings";
 import { CreateCheckoutSessionRequest } from "./types/subscription";
-
-interface Env {
-  DB: D1Database;
-  FILES: R2Bucket;
-  ANALYTICS: AnalyticsEngineDataset;
-  CACHE: KVNamespace;
-  JWT_SECRET: string;
-  STRIPE_SECRET_KEY: string;
-  RESEND_API_KEY: string;
-  ENVIRONMENT: string;
-  APP_URL: string;
-  R2_BUCKET_NAME: string;
-  R2_PUBLIC_URL: string;
-}
+import { Env } from "./types/env";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -79,6 +68,15 @@ async function initializeServices(env: Env) {
   const listingsService = new ListingsService(databaseService);
   const duplicateDetectionService = new DuplicateDetectionService(databaseService);
   const subscriptionService = new SubscriptionService(env.STRIPE_SECRET_KEY || 'sk_test_your_stripe_secret_key');
+
+  console.log('Creating EmbeddingService with OPENAI_API_KEY:', env.OPENAI_API_KEY ? 'SET' : 'NOT SET');
+  const embeddingService = new EmbeddingService(env);
+  console.log('EmbeddingService created successfully');
+
+  console.log('Creating SemanticSearchService...');
+  const semanticSearchService = new SemanticSearchService(env, databaseService);
+  console.log('SemanticSearchService created successfully');
+
   console.log('=== SERVICES INITIALIZED ===');
 
   return {
@@ -93,7 +91,9 @@ async function initializeServices(env: Env) {
     emailVerificationService,
     listingsService,
     duplicateDetectionService,
-    subscriptionService
+    subscriptionService,
+    embeddingService,
+    semanticSearchService
   };
 }
 
@@ -606,6 +606,172 @@ app.post("/api/listings/search", async (c) => {
   }
 });
 
+// Semantic search endpoint
+app.post("/api/listings/semantic-search", async (c) => {
+  try {
+    const services = c.get('services');
+    const searchQuery = await c.req.json();
+    const result = await services.semanticSearchService.semanticSearch(searchQuery);
+    return c.json({
+      results: result,
+      count: result.length,
+      searchType: 'semantic'
+    });
+  } catch (error) {
+    console.error('Semantic search endpoint error:', error);
+    return c.json({ error: "Semantic search failed" }, 500);
+  }
+});
+
+// Hybrid search endpoint (combines semantic + keyword)
+app.post("/api/listings/hybrid-search", async (c) => {
+  try {
+    const services = c.get('services');
+    const searchQuery = await c.req.json();
+    const result = await services.semanticSearchService.hybridSearch(searchQuery);
+    return c.json(result);
+  } catch (error) {
+    console.error('Hybrid search endpoint error:', error);
+    return c.json({ error: "Hybrid search failed" }, 500);
+  }
+});
+
+// Find similar listings endpoint
+app.get("/api/listings/:id/similar", async (c) => {
+  try {
+    const services = c.get('services');
+    const listingId = c.req.param('id');
+    const limit = parseInt(c.req.query('limit') || '5');
+
+    const result = await services.semanticSearchService.findSimilarListings(listingId, limit);
+    return c.json({
+      results: result,
+      count: result.length,
+      listingId
+    });
+  } catch (error) {
+    console.error('Similar listings endpoint error:', error);
+    return c.json({ error: "Failed to find similar listings" }, 500);
+  }
+});
+
+// Personalized recommendations endpoint
+app.get("/api/listings/recommendations", authMiddleware, async (c) => {
+  try {
+    const services = c.get('services');
+    const auth = c.get('auth');
+    const limit = parseInt(c.req.query('limit') || '10');
+
+    const result = await services.semanticSearchService.getPersonalizedRecommendations(auth.userId, limit);
+    return c.json({
+      results: result,
+      count: result.length,
+      userId: auth.userId
+    });
+  } catch (error) {
+    console.error('Recommendations endpoint error:', error);
+    return c.json({ error: "Failed to get recommendations" }, 500);
+  }
+});
+
+// Embedding management endpoints (admin only)
+
+// Generate embedding for a specific listing
+app.post("/api/admin/embeddings/generate/:id", authMiddleware, roleMiddleware(['admin']), async (c) => {
+  try {
+    const services = c.get('services');
+    const listingId = c.req.param('id');
+
+    // Get listing from database
+    const listing = await services.databaseService.getDatabase()
+      .prepare('SELECT * FROM listings WHERE id = ? AND is_active = true')
+      .bind(listingId)
+      .first();
+
+    if (!listing) {
+      return c.json({ error: "Listing not found" }, 404);
+    }
+
+    // Generate and store embedding
+    await services.embeddingService.processListingEmbedding(listing);
+
+    return c.json({
+      success: true,
+      message: `Embedding generated for listing ${listingId}`,
+      listingId
+    });
+  } catch (error) {
+    console.error('Generate embedding endpoint error:', error);
+    return c.json({ error: "Failed to generate embedding" }, 500);
+  }
+});
+
+// Batch generate embeddings for all listings
+app.post("/api/admin/embeddings/generate-all", authMiddleware, roleMiddleware(['admin']), async (c) => {
+  try {
+    const services = c.get('services');
+    const batchSize = parseInt(c.req.query('batchSize') || '10');
+
+    // Get all active listings
+    const listings = await services.databaseService.getDatabase()
+      .prepare('SELECT * FROM listings WHERE is_active = true ORDER BY created_at DESC')
+      .all();
+
+    if (!listings.results || listings.results.length === 0) {
+      return c.json({ message: "No listings found" });
+    }
+
+    const allListings = listings.results;
+    let processed = 0;
+    let errors = 0;
+
+    // Process in batches
+    for (let i = 0; i < allListings.length; i += batchSize) {
+      const batch = allListings.slice(i, i + batchSize);
+
+      try {
+        await services.embeddingService.processBatchListingEmbeddings(batch);
+        processed += batch.length;
+        console.log(`✅ Processed batch ${Math.floor(i/batchSize) + 1}, total processed: ${processed}`);
+      } catch (error) {
+        console.error(`❌ Error processing batch ${Math.floor(i/batchSize) + 1}:`, error);
+        errors += batch.length;
+      }
+
+      // Small delay between batches to avoid rate limits
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    return c.json({
+      success: true,
+      message: `Batch embedding generation completed`,
+      totalListings: allListings.length,
+      processed,
+      errors,
+      batchSize
+    });
+  } catch (error) {
+    console.error('Batch generate embeddings endpoint error:', error);
+    return c.json({ error: "Failed to generate batch embeddings" }, 500);
+  }
+});
+
+// Get embedding statistics
+app.get("/api/admin/embeddings/stats", authMiddleware, roleMiddleware(['admin']), async (c) => {
+  try {
+    const services = c.get('services');
+    const stats = await services.embeddingService.getIndexStats();
+
+    return c.json({
+      success: true,
+      stats
+    });
+  } catch (error) {
+    console.error('Embedding stats endpoint error:', error);
+    return c.json({ error: "Failed to get embedding stats" }, 500);
+  }
+});
+
 // Get single listing (public)
 app.get("/api/listings/:id", async (c) => {
   try {
@@ -760,6 +926,15 @@ app.post("/api/listings", authMiddleware, async (c) => {
     const listing = await services.databaseService.getFullListingById(listingId);
     console.log('Retrieved full listing for API response:', listing);
 
+    // Generate and store embedding for the new listing (async, don't wait)
+    try {
+      await services.embeddingService.processListingEmbedding(listing);
+      console.log('✅ Embedding generated for new listing:', listingId);
+    } catch (embeddingError) {
+      console.error('⚠️ Failed to generate embedding for new listing:', embeddingError);
+      // Don't fail the listing creation if embedding fails
+    }
+
     return c.json({ listing }, 201);
   } catch (error) {
     console.error('Create listing error:', error);
@@ -822,6 +997,15 @@ app.put("/api/listings/:id", authMiddleware, async (c) => {
     const listing = await services.databaseService.getFullListingById(listingId);
     console.log('Listing updated successfully:', listing);
 
+    // Update embedding for the modified listing (async, don't wait)
+    try {
+      await services.embeddingService.processListingEmbedding(listing);
+      console.log('✅ Embedding updated for listing:', listingId);
+    } catch (embeddingError) {
+      console.error('⚠️ Failed to update embedding for listing:', embeddingError);
+      // Don't fail the listing update if embedding fails
+    }
+
     return c.json({ listing });
   } catch (error) {
     console.error('Update listing error:', error);
@@ -840,6 +1024,15 @@ app.delete("/api/listings/:id", authMiddleware, async (c) => {
 
   if (!success) {
     return c.json({ error: "Listing not found or access denied" }, 404);
+  }
+
+  // Delete embedding for the deleted listing (async, don't wait)
+  try {
+    await services.embeddingService.deleteEmbedding(`listing_${listingId}`);
+    console.log('✅ Embedding deleted for listing:', listingId);
+  } catch (embeddingError) {
+    console.error('⚠️ Failed to delete embedding for listing:', embeddingError);
+    // Don't fail the listing deletion if embedding deletion fails
   }
 
   return c.json({ success: true });

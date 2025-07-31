@@ -959,6 +959,28 @@ app.post("/api/test/check-user", authMiddleware, roleMiddleware(['admin']), asyn
       console.error('Database lookup error:', dbError);
     }
 
+    // Test the exact query used in resend verification
+    let resendQueryResult = null;
+    try {
+      resendQueryResult = await services.databaseService.db.prepare(`
+        SELECT * FROM users WHERE email = ? AND is_active = true
+      `).bind(email).first();
+      console.log('🔍 Resend query result:', resendQueryResult);
+    } catch (error) {
+      console.error('❌ Resend query error:', error);
+    }
+
+    // Test without is_active filter
+    let simpleQueryResult = null;
+    try {
+      simpleQueryResult = await services.databaseService.db.prepare(`
+        SELECT * FROM users WHERE email = ?
+      `).bind(email).first();
+      console.log('🔍 Simple query result:', simpleQueryResult);
+    } catch (error) {
+      console.error('❌ Simple query error:', error);
+    }
+
     // Check if user exists in memory (AuthService) - simplified check
     let memoryUserExists = false;
     let memoryUserInfo = null;
@@ -989,12 +1011,26 @@ app.post("/api/test/check-user", authMiddleware, roleMiddleware(['admin']), asyn
       email,
       existsInDatabase: !!dbUser,
       existsInMemory: memoryUserExists,
+      resendQueryWorks: !!resendQueryResult,
+      simpleQueryWorks: !!simpleQueryResult,
       databaseUser: dbUser ? {
         id: dbUser.id,
         email: dbUser.email,
         role: dbUser.role,
         isActive: dbUser.isActive,
         emailVerified: dbUser.email_verified
+      } : null,
+      resendQueryResult: resendQueryResult ? {
+        id: resendQueryResult.id,
+        email: resendQueryResult.email,
+        is_active: resendQueryResult.is_active,
+        email_verified: resendQueryResult.email_verified
+      } : null,
+      simpleQueryResult: simpleQueryResult ? {
+        id: simpleQueryResult.id,
+        email: simpleQueryResult.email,
+        is_active: simpleQueryResult.is_active,
+        email_verified: simpleQueryResult.email_verified
       } : null,
       memoryUser: memoryUserInfo,
       message: !dbUser && !memoryUserExists ? 'User not found in database or memory' :

@@ -74,8 +74,6 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
   const [locationSearch, setLocationSearch] = useState('');
   const [searchRadius, setSearchRadius] = useState(10); // km
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
-  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
-  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
 
   // Calculate distance between two coordinates using Haversine formula

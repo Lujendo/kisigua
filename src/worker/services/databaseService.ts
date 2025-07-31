@@ -237,9 +237,36 @@ export class DatabaseService {
   }
 
   async getAllUsers(): Promise<DatabaseUser[]> {
-    const stmt = this.db.prepare('SELECT * FROM users ORDER BY created_at DESC');
+    console.log('🔍 getAllUsers called - fetching all users for admin dashboard');
+    const stmt = this.db.prepare(`
+      SELECT
+        id,
+        email,
+        password_hash,
+        role,
+        first_name as firstName,
+        last_name as lastName,
+        is_active as isActive,
+        profile_image_url as profileImageUrl,
+        created_at as createdAt,
+        updated_at as updatedAt,
+        last_login_at as lastLoginAt
+      FROM users
+      ORDER BY created_at DESC
+    `);
     const result = await stmt.all();
-    return result.results as unknown as DatabaseUser[];
+    const users = result.results as unknown as DatabaseUser[];
+
+    console.log(`✅ getAllUsers found ${users.length} users:`, users.map(u => ({
+      id: u.id,
+      email: u.email,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      isActive: u.isActive,
+      isActiveType: typeof u.isActive
+    })));
+
+    return users;
   }
 
   async updateLastLogin(userId: string): Promise<void> {

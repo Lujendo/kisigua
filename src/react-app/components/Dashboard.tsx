@@ -200,8 +200,8 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
       coordinates: location.coordinates
     }));
 
-    // Auto-switch to map view for better location search experience
-    setViewMode('map');
+    // Keep current view mode - don't force map view
+    // Users can choose their preferred view (list, grid, map)
 
     // Trigger search with new location
     handleSearch(searchQuery);

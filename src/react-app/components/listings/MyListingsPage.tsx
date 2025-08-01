@@ -68,6 +68,10 @@ const MyListingsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Edit form optimization states
+  const [editingListingId, setEditingListingId] = useState<string | null>(null);
+  const [loadingEditData, setLoadingEditData] = useState<string | null>(null);
+
   // Global categories cache - shared across all form instances
   const [globalCategories, setGlobalCategories] = useState<Array<{ id: string; label: string; color?: string; icon?: string }>>([]);
   const [categoriesLoaded, setCategoriesLoaded] = useState(false);
@@ -411,24 +415,35 @@ const MyListingsPage: React.FC = () => {
   };
 
   const handleEditListing = async (listingId: string) => {
-    try {
-      // Fetch the complete listing data including images
-      const response = await fetch(`/api/listings/${listingId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch listing details');
-      }
+    console.log('🚀 Opening edit form for listing:', listingId);
 
-      const data = await response.json();
-      setEditingListing(data.listing);
+    // Step 1: Open form immediately with cached listing data (optimistic UI)
+    const cachedListing = listings.find(l => l.id === listingId);
+    if (cachedListing) {
+      console.log('⚡ Using cached listing data for instant form opening');
+      setEditingListing(cachedListing);
+      setEditingListingId(listingId);
       setShowCreateForm(true);
-    } catch (error) {
-      console.error('Error fetching listing for edit:', error);
-      // Fallback to the listing from the list
-      const listing = listings.find(l => l.id === listingId);
-      if (listing) {
-        setEditingListing(listing);
-        setShowCreateForm(true);
+    }
+
+    // Step 2: Fetch complete data in background (non-blocking)
+    setLoadingEditData(listingId);
+    try {
+      console.log('🔄 Fetching complete listing data in background...');
+      const response = await fetch(`/api/listings/${listingId}`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Complete listing data loaded, updating form');
+        setEditingListing(data.listing);
+      } else {
+        console.warn('⚠️ Failed to fetch complete data, using cached data');
+        // Keep using cached data - form is already open and functional
       }
+    } catch (error) {
+      console.error('❌ Error fetching complete listing data:', error);
+      // Keep using cached data - form is already open and functional
+    } finally {
+      setLoadingEditData(null);
     }
   };
 
@@ -621,9 +636,24 @@ const MyListingsPage: React.FC = () => {
         <div className="flex space-x-2">
           <button
             onClick={() => handleEditListing(listing.id)}
-            className="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors"
+            disabled={loadingEditData === listing.id}
+            className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-all duration-200 flex items-center justify-center space-x-1 ${
+              loadingEditData === listing.id
+                ? 'bg-green-400 cursor-wait'
+                : 'bg-green-600 hover:bg-green-700 text-white'
+            }`}
           >
-            Edit
+            {loadingEditData === listing.id ? (
+              <>
+                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Opening...</span>
+              </>
+            ) : (
+              <span>Edit</span>
+            )}
           </button>
           <button
             onClick={() => handleViewListing(listing.id)}
@@ -695,32 +725,46 @@ const MyListingsPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'basic' | 'location' | 'contact' | 'media' | 'pricing'>('basic');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const isEditing = editingListing !== null;
+    const isLoadingCompleteData = loadingEditData === editingListingId;
 
-    const [formData, setFormData] = useState({
-      title: editingListing?.title || '',
-      description: editingListing?.description || '',
-      category: editingListing?.category || '',
-      street: editingListing?.location?.street || '',
-      houseNumber: editingListing?.location?.houseNumber || '',
-      city: editingListing?.location?.city || '',
-      region: editingListing?.location?.region || '',
-      country: editingListing?.location?.country || '',
-      postalCode: editingListing?.location?.postalCode || '',
-      latitude: editingListing?.location?.latitude || editingListing?.location?.coordinates?.lat,
-      longitude: editingListing?.location?.longitude || editingListing?.location?.coordinates?.lng,
-      phone: editingListing?.contactInfo?.phone || editingListing?.contact?.phone || '',
-      mobile: editingListing?.contact?.mobile || '',
-      email: editingListing?.contactInfo?.email || editingListing?.contact?.email || '',
-      website: editingListing?.contactInfo?.website || editingListing?.contact?.website || '',
-      facebook: editingListing?.contact?.socials?.facebook || '',
-      instagram: editingListing?.contact?.socials?.instagram || '',
-      twitter: editingListing?.contact?.socials?.twitter || '',
-      linkedin: editingListing?.contact?.socials?.linkedin || '',
-      priceType: (editingListing?.priceType || 'free') as 'free' | 'paid' | 'donation',
-      price: editingListing?.price?.toString() || '',
-      tags: editingListing?.tags?.join(', ') || '',
-      status: (editingListing?.status || 'active') as 'active' | 'inactive' | 'pending' | 'rejected',
-      hideAddress: (editingListing as any)?.hideAddress || false
+    // Optimized form data initialization with memoization
+    const [formData, setFormData] = useState(() => {
+      if (!editingListing) {
+        return {
+          title: '', description: '', category: '', street: '', houseNumber: '',
+          city: '', region: '', country: '', postalCode: '', latitude: undefined, longitude: undefined,
+          phone: '', mobile: '', email: '', website: '', facebook: '', instagram: '', twitter: '', linkedin: '',
+          priceType: 'free' as 'free' | 'paid' | 'donation', price: '', tags: '',
+          status: 'active' as 'active' | 'inactive' | 'pending' | 'rejected', hideAddress: false
+        };
+      }
+
+      return {
+        title: editingListing.title || '',
+        description: editingListing.description || '',
+        category: editingListing.category || '',
+        street: editingListing.location?.street || '',
+        houseNumber: editingListing.location?.houseNumber || '',
+        city: editingListing.location?.city || '',
+        region: editingListing.location?.region || '',
+        country: editingListing.location?.country || '',
+        postalCode: editingListing.location?.postalCode || '',
+        latitude: editingListing.location?.latitude || editingListing.location?.coordinates?.lat,
+        longitude: editingListing.location?.longitude || editingListing.location?.coordinates?.lng,
+        phone: editingListing.contactInfo?.phone || editingListing.contact?.phone || '',
+        mobile: editingListing.contact?.mobile || '',
+        email: editingListing.contactInfo?.email || editingListing.contact?.email || '',
+        website: editingListing.contactInfo?.website || editingListing.contact?.website || '',
+        facebook: editingListing.contact?.socials?.facebook || '',
+        instagram: editingListing.contact?.socials?.instagram || '',
+        twitter: editingListing.contact?.socials?.twitter || '',
+        linkedin: editingListing.contact?.socials?.linkedin || '',
+        priceType: (editingListing.priceType || 'free') as 'free' | 'paid' | 'donation',
+        price: editingListing.price?.toString() || '',
+        tags: editingListing.tags?.join(', ') || '',
+        status: (editingListing.status || 'active') as 'active' | 'inactive' | 'pending' | 'rejected',
+        hideAddress: (editingListing as any)?.hideAddress || false
+      };
     });
     const [images, setImages] = useState<string[]>([]);
     // Use global categories cache instead of local state
@@ -735,6 +779,39 @@ const MyListingsPage: React.FC = () => {
         setImages([]);
       }
     }, [editingListing]);
+
+    // Update form data when complete listing data is loaded
+    useEffect(() => {
+      if (editingListing && !isLoadingCompleteData) {
+        console.log('🔄 Updating form with complete listing data');
+        setFormData({
+          title: editingListing.title || '',
+          description: editingListing.description || '',
+          category: editingListing.category || '',
+          street: editingListing.location?.street || '',
+          houseNumber: editingListing.location?.houseNumber || '',
+          city: editingListing.location?.city || '',
+          region: editingListing.location?.region || '',
+          country: editingListing.location?.country || '',
+          postalCode: editingListing.location?.postalCode || '',
+          latitude: editingListing.location?.latitude || editingListing.location?.coordinates?.lat,
+          longitude: editingListing.location?.longitude || editingListing.location?.coordinates?.lng,
+          phone: editingListing.contactInfo?.phone || editingListing.contact?.phone || '',
+          mobile: editingListing.contact?.mobile || '',
+          email: editingListing.contactInfo?.email || editingListing.contact?.email || '',
+          website: editingListing.contactInfo?.website || editingListing.contact?.website || '',
+          facebook: editingListing.contact?.socials?.facebook || '',
+          instagram: editingListing.contact?.socials?.instagram || '',
+          twitter: editingListing.contact?.socials?.twitter || '',
+          linkedin: editingListing.contact?.socials?.linkedin || '',
+          priceType: (editingListing.priceType || 'free') as 'free' | 'paid' | 'donation',
+          price: editingListing.price?.toString() || '',
+          tags: editingListing.tags?.join(', ') || '',
+          status: (editingListing.status || 'active') as 'active' | 'inactive' | 'pending' | 'rejected',
+          hideAddress: (editingListing as any)?.hideAddress || false
+        });
+      }
+    }, [editingListing, isLoadingCompleteData]);
 
     // Countries list - now handled by LocationInputWithPostalCode component
 
@@ -862,16 +939,32 @@ const MyListingsPage: React.FC = () => {
             {/* Header */}
             <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 bg-gradient-to-r from-green-50 to-blue-50">
               <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
-                  {isEditing ? 'Edit Listing' : 'Create New Listing'}
-                </h2>
+                <div className="flex items-center space-x-3">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+                    {isEditing ? 'Edit Listing' : 'Create New Listing'}
+                  </h2>
+                  {isLoadingCompleteData && (
+                    <div className="flex items-center space-x-2 text-blue-600">
+                      <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span className="text-xs font-medium">Loading complete data...</span>
+                    </div>
+                  )}
+                </div>
                 <p className="text-sm text-gray-600 mt-1">
                   {isEditing ? 'Update your listing information' : 'Share your sustainable location with the community'}
+                  {isLoadingCompleteData && (
+                    <span className="text-blue-600 ml-2">• Complete data loading in background</span>
+                  )}
                 </p>
               </div>
               <button
                 onClick={() => {
                   setEditingListing(null);
+                  setEditingListingId(null);
+                  setLoadingEditData(null);
                   setShowCreateForm(false);
                 }}
                 className="text-gray-400 hover:text-gray-600 hover:bg-white rounded-full p-2 transition-all duration-200"
@@ -1769,9 +1862,24 @@ const MyListingsPage: React.FC = () => {
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => handleEditListing(listing.id)}
-                        className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
+                        disabled={loadingEditData === listing.id}
+                        className={`px-3 py-1 rounded text-sm font-medium transition-all duration-200 flex items-center space-x-1 ${
+                          loadingEditData === listing.id
+                            ? 'bg-green-400 cursor-wait text-white'
+                            : 'bg-green-600 hover:bg-green-700 text-white'
+                        }`}
                       >
-                        Edit
+                        {loadingEditData === listing.id ? (
+                          <>
+                            <svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>Opening...</span>
+                          </>
+                        ) : (
+                          <span>Edit</span>
+                        )}
                       </button>
                       <button
                         onClick={() => handleViewListing(listing.id)}
@@ -1798,6 +1906,8 @@ const MyListingsPage: React.FC = () => {
           <button
             onClick={() => {
               setEditingListing(null);
+              setEditingListingId(null);
+              setLoadingEditData(null);
               setShowCreateForm(true);
             }}
             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"

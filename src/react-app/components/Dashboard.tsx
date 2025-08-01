@@ -515,8 +515,8 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
         ...(selectedCategory && { category: selectedCategory }),
         ...(locationFilters.coordinates && {
           location: {
-            lat: locationFilters.coordinates.lat,
-            lng: locationFilters.coordinates.lng,
+            latitude: locationFilters.coordinates.lat,
+            longitude: locationFilters.coordinates.lng,
             radius: locationFilters.radius || 25
           }
         })
@@ -524,6 +524,8 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
       page: 1,
       limit: 100
     };
+
+    console.log('🔍 Traditional search payload:', JSON.stringify(searchPayload, null, 2));
 
     const response = await fetch('/api/listings/search', {
       method: 'POST',
@@ -551,12 +553,14 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
       ...(selectedCategory && { category: selectedCategory }),
       ...(locationFilters.coordinates && {
         location: {
-          lat: locationFilters.coordinates.lat,
-          lng: locationFilters.coordinates.lng,
+          latitude: locationFilters.coordinates.lat,
+          longitude: locationFilters.coordinates.lng,
           radius: locationFilters.radius || 25
         }
       })
     };
+
+    console.log('🤖 AI hybrid search payload:', JSON.stringify(searchPayload, null, 2));
 
     const response = await fetch('/api/listings/hybrid-search', {
       method: 'POST',

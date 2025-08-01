@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 // import { usePerformance } from '../../contexts/PerformanceContext';
 import useOptimizedFetch from '../../hooks/useOptimizedFetch';
+import LocationSearchInput from './LocationSearchInput';
+import { LocationSearchResult } from '../../types/location';
 
 interface Listing {
   id: string;
@@ -27,6 +29,8 @@ const CompactSearchCard: React.FC<CompactSearchCardProps> = ({ onListingClick, c
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [locationSearch, setLocationSearch] = useState('');
+  const [selectedLocationData, setSelectedLocationData] = useState<LocationSearchResult | null>(null);
   // const { getFromCache, setCache } = usePerformance();
 
   // Fetch all listings with optimized caching
@@ -49,15 +53,26 @@ const CompactSearchCard: React.FC<CompactSearchCardProps> = ({ onListingClick, c
 
   // Filter listings based on search criteria
   const filteredListings = allListings.filter(listing => {
-    const matchesQuery = !searchQuery || 
+    const matchesQuery = !searchQuery ||
       listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       listing.description.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesLocation = !selectedLocation || 
-      listing.city.toLowerCase().includes(selectedLocation.toLowerCase()) ||
-      listing.region.toLowerCase().includes(selectedLocation.toLowerCase());
-    
-    const matchesCategory = !selectedCategory || 
+
+    // Enhanced location matching - check both dropdown selection and location search
+    const matchesLocation = (!selectedLocation && !locationSearch) ||
+      (selectedLocation && (
+        listing.city.toLowerCase().includes(selectedLocation.toLowerCase()) ||
+        listing.region.toLowerCase().includes(selectedLocation.toLowerCase())
+      )) ||
+      (locationSearch && (
+        listing.city.toLowerCase().includes(locationSearch.toLowerCase()) ||
+        listing.region.toLowerCase().includes(locationSearch.toLowerCase())
+      )) ||
+      (selectedLocationData && (
+        listing.city.toLowerCase().includes(selectedLocationData.hierarchy.city.toLowerCase()) ||
+        (selectedLocationData.hierarchy.region && listing.region.toLowerCase().includes(selectedLocationData.hierarchy.region.toLowerCase()))
+      ));
+
+    const matchesCategory = !selectedCategory ||
       listing.category === selectedCategory;
 
     return matchesQuery && matchesLocation && matchesCategory;
@@ -78,6 +93,16 @@ const CompactSearchCard: React.FC<CompactSearchCardProps> = ({ onListingClick, c
     setSearchQuery('');
     setSelectedLocation('');
     setSelectedCategory('');
+    setLocationSearch('');
+    setSelectedLocationData(null);
+  };
+
+  // Handle location selection from LocationSearchInput
+  const handleLocationSelect = (location: LocationSearchResult) => {
+    setSelectedLocationData(location);
+    setLocationSearch(location.displayName);
+    setSelectedLocation(''); // Clear dropdown selection when using location search
+    console.log('🌍 Location selected:', location);
   };
 
   const getCategoryIcon = (category: string) => {
@@ -109,46 +134,75 @@ const CompactSearchCard: React.FC<CompactSearchCardProps> = ({ onListingClick, c
       </div>
 
       {/* Compact Search Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
-        {/* Search Query */}
-        <div className="md:col-span-2">
+      <div className="space-y-4 mb-6">
+        {/* Top Row: Search Query */}
+        <div>
           <input
             type="text"
             placeholder="Search by title or description..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
           />
         </div>
 
-        {/* Location Filter */}
-        <div>
-          <select
-            value={selectedLocation}
-            onChange={(e) => setSelectedLocation(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
-          >
-            <option value="">All Locations</option>
-            {locations.map(location => (
-              <option key={location} value={location}>{location}</option>
-            ))}
-          </select>
-        </div>
+        {/* Bottom Row: Location Search + Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* Enhanced Location Search */}
+          <div className="relative">
+            <LocationSearchInput
+              placeholder="🌍 Search location..."
+              value={locationSearch}
+              onLocationSelect={handleLocationSelect}
+              showSuggestions={true}
+              includeMinorLocations={true}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+              countries={['DE', 'IT', 'ES', 'FR']}
+            />
+            {selectedLocationData && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-green-600">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            )}
+          </div>
 
-        {/* Category Filter */}
-        <div>
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
-          >
-            <option value="">All Categories</option>
-            {categories.map(category => (
-              <option key={category} value={category}>
-                {getCategoryIcon(category)} {formatCategory(category)}
-              </option>
-            ))}
-          </select>
+          {/* Quick Location Filter (for existing locations) */}
+          <div>
+            <select
+              value={selectedLocation}
+              onChange={(e) => {
+                setSelectedLocation(e.target.value);
+                if (e.target.value) {
+                  setLocationSearch(''); // Clear location search when using dropdown
+                  setSelectedLocationData(null);
+                }
+              }}
+              className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+            >
+              <option value="">📍 Quick Locations</option>
+              {locations.slice(0, 10).map(location => (
+                <option key={location} value={location}>{location}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Category Filter */}
+          <div>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+            >
+              <option value="">🏷️ All Categories</option>
+              {categories.map(category => (
+                <option key={category} value={category}>
+                  {getCategoryIcon(category)} {formatCategory(category)}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -171,9 +225,17 @@ const CompactSearchCard: React.FC<CompactSearchCardProps> = ({ onListingClick, c
         </div>
         
         {/* Active Filters Indicator */}
-        {(searchQuery || selectedLocation || selectedCategory) && (
-          <div className="text-sm text-green-600 font-medium">
-            Filters active
+        {(searchQuery || selectedLocation || selectedCategory || locationSearch) && (
+          <div className="flex items-center gap-2">
+            <div className="text-sm text-green-600 font-medium">
+              Filters active
+            </div>
+            {selectedLocationData && (
+              <div className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full flex items-center gap-1">
+                🌍 {selectedLocationData.hierarchy.city}
+                {selectedLocationData.hierarchy.region && `, ${selectedLocationData.hierarchy.region}`}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -192,12 +254,17 @@ const CompactSearchCard: React.FC<CompactSearchCardProps> = ({ onListingClick, c
           {filteredListings.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <div className="text-4xl mb-2">🔍</div>
-              <p>No listings found matching your criteria</p>
+              <p className="mb-2">No listings found matching your criteria</p>
+              {(searchQuery || selectedLocation || selectedCategory || locationSearch) && (
+                <div className="text-sm mb-3">
+                  Try adjusting your search terms or location filters
+                </div>
+              )}
               <button
                 onClick={clearFilters}
                 className="mt-2 text-green-600 hover:text-green-800 underline"
               >
-                Clear filters to see all listings
+                Clear all filters to see all listings
               </button>
             </div>
           ) : (

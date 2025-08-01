@@ -55,9 +55,8 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
   const [regionQuery, setRegionQuery] = useState(value.region || '');
   const [isLoadingRegions, setIsLoadingRegions] = useState(false);
 
-  // Postal code selection state
-  const [showPostalCodeSelection, setShowPostalCodeSelection] = useState(false);
-  const [selectedCityForPostalCodes, setSelectedCityForPostalCodes] = useState<CityLookupResult | null>(null);
+  // Postal code selection state - simplified (no modal needed)
+  // Postal codes now show directly in the postal code field dropdown
   
   const cityInputRef = useRef<HTMLInputElement>(null);
   const postalInputRef = useRef<HTMLInputElement>(null);
@@ -267,9 +266,13 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
 
   // Handle postal code selection
   const handlePostalSelect = (suggestion: LocationSearchResult) => {
+    console.log('📮 Postal code selected:', suggestion.hierarchy.postalCode, 'for city:', suggestion.name);
+
     setPostalQuery(suggestion.hierarchy.postalCode || '');
+    setCityQuery(suggestion.name); // Auto-populate city field
+    setRegionQuery(suggestion.hierarchy.region || '');
     setShowPostalSuggestions(false);
-    
+
     // Auto-fill location data
     const newLocation: LocationData = {
       ...value,
@@ -280,11 +283,8 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
       latitude: suggestion.coordinates.lat,
       longitude: suggestion.coordinates.lng
     };
-    
+
     onChange(newLocation);
-    
-    // Update city input
-    setCityQuery(suggestion.name);
   };
 
   // Handle enhanced postal code lookup selection
@@ -313,10 +313,35 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
     setRegionQuery(result.region);
     setShowLookupSuggestions(false);
 
-    // If multiple postal codes, show selection dialog
+    // If multiple postal codes, show them in the postal code field
     if (result.postalCodes.length > 1) {
-      setSelectedCityForPostalCodes(result);
-      setShowPostalCodeSelection(true);
+      console.log(`🏙️ City ${result.city} has ${result.postalCodes.length} postal codes, showing in postal code field`);
+
+      // Create postal code suggestions for the postal code field
+      const postalCodeSuggestions = result.postalCodes.map(postalCode => ({
+        name: result.city,
+        displayName: `${postalCode} ${result.city}, ${result.region}`,
+        coordinates: result.coordinates,
+        hierarchy: {
+          country: result.country,
+          countryCode: result.country === 'Germany' ? 'DE' : result.country === 'Italy' ? 'IT' : 'DE',
+          region: result.region,
+          district: '',
+          city: result.city,
+          postalCode: postalCode,
+          coordinates: result.coordinates,
+          locationType: 'city' as const
+        }
+      }));
+
+      // Show postal code suggestions
+      setPostalSuggestions(postalCodeSuggestions);
+      setShowPostalSuggestions(true);
+
+      // Focus postal code field to show suggestions
+      if (postalInputRef.current) {
+        postalInputRef.current.focus();
+      }
 
       // Update location without postal code for now
       const newLocation: LocationData = {
@@ -361,25 +386,7 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
     onChange(newLocation);
   };
 
-  // Handle postal code selection from multiple options
-  const handlePostalCodeSelect = (postalCode: string) => {
-    setPostalQuery(postalCode);
-    setShowPostalCodeSelection(false);
-
-    const newLocation: LocationData = {
-      ...value,
-      postalCode: postalCode
-    };
-
-    onChange(newLocation);
-    setSelectedCityForPostalCodes(null);
-  };
-
-  // Close postal code selection
-  const closePostalCodeSelection = () => {
-    setShowPostalCodeSelection(false);
-    setSelectedCityForPostalCodes(null);
-  };
+  // Modal-related functions removed - postal codes now show in dropdown
 
   // Handle manual input changes
   const handleInputChange = (field: keyof LocationData, inputValue: string) => {
@@ -403,7 +410,6 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
             setPostalQuery('');
             setRegionQuery('');
             setShowLookupSuggestions(false);
-            setShowPostalCodeSelection(false);
             setShowCitySuggestions(false);
             setShowPostalSuggestions(false);
           }}
@@ -526,7 +532,7 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
             placeholder="e.g., 72654 or Berlin"
             className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
           />
-          
+
           {/* Loading indicator */}
           {isLoadingPostal && (
             <div className="absolute right-3 top-9">
@@ -536,7 +542,7 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
 
           {/* Helper text */}
           <p className="text-xs text-gray-500 mt-1">
-            💡 You can type a postal code or city name
+            💡 Type a postal code or city name - multiple postal codes will appear here
           </p>
 
           {/* Postal Code Suggestions */}
@@ -666,7 +672,7 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
                           Postal codes: {result.postalCodes.slice(0, 3).join(', ')}
                           {result.postalCodes.length > 3 && ` +${result.postalCodes.length - 3} more`}
                           <span className="ml-2 text-blue-600 font-medium">
-                            → Click to choose
+                            → Click to see postal codes
                           </span>
                         </>
                       )}
@@ -720,69 +726,8 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
         </div>
       )}
 
-      {/* Postal Code Selection Modal */}
-      {showPostalCodeSelection && selectedCityForPostalCodes && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-96 overflow-hidden">
-            <div className="p-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Choose Postal Code
-                </h3>
-                <button
-                  onClick={closePostalCodeSelection}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              <p className="text-sm text-gray-600 mt-1">
-                {selectedCityForPostalCodes.city} has multiple postal codes. Please select one:
-              </p>
-            </div>
-
-            <div className="p-4 max-h-64 overflow-y-auto">
-              <div className="space-y-2">
-                {selectedCityForPostalCodes.postalCodes.map((postalCode, index) => (
-                  <button
-                    key={`postal-${postalCode}-${index}`}
-                    onClick={() => handlePostalCodeSelect(postalCode)}
-                    className="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-green-300 hover:bg-green-50 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-gray-900">{postalCode}</div>
-                        <div className="text-sm text-gray-600">
-                          {selectedCityForPostalCodes.city}, {selectedCityForPostalCodes.region}
-                        </div>
-                      </div>
-                      <div className="text-green-600">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="p-4 border-t border-gray-200 bg-gray-50">
-              <div className="flex justify-between items-center text-sm text-gray-600">
-                <span>{selectedCityForPostalCodes.postalCodes.length} postal codes available</span>
-                <button
-                  onClick={closePostalCodeSelection}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Postal Code Selection Modal - REMOVED
+          Postal codes now show directly in the postal code field dropdown */}
         </>
       )}
     </div>

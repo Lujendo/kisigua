@@ -6,6 +6,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { LocationSearchResult } from '../../types/location';
 import { MapService } from '../../services/mapService';
+import { PostalCodeLookupService, PostalCodeLookupResult, CityLookupResult, RegionLookupResult } from '../../services/postalCodeLookupService';
 
 interface LocationData {
   street?: string;
@@ -42,9 +43,89 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
   const [postalSuggestions, setPostalSuggestions] = useState<LocationSearchResult[]>([]);
   const [showPostalSuggestions, setShowPostalSuggestions] = useState(false);
   const [isLoadingPostal, setIsLoadingPostal] = useState(false);
+
+  // Enhanced lookup states
+  const [postalLookupResults, setPostalLookupResults] = useState<PostalCodeLookupResult[]>([]);
+  const [cityLookupResults, setCityLookupResults] = useState<CityLookupResult[]>([]);
+  const [regionLookupResults, setRegionLookupResults] = useState<RegionLookupResult[]>([]);
+  const [showLookupSuggestions, setShowLookupSuggestions] = useState(false);
+  const [lookupType, setLookupType] = useState<'postal' | 'city' | 'region' | null>(null);
+
+  // Region input state
+  const [regionQuery, setRegionQuery] = useState(value.region || '');
+  const [isLoadingRegions, setIsLoadingRegions] = useState(false);
   
   const cityInputRef = useRef<HTMLInputElement>(null);
   const postalInputRef = useRef<HTMLInputElement>(null);
+
+  // Enhanced postal code lookup
+  const performPostalLookup = useCallback(async (postalCode: string) => {
+    if (!postalCode || postalCode.length < 3) {
+      setPostalLookupResults([]);
+      setShowLookupSuggestions(false);
+      return;
+    }
+
+    setIsLoadingPostal(true);
+    try {
+      const countryCode = PostalCodeLookupService.getCountryCode(value.country);
+      const results = await PostalCodeLookupService.lookupByPostalCode(postalCode, countryCode);
+      setPostalLookupResults(results);
+      setLookupType('postal');
+      setShowLookupSuggestions(results.length > 0);
+    } catch (error) {
+      console.error('Postal lookup error:', error);
+      setPostalLookupResults([]);
+    } finally {
+      setIsLoadingPostal(false);
+    }
+  }, [value.country]);
+
+  // Enhanced city lookup
+  const performCityLookup = useCallback(async (cityName: string) => {
+    if (!cityName || cityName.length < 2) {
+      setCityLookupResults([]);
+      setShowLookupSuggestions(false);
+      return;
+    }
+
+    setIsLoadingCities(true);
+    try {
+      const countryCode = PostalCodeLookupService.getCountryCode(value.country);
+      const results = await PostalCodeLookupService.lookupByCity(cityName, countryCode);
+      setCityLookupResults(results);
+      setLookupType('city');
+      setShowLookupSuggestions(results.length > 0);
+    } catch (error) {
+      console.error('City lookup error:', error);
+      setCityLookupResults([]);
+    } finally {
+      setIsLoadingCities(false);
+    }
+  }, [value.country]);
+
+  // Enhanced region lookup
+  const performRegionLookup = useCallback(async (regionName: string) => {
+    if (!regionName || regionName.length < 2) {
+      setRegionLookupResults([]);
+      setShowLookupSuggestions(false);
+      return;
+    }
+
+    setIsLoadingRegions(true);
+    try {
+      const countryCode = PostalCodeLookupService.getCountryCode(value.country);
+      const results = await PostalCodeLookupService.lookupByRegion(regionName, countryCode);
+      setRegionLookupResults(results);
+      setLookupType('region');
+      setShowLookupSuggestions(results.length > 0);
+    } catch (error) {
+      console.error('Region lookup error:', error);
+      setRegionLookupResults([]);
+    } finally {
+      setIsLoadingRegions(false);
+    }
+  }, [value.country]);
 
   // Debounced city search
   const searchCities = useCallback(async (query: string) => {
@@ -185,6 +266,66 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
     setCityQuery(suggestion.name);
   };
 
+  // Handle enhanced postal code lookup selection
+  const handleEnhancedPostalSelect = (result: PostalCodeLookupResult) => {
+    setPostalQuery(result.postalCode);
+    setCityQuery(result.city);
+    setRegionQuery(result.region);
+    setShowLookupSuggestions(false);
+
+    const newLocation: LocationData = {
+      ...value,
+      city: result.city,
+      region: result.region,
+      country: result.country,
+      postalCode: result.postalCode,
+      latitude: result.coordinates.lat,
+      longitude: result.coordinates.lng
+    };
+
+    onChange(newLocation);
+  };
+
+  // Handle enhanced city lookup selection
+  const handleEnhancedCitySelect = (result: CityLookupResult) => {
+    setCityQuery(result.city);
+    setRegionQuery(result.region);
+    setShowLookupSuggestions(false);
+
+    // If only one postal code, auto-fill it
+    if (result.postalCodes.length === 1) {
+      setPostalQuery(result.postalCodes[0]);
+    }
+
+    const newLocation: LocationData = {
+      ...value,
+      city: result.city,
+      region: result.region,
+      country: result.country,
+      postalCode: result.postalCodes.length === 1 ? result.postalCodes[0] : value.postalCode,
+      latitude: result.coordinates.lat,
+      longitude: result.coordinates.lng
+    };
+
+    onChange(newLocation);
+  };
+
+  // Handle enhanced region lookup selection
+  const handleEnhancedRegionSelect = (result: RegionLookupResult) => {
+    setRegionQuery(result.region);
+    setShowLookupSuggestions(false);
+
+    const newLocation: LocationData = {
+      ...value,
+      region: result.region,
+      country: result.country,
+      latitude: result.coordinates.lat,
+      longitude: result.coordinates.lng
+    };
+
+    onChange(newLocation);
+  };
+
   // Handle manual input changes
   const handleInputChange = (field: keyof LocationData, inputValue: string) => {
     const newLocation = { ...value, [field]: inputValue };
@@ -238,6 +379,7 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
               setCityQuery(e.target.value);
               handleInputChange('city', e.target.value);
               searchCities(e.target.value);
+              performCityLookup(e.target.value);
             }}
             onFocus={() => citySuggestions.length > 0 && setShowCitySuggestions(true)}
             placeholder="Enter city name..."
@@ -287,6 +429,7 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
               setPostalQuery(e.target.value);
               handleInputChange('postalCode', e.target.value);
               searchPostalCodes(e.target.value);
+              performPostalLookup(e.target.value);
             }}
             onFocus={() => postalSuggestions.length > 0 && setShowPostalSuggestions(true)}
             placeholder="e.g., 72654, 10115"
@@ -325,17 +468,29 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
 
       {/* Region and Country */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
+        <div className="relative">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Region/State
           </label>
           <input
             type="text"
-            value={value.region || ''}
-            onChange={(e) => handleInputChange('region', e.target.value)}
+            value={regionQuery}
+            onChange={(e) => {
+              setRegionQuery(e.target.value);
+              handleInputChange('region', e.target.value);
+              performRegionLookup(e.target.value);
+            }}
+            onFocus={() => regionLookupResults.length > 0 && setShowLookupSuggestions(true)}
             placeholder="e.g., Baden-Württemberg, Lombardy"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
           />
+
+          {/* Loading indicator */}
+          {isLoadingRegions && (
+            <div className="absolute right-3 top-9">
+              <div className="animate-spin w-4 h-4 border-2 border-gray-300 border-t-green-500 rounded-full"></div>
+            </div>
+          )}
         </div>
         
         <div>
@@ -373,6 +528,94 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
               {value.region && `, ${value.region}`}
             </span>
           </div>
+        </div>
+      )}
+
+      {/* Enhanced Lookup Suggestions */}
+      {showLookupSuggestions && (
+        <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-4 mt-4">
+          <div className="text-sm font-medium text-gray-700 mb-3">
+            {lookupType === 'postal' && 'Postal Code Suggestions'}
+            {lookupType === 'city' && 'City Suggestions'}
+            {lookupType === 'region' && 'Region Suggestions'}
+          </div>
+
+          {/* Postal Code Results */}
+          {lookupType === 'postal' && postalLookupResults.length > 0 && (
+            <div className="space-y-2">
+              {postalLookupResults.slice(0, 5).map((result, index) => (
+                <div
+                  key={`postal-${result.postalCode}-${index}`}
+                  className="flex items-center justify-between p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors"
+                  onClick={() => handleEnhancedPostalSelect(result)}
+                >
+                  <div className="flex-1">
+                    <div className="font-medium text-blue-900">{result.postalCode}</div>
+                    <div className="text-sm text-blue-700">{result.displayName}</div>
+                  </div>
+                  <div className="text-xs text-blue-600">
+                    {(result.confidence * 100).toFixed(0)}% match
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* City Results */}
+          {lookupType === 'city' && cityLookupResults.length > 0 && (
+            <div className="space-y-2">
+              {cityLookupResults.slice(0, 5).map((result, index) => (
+                <div
+                  key={`city-${result.city}-${index}`}
+                  className="flex items-center justify-between p-3 bg-green-50 rounded-lg cursor-pointer hover:bg-green-100 transition-colors"
+                  onClick={() => handleEnhancedCitySelect(result)}
+                >
+                  <div className="flex-1">
+                    <div className="font-medium text-green-900">{result.city}</div>
+                    <div className="text-sm text-green-700">{result.displayName}</div>
+                    <div className="text-xs text-green-600 mt-1">
+                      Postal codes: {result.postalCodes.slice(0, 3).join(', ')}
+                      {result.postalCodes.length > 3 && ` +${result.postalCodes.length - 3} more`}
+                    </div>
+                  </div>
+                  <div className="text-xs text-green-600">
+                    {(result.confidence * 100).toFixed(0)}% match
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Region Results */}
+          {lookupType === 'region' && regionLookupResults.length > 0 && (
+            <div className="space-y-2">
+              {regionLookupResults.slice(0, 3).map((result, index) => (
+                <div
+                  key={`region-${result.region}-${index}`}
+                  className="flex items-center justify-between p-3 bg-purple-50 rounded-lg cursor-pointer hover:bg-purple-100 transition-colors"
+                  onClick={() => handleEnhancedRegionSelect(result)}
+                >
+                  <div className="flex-1">
+                    <div className="font-medium text-purple-900">{result.region}</div>
+                    <div className="text-sm text-purple-700">{result.country}</div>
+                    <div className="text-xs text-purple-600 mt-1">
+                      {result.cities.length} cities • {result.postalCodeRanges.join(', ')}
+                    </div>
+                  </div>
+                  <div className="text-xs text-purple-600">
+                    {(result.confidence * 100).toFixed(0)}% match
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <button
+            onClick={() => setShowLookupSuggestions(false)}
+            className="mt-3 text-xs text-gray-500 hover:text-gray-700"
+          >
+            Close suggestions
+          </button>
         </div>
       )}
     </div>

@@ -426,6 +426,125 @@ app.get("/api/locations/nearby", async (c) => {
   }
 });
 
+// Postal code lookup endpoint - for listing creation/editing
+app.get("/api/locations/postal-lookup", async (c) => {
+  try {
+    const services = c.get('services');
+    const postalCode = c.req.query('postal_code') || '';
+    const country = c.req.query('country') || 'DE';
+    const maxResults = parseInt(c.req.query('limit') || '10');
+
+    if (!postalCode) {
+      return c.json({
+        error: "Postal code is required",
+        results: []
+      }, 400);
+    }
+
+    // Search by postal code
+    const results = await services.postalCodeService.searchByPostalCode(
+      postalCode,
+      { country, maxResults, includeCoordinates: true }
+    );
+
+    return c.json({
+      success: true,
+      results: results,
+      total: results.length,
+      query: postalCode,
+      country
+    });
+
+  } catch (error) {
+    console.error('Postal code lookup error:', error);
+    return c.json({
+      error: "Postal code lookup failed",
+      results: []
+    }, 500);
+  }
+});
+
+// City lookup endpoint - for listing creation/editing
+app.get("/api/locations/city-lookup", async (c) => {
+  try {
+    const services = c.get('services');
+    const cityName = c.req.query('city') || '';
+    const country = c.req.query('country') || 'DE';
+    const maxResults = parseInt(c.req.query('limit') || '10');
+
+    if (!cityName) {
+      return c.json({
+        error: "City name is required",
+        results: []
+      }, 400);
+    }
+
+    // Search by city name
+    const results = await services.postalCodeService.searchByPlaceName(
+      cityName,
+      { country, maxResults, includeCoordinates: true, fuzzySearch: true }
+    );
+
+    return c.json({
+      success: true,
+      results: results,
+      total: results.length,
+      query: cityName,
+      country
+    });
+
+  } catch (error) {
+    console.error('City lookup error:', error);
+    return c.json({
+      error: "City lookup failed",
+      results: []
+    }, 500);
+  }
+});
+
+// Region lookup endpoint - for listing creation/editing
+app.get("/api/locations/region-lookup", async (c) => {
+  try {
+    const services = c.get('services');
+    const regionName = c.req.query('region') || '';
+    const country = c.req.query('country') || 'DE';
+    const maxResults = parseInt(c.req.query('limit') || '50');
+
+    if (!regionName) {
+      return c.json({
+        error: "Region name is required",
+        results: []
+      }, 400);
+    }
+
+    // Search by region/state name
+    const results = await services.postalCodeService.searchByPlaceName(
+      regionName,
+      { country, maxResults, includeCoordinates: true, fuzzySearch: true }
+    );
+
+    // Filter to only include results where the region matches
+    const regionResults = results.filter((result: any) =>
+      result.region && result.region.toLowerCase().includes(regionName.toLowerCase())
+    );
+
+    return c.json({
+      success: true,
+      results: regionResults,
+      total: regionResults.length,
+      query: regionName,
+      country
+    });
+
+  } catch (error) {
+    console.error('Region lookup error:', error);
+    return c.json({
+      error: "Region lookup failed",
+      results: []
+    }, 500);
+  }
+});
+
 // Authentication routes
 app.post("/api/auth/login", async (c) => {
   try {

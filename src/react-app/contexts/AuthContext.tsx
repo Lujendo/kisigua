@@ -54,19 +54,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Load token from localStorage on mount
   useEffect(() => {
+    console.log('🔄 AuthContext: Initializing authentication state');
     const savedToken = localStorage.getItem('kisigua_token');
+
     if (savedToken) {
+      console.log('✅ AuthContext: Found saved token, verifying...');
       setToken(savedToken);
       // Verify token and get user info
       verifyToken(savedToken);
     } else {
+      console.log('❌ AuthContext: No saved token found');
       setIsLoading(false);
     }
   }, []);
 
   const verifyToken = async (tokenToVerify: string) => {
     try {
-      console.log('Verifying token...');
+      console.log('🔍 AuthContext: Verifying token with backend...');
       const response = await fetch('/api/auth/verify', {
         method: 'POST',
         headers: {
@@ -75,25 +79,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         },
       });
 
+      console.log('🔍 AuthContext: Token verification response status:', response.status);
       const data = await response.json();
+      console.log('🔍 AuthContext: Token verification response:', {
+        success: data.success,
+        hasUser: !!data.user,
+        message: data.message
+      });
 
       if (response.ok && data.success) {
-        console.log('Token verification successful');
+        console.log('✅ AuthContext: Token verification successful, user authenticated');
         setUser(data.user);
         setToken(tokenToVerify);
       } else {
-        console.log('Token verification failed:', data.message);
+        console.log('❌ AuthContext: Token verification failed:', data.message);
+        console.log('🗑️ AuthContext: Removing invalid token from localStorage');
         // Token is invalid or expired, remove it
         localStorage.removeItem('kisigua_token');
         setToken(null);
         setUser(null);
       }
     } catch (error) {
-      console.error('Token verification failed:', error);
+      console.error('❌ AuthContext: Token verification network error:', error);
+      console.log('🗑️ AuthContext: Removing token due to network error');
       localStorage.removeItem('kisigua_token');
       setToken(null);
       setUser(null);
     } finally {
+      console.log('🏁 AuthContext: Token verification complete, setting loading to false');
       setIsLoading(false);
     }
   };

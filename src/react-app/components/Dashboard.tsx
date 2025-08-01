@@ -57,24 +57,64 @@ interface DashboardProps {
   onNavigateToMyListings?: () => void;
 }
 
+// Transform API listings to Location format
+const transformListingsToLocations = (listings: any[]): Location[] => {
+  return listings.map((listing: any) => ({
+    id: listing.id,
+    title: listing.title,
+    description: listing.description,
+    category: listing.category,
+    location: {
+      address: listing.address || '',
+      city: listing.city || '',
+      country: listing.country || '',
+      coordinates: {
+        lat: listing.latitude || 0,
+        lng: listing.longitude || 0
+      }
+    },
+    images: listing.images || [],
+    thumbnail: listing.images?.[0] || '/api/placeholder/300/200',
+    rating: listing.rating || 0,
+    reviews: listing.reviewCount || 0,
+    price: listing.price,
+    priceType: listing.price ? 'paid' : 'free',
+    tags: listing.tags || [],
+    createdBy: listing.user_id || listing.userId,
+    createdAt: listing.created_at || listing.createdAt,
+    isVerified: listing.is_certified || false,
+    isFeatured: false,
+    views: listing.views || 0,
+    favorites: 0,
+    lastViewed: undefined,
+    contact: {
+      email: listing.contact_email || '',
+      phone: listing.contact_phone || '',
+      website: listing.contact_website || ''
+    }
+  }));
+};
+
 const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
   const { user, token } = useAuth();
   const { toggleFavorite, isFavorite } = useFavorites();
   const { getFromCache, setCache, isLoading } = usePerformance();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'admin'>('dashboard');
 
-  // OPTIMIZED: Use optimized fetch for locations with caching
+  // OPTIMIZED: Use optimized fetch for listings with caching
   const {
-    data: locations,
+    data: listings,
     loading: locationsLoading
-  } = useOptimizedFetch<Location[]>('/api/locations/search-multi', {
+  } = useOptimizedFetch<any>('/api/listings', {
     method: 'GET',
     cache: true,
     cacheTTL: 10 * 60 * 1000, // 10 minutes cache
     immediate: true,
     onSuccess: (data) => {
-      console.log('⚡ Dashboard locations loaded from optimized fetch:', data?.length || 0);
-      setFilteredLocations(data || []);
+      console.log('⚡ Dashboard listings loaded from optimized fetch:', data?.listings?.length || 0);
+      // Transform API data to Location format
+      const transformedLocations = transformListingsToLocations(data?.listings || []);
+      setFilteredLocations(transformedLocations);
     }
   });
 
@@ -295,15 +335,17 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
     loadSearchHistory();
   }, [getFromCache, setCache]);
 
-  // Load recently viewed after locations are loaded
+  // Load recently viewed after listings are loaded
   useEffect(() => {
-    if (locations && locations.length > 0) {
+    if (listings && listings.listings && listings.listings.length > 0) {
+      const transformedLocations = transformListingsToLocations(listings.listings);
+      setFilteredLocations(transformedLocations);
       const loadRecentlyViewed = () => {
         try {
           const stored = localStorage.getItem('kisigua_recently_viewed');
           if (stored) {
             const recentIds = JSON.parse(stored);
-            const recentItems = (locations || []).filter(loc => recentIds.includes(loc.id));
+            const recentItems = transformedLocations.filter(loc => recentIds.includes(loc.id));
             setRecentlyViewed(recentItems.slice(0, 5));
           }
         } catch (error) {
@@ -312,7 +354,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
       };
       loadRecentlyViewed();
     }
-  }, [locations]);
+  }, [listings]);
 
   // Remove automatic re-search on location changes to prevent interference
   // Users will manually trigger search using the search button
@@ -598,7 +640,12 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
     setUserLocation(null);
     setCurrentPage(1);
     // Reset to show all locations
-    setFilteredLocations(locations || []);
+    if (listings && listings.listings) {
+      const transformedLocations = transformListingsToLocations(listings.listings);
+      setFilteredLocations(transformedLocations);
+    } else {
+      setFilteredLocations([]);
+    }
     // Hide any open panels
     setShowLocationFilters(false);
     setShowSearchHistory(false);
@@ -685,7 +732,8 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
       localStorage.setItem('kisigua_recently_viewed', JSON.stringify(recentIds));
 
       // Update recently viewed state
-      const recentItems = (locations || []).filter(loc => recentIds.includes(loc.id));
+      const transformedLocations = listings && listings.listings ? transformListingsToLocations(listings.listings) : [];
+      const recentItems = transformedLocations.filter(loc => recentIds.includes(loc.id));
       setRecentlyViewed(recentItems.slice(0, 5));
     } catch (error) {
       console.error('Error updating recently viewed:', error);
@@ -925,7 +973,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
           {/* Detail Card */}
           {showDetailCard && selectedLocationId && (
             <DetailCard
-              location={(locations || []).find(loc => loc.id === selectedLocationId)!}
+              location={filteredLocations.find(loc => loc.id === selectedLocationId)!}
             />
           )}
 
@@ -1146,7 +1194,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
           {/* Quick Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">{locations?.length || 0}</div>
+              <div className="text-2xl font-bold text-green-600">{listings?.listings?.length || 0}</div>
               <div className="text-sm text-gray-600">Total Locations</div>
             </div>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 text-center">

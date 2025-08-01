@@ -527,21 +527,27 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
 
     console.log('🔍 Traditional search payload:', JSON.stringify(searchPayload, null, 2));
 
-    const response = await fetch('/api/listings/search', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` })
-      },
-      body: JSON.stringify(searchPayload)
-    });
+    try {
+      const response = await fetch('/api/listings/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        body: JSON.stringify(searchPayload)
+      });
 
-    if (!response.ok) {
-      throw new Error(`Traditional search failed: ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`Traditional search failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.listings || [];
+    } catch (error) {
+      console.warn('🚧 API not available during development, using fallback search');
+      // Fallback to client-side filtering of existing locations
+      return performClientSideSearch(query);
     }
-
-    const data = await response.json();
-    return data.listings || [];
   };
 
   // AI hybrid search implementation
@@ -562,21 +568,50 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
 
     console.log('🤖 AI hybrid search payload:', JSON.stringify(searchPayload, null, 2));
 
-    const response = await fetch('/api/listings/hybrid-search', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` })
-      },
-      body: JSON.stringify(searchPayload)
-    });
+    try {
+      const response = await fetch('/api/listings/hybrid-search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        body: JSON.stringify(searchPayload)
+      });
 
-    if (!response.ok) {
-      throw new Error(`Hybrid search failed: ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`Hybrid search failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.combinedResults || [];
+    } catch (error) {
+      console.warn('🚧 AI API not available during development, using fallback search');
+      // Fallback to client-side filtering of existing locations
+      return performClientSideSearch(query);
+    }
+  };
+
+  // Client-side search fallback for development
+  const performClientSideSearch = (query: string) => {
+    if (!query.trim()) {
+      return locations; // Return all locations if no query
     }
 
-    const data = await response.json();
-    return data.combinedResults || [];
+    const searchTerm = query.toLowerCase().trim();
+    return locations.filter(location => {
+      // Search in title, description, category, tags, and location
+      const searchableText = [
+        location.title,
+        location.description,
+        location.category,
+        ...location.tags,
+        location.location.address,
+        location.location.city,
+        location.location.country
+      ].join(' ').toLowerCase();
+
+      return searchableText.includes(searchTerm);
+    });
   };
 
   // Transform search result to Location format

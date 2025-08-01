@@ -200,6 +200,17 @@ export const GERMAN_LOCATIONS: StaticLocationEntry[] = [
     postalCodes: ['72070', '72072', '72074']
   },
   {
+    name: 'Neckartenzlingen',
+    coordinates: { lat: 48.6167, lng: 9.1333 },
+    country: 'Germany',
+    countryCode: 'DE',
+    region: 'Baden-Württemberg',
+    district: 'Tübingen',
+    population: 6800,
+    locationType: 'town',
+    postalCodes: ['72654']
+  },
+  {
     name: 'Metzingen',
     coordinates: { lat: 48.5378, lng: 9.2828 },
     country: 'Germany',
@@ -671,17 +682,19 @@ export class GeocodingService {
   ): GeocodingResult | null {
     const normalizedName = locationName.toLowerCase().trim();
     
-    // Find exact matches first
-    let match = GERMAN_LOCATIONS.find(location => 
+    // Find exact matches first (name, variants, or postal codes)
+    let match = GERMAN_LOCATIONS.find(location =>
       location.name.toLowerCase() === normalizedName ||
-      location.nameVariants?.some(variant => variant.toLowerCase() === normalizedName)
+      location.nameVariants?.some(variant => variant.toLowerCase() === normalizedName) ||
+      location.postalCodes?.some(code => code === normalizedName)
     );
 
     // If no exact match, try partial matches
     if (!match) {
-      match = GERMAN_LOCATIONS.find(location => 
+      match = GERMAN_LOCATIONS.find(location =>
         location.name.toLowerCase().includes(normalizedName) ||
-        location.nameVariants?.some(variant => variant.toLowerCase().includes(normalizedName))
+        location.nameVariants?.some(variant => variant.toLowerCase().includes(normalizedName)) ||
+        location.postalCodes?.some(code => code.startsWith(normalizedName))
       );
     }
 
@@ -749,6 +762,20 @@ export class GeocodingService {
           } else if (variant.toLowerCase().includes(normalizedQuery)) {
             relevanceScore = 0.7;
             matchedName = variant;
+            break;
+          }
+        }
+      }
+      // Check postal codes
+      else if (location.postalCodes) {
+        for (const postalCode of location.postalCodes) {
+          if (postalCode === normalizedQuery) {
+            relevanceScore = 1.0;
+            matchedName = `${location.name} (${postalCode})`;
+            break;
+          } else if (postalCode.startsWith(normalizedQuery)) {
+            relevanceScore = 0.8;
+            matchedName = `${location.name} (${postalCode})`;
             break;
           }
         }

@@ -4,8 +4,8 @@
 
 **Mission**: Supporting local producers and promoting sustainable living through community connections.
 
-**Live URL**: https://kisigua.com (production) | https://kisigua.info-eac.workers.dev (deployed on Cloudflare Workers)
-**Repository**: https://github.com/Lujendo/kisigua
+**Live URL**: https://kisigua.com (production deployment via Cloudflare Workers)
+**Repository**: https://github.com/Lujendo/kisigua (auto-deploys to production on push to main)
 
 ## 🏗️ Architecture & Tech Stack
 
@@ -171,25 +171,39 @@ kisigua/
 
 ## 🚀 Deployment & CI/CD
 
-### Environments
-- **Development**: Auto-deploy on push to `develop` branch
-- **Production**: Auto-deploy on push to `main` branch (kisigua.com)
+### Production Deployment
+- **Cloudflare Workers**: Edge computing deployment with global distribution
+- **Git Integration**: Automatic deployment to kisigua.com on push to main branch
+- **Domain**: kisigua.com (production) with custom domain configuration
+- **Environment**: Production environment with live Cloudflare resources
+
+### Cloudflare Resources
+- **D1 Database**: kisigua-production (SQL database with 10+ tables)
+- **R2 Storage**: kisigua-files (public bucket for images/documents)
+- **KV Storage**: CACHE (session management and caching)
+- **Analytics Engine**: kisigua_analytics (user behavior tracking)
+
+### Development & Debugging Tools
+- **Wrangler CLI**: Local development and deployment management
+- **Wrangler Tail**: Real-time production log monitoring (`wrangler tail --env production`)
+- **Local Development**: `npm run dev` with hot reload and local Cloudflare resources
+- **Production Logs**: Live debugging with `wrangler tail` for production troubleshooting
 
 ### CI/CD Pipeline Features
-- Automated testing, linting, and security checks
-- Performance monitoring with Lighthouse audits
-- Dependency updates and vulnerability scanning
-- Database migrations and health checks
-- Bundle size monitoring and performance budgets
+- **Automated Git Deployment**: Push to main → automatic production deployment
+- **Testing Pipeline**: Automated testing, linting, and security checks
+- **Performance Monitoring**: Lighthouse audits and bundle size monitoring
+- **Database Migrations**: Automatic schema updates and health checks
+- **Dependency Management**: Automated updates and vulnerability scanning
 
 ### Deployment Commands
 ```bash
-npm run dev                    # Local development
-npm run build                  # Build for production
-npm run deploy                 # Deploy to development
-npm run deploy:production      # Deploy to production (kisigua.com)
-npm run test                   # Run tests
-npm run logs:production        # View production logs
+npm run dev                    # Local development with Cloudflare resources
+npm run build                  # Build for production deployment
+npm run deploy:production      # Manual production deployment (if needed)
+npm run test                   # Run test suite
+wrangler tail --env production # Real-time production log monitoring
+wrangler d1 execute kisigua-production --file=database/schema.sql # Database operations
 ```
 
 ## 📊 Performance & Monitoring
@@ -207,8 +221,39 @@ npm run logs:production        # View production logs
 
 ## 🔧 Recent Major Changes (Last 7 Days)
 
-### Latest Major Features (January 31, 2025)
-1. **🗺️ GOOGLE-STYLE LOCATION SEARCH** - Complete location-based search system like Kleinanzeigen.de
+### Latest Critical Fixes (August 1, 2025)
+1. **🔐 AUTHENTICATION PERSISTENCE FIX** - Users now stay logged in after page refresh
+   - **Fixed token verification** to check both in-memory and database users
+   - **Enhanced verifyToken()** method to load database users when not in memory
+   - **Automatic user caching** for performance optimization
+   - **Comprehensive debugging** with detailed console logging
+   - **Root cause resolved**: Token verification was only checking memory users
+   - **Result**: Seamless authentication experience across page refreshes
+
+2. **🗺️ LOCATION SEARCH COORDINATE FIX** - Location filtering now works properly
+   - **Fixed coordinate field mismatch** between frontend (lat/lng) and backend (latitude/longitude)
+   - **Updated search payloads** for both traditional and AI hybrid search
+   - **Enhanced debugging** with search payload logging
+   - **Backend compatibility** with ListingsService and SemanticSearchService
+   - **Result**: Distance-based location filtering now works correctly
+
+3. **🔍 UNIFIED SEARCH SYSTEM** - Consistent search experience across all components
+   - **Smart search routing** based on user role (AI for premium, traditional for free)
+   - **API-based search** replacing client-side filtering for better performance
+   - **AI search indicators** for premium users with visual badges
+   - **Integrated location filtering** with both search types
+   - **Sticky view selection** that persists through searches
+   - **Result**: Professional search experience with role-based capabilities
+
+4. **🎯 STICKY VIEW SELECTION** - User view preferences now persist
+   - **View selection tracking** to distinguish user choices from defaults
+   - **Override protection** preventing automatic view switching
+   - **Location search independence** from view mode selection
+   - **Enhanced user control** over browsing experience
+   - **Result**: Users maintain their preferred view (list/grid/map) during searches
+
+### Previous Major Features (January 31, 2025)
+5. **🗺️ GOOGLE-STYLE LOCATION SEARCH** - Complete location-based search system like Kleinanzeigen.de
    - **Location input with geocoding** for 40+ German cities (Berlin, Munich, Stuttgart, Reutlingen, etc.)
    - **Interactive map integration** with search radius visualization (red circle)
    - **Distance-based filtering** with 1km to 100km radius selection
@@ -218,7 +263,7 @@ npm run logs:production        # View production logs
    - **Auto-switch to map view** when location search is performed
    - **Performance optimized** - fixed infinite re-rendering issues
 
-2. **🎨 CARD-STYLE LISTING DETAILS** - Consistent design like MyListings
+6. **🎨 CARD-STYLE LISTING DETAILS** - Consistent design like MyListings
    - **Replaced modal with card interface** for better UX consistency
    - **Professional contact information** display with email, phone, website
    - **Enhanced image galleries** with proper aspect ratios
@@ -226,7 +271,7 @@ npm run logs:production        # View production logs
    - **Smooth animations** and responsive design
    - **Close button and scroll-to-top** functionality
 
-3. **🔒 PRIVACY & ADMIN ENHANCEMENTS** - User control and admin oversight
+7. **🔒 PRIVACY & ADMIN ENHANCEMENTS** - User control and admin oversight
    - **Address privacy controls** - users can hide detailed address from public
    - **Role-based data visibility** (public sees city/country, admins see full address)
    - **Admin listing review** with "View Details" buttons in management panel
@@ -234,33 +279,33 @@ npm run logs:production        # View production logs
    - **Database schema updates** with hideAddress field and proper defaults
 
 ### Previous Critical Fixes (July 30, 2025)
-4. **🔥 CRITICAL IMAGE FIX** - Resolved image display issues by correcting R2 public URL configuration
+8. **🔥 CRITICAL IMAGE FIX** - Resolved image display issues by correcting R2 public URL configuration
    - Fixed development wrangler.json using incorrect domain (files.kisigua.com)
    - Production now uses correct R2 URL: https://pub-49c315845edf402b9841432c6b1083f1.r2.dev
    - All image uploads, display, and cover image functionality now working perfectly
    - Redeployed with proper production configuration
 
-5. **Database Schema Improvements** - Enhanced category constraints and data integrity
+9. **Database Schema Improvements** - Enhanced category constraints and data integrity
    - Updated category foreign key constraints for better data consistency
    - Improved error handling for category-related operations
    - Fixed category management system with proper validation
 
 ### Previous Updates (July 29-30, 2025)
-6. **Complete File Upload System** (ffd549a6, 0c48874f) - R2 Storage integration with database tracking
-7. **Real Data Integration** (2764681b) - Favorites system and admin dashboard with live data
-8. **Rich Text Editor** (f838b2e1) - Enhanced listing creation with formatting capabilities
-9. **Region Field Addition** (d7f45bd2) - Location categorization with region support
-10. **Frontend Listings Import** (0b1aea2f) - 15 total listings with diverse categories
-11. **File Upload Domain Fix** (f57ddd99) - Resolved DNS issues for image/document uploads
-12. **Admin Panel Simplification** (8fa418e1, 71b5239c) - Streamlined admin interface
-13. **Category Management System** (71b5239c) - Dynamic categories with database integration
+10. **Complete File Upload System** (ffd549a6, 0c48874f) - R2 Storage integration with database tracking
+11. **Real Data Integration** (2764681b) - Favorites system and admin dashboard with live data
+12. **Rich Text Editor** (f838b2e1) - Enhanced listing creation with formatting capabilities
+13. **Region Field Addition** (d7f45bd2) - Location categorization with region support
+14. **Frontend Listings Import** (0b1aea2f) - 15 total listings with diverse categories
+15. **File Upload Domain Fix** (f57ddd99) - Resolved DNS issues for image/document uploads
+16. **Admin Panel Simplification** (8fa418e1, 71b5239c) - Streamlined admin interface
+17. **Category Management System** (71b5239c) - Dynamic categories with database integration
 
 ### Previous Major Features (July 28, 2025)
-14. **Complete Application Implementation** (d1ee589a) - Full-featured platform with all core functionality
-15. **Custom Favicon** (a776a295) - Brand-consistent green "K" favicon
-16. **Enhanced Search Engine** (bdb25d4185) - Comprehensive search with multiple views and filtering
-17. **Sidebar Architecture** (57385279) - Global sidebar with role-based navigation
-18. **Authentication Improvements** (1f2b31a5) - Extended JWT expiration, token verification/refresh
+18. **Complete Application Implementation** (d1ee589a) - Full-featured platform with all core functionality
+19. **Custom Favicon** (a776a295) - Brand-consistent green "K" favicon
+20. **Enhanced Search Engine** (bdb25d4185) - Comprehensive search with multiple views and filtering
+21. **Sidebar Architecture** (57385279) - Global sidebar with role-based navigation
+22. **Authentication Improvements** (1f2b31a5) - Extended JWT expiration, token verification/refresh
 
 ## 🎯 Current Status
 
@@ -295,20 +340,40 @@ npm run logs:production        # View production logs
 - ✅ **Production deployment** configuration with health monitoring
 
 ### 🔧 Recent Fixes & Improvements (All Working)
-- ✅ **🗺️ LOCATION SEARCH SYSTEM** - Complete Google-style location search implementation ⭐ **NEW**
+- ✅ **� AUTHENTICATION PERSISTENCE** - Users stay logged in after page refresh ⭐ **LATEST**
+  - Fixed token verification to check both memory and database users
+  - Enhanced verifyToken() method with automatic user loading and caching
+  - Comprehensive debugging with detailed console logging
+  - Seamless authentication experience across page refreshes
+- ✅ **�🗺️ LOCATION SEARCH COORDINATE FIX** - Distance filtering now works properly ⭐ **LATEST**
+  - Fixed coordinate field mismatch (lat/lng vs latitude/longitude)
+  - Updated search payloads for both traditional and AI search
+  - Enhanced debugging with search payload logging
+  - Location filtering works correctly with distance calculations
+- ✅ **🔍 UNIFIED SEARCH SYSTEM** - Consistent search across all components ⭐ **LATEST**
+  - Smart search routing based on user role (AI for premium, traditional for free)
+  - API-based search replacing client-side filtering
+  - AI search indicators for premium users with visual badges
+  - Integrated location filtering with both search types
+- ✅ **🎯 STICKY VIEW SELECTION** - User view preferences persist ⭐ **LATEST**
+  - View selection tracking to distinguish user choices from defaults
+  - Override protection preventing automatic view switching
+  - Location search independence from view mode selection
+  - Enhanced user control over browsing experience
+- ✅ **🗺️ LOCATION SEARCH SYSTEM** - Complete Google-style location search implementation
   - Interactive map with search radius visualization and click-to-search
   - Geocoding for 40+ German cities with GPS location detection
-  - Real-time distance display and auto-switch to map view
+  - Real-time distance display and intelligent view management
   - Performance optimized with fixed infinite re-rendering issues
-- ✅ **🎨 CARD-STYLE DETAILS** - Professional listing detail cards like MyListings ⭐ **NEW**
+- ✅ **🎨 CARD-STYLE DETAILS** - Professional listing detail cards like MyListings
   - Replaced modal interface with consistent card design
   - Enhanced contact information display and image galleries
   - Smooth animations and responsive mobile design
-- ✅ **🔒 PRIVACY & ADMIN FEATURES** - User privacy controls with admin oversight ⭐ **NEW**
+- ✅ **🔒 PRIVACY & ADMIN FEATURES** - User privacy controls with admin oversight
   - Address privacy settings with role-based visibility
   - Admin review system with "View Details" functionality
   - Database schema updates with hideAddress field
-- ✅ **🔥 CRITICAL IMAGE SYSTEM FIX** - All image functionality now working perfectly
+- ✅ **🔥 CRITICAL IMAGE SYSTEM FIX** - All image functionality working perfectly
   - Fixed R2 public URL configuration (was using non-existent files.kisigua.com)
   - Corrected to proper R2 domain: https://pub-49c315845edf402b9841432c6b1083f1.r2.dev
   - Image uploads, display, cover images, and galleries all functional
@@ -368,11 +433,17 @@ npm run logs:production        # View production logs
 
 ## 🔍 Quick Debug & Maintenance
 
-### Useful Scripts & Endpoints
+### Production Debugging Tools
+- **Wrangler Tail**: `wrangler tail --env production` - Real-time production log monitoring
+- **Health Check**: `https://kisigua.com/health` - Application status and connectivity
+- **Debug Endpoints**: `/api/debug/*` - Various debugging and diagnostic tools
+- **Database Operations**: `wrangler d1 execute kisigua-production --file=database/schema.sql`
+
+### Development & Maintenance Scripts
 - **Password Fix**: `fix-passwords.js` - Updates test user passwords
 - **Database Check**: `fresh-db-check.js` - Verifies database connectivity
-- **Health Check**: `https://kisigua.com/health` - Application status
-- **Debug Endpoints**: `/api/debug/*` - Various debugging tools
+- **Local Development**: `npm run dev` - Local development with Cloudflare resources
+- **Production Deployment**: Automatic via Git push to main branch
 
 ### Demo Credentials (All Working ✅)
 - **Admin**: admin@kisigua.com / admin123
@@ -399,8 +470,12 @@ npm run logs:production        # View production logs
 
 **🚀 Live at https://kisigua.com with complete functionality, real data, and ALL FEATURES working perfectly! ✨**
 
-**🗺️ LATEST MAJOR UPDATE: Google-style location search with interactive maps - find sustainable businesses by distance like Kleinanzeigen.de! 📍**
+**� LATEST CRITICAL FIXES: Authentication persistence, location search coordinates, unified search system, and sticky view selection - all major user experience issues resolved! 🎯**
 
-**🎨 NEW: Card-style listing details with privacy controls and admin oversight for professional user experience! 🔒**
+**🗺️ LOCATION SEARCH: Google-style location search with interactive maps - find sustainable businesses by distance like Kleinanzeigen.de! 📍**
 
-**🔥 ALL SYSTEMS OPERATIONAL: Location search, image management, privacy controls, and admin features working flawlessly! 🚀**
+**🎨 PROFESSIONAL UX: Card-style listing details with privacy controls and admin oversight for seamless user experience! 🔒**
+
+**🔥 ALL SYSTEMS OPERATIONAL: Authentication, location search, image management, search functionality, and admin features working flawlessly! 🚀**
+
+**⚡ CLOUDFLARE DEPLOYMENT: Automatic deployment via Git repository with real-time debugging via Wrangler Tail! 🛠️**

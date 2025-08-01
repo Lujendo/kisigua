@@ -1,28 +1,34 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { FavoritesProvider } from './contexts/FavoritesContext';
+import { PerformanceProvider } from './contexts/PerformanceContext';
+import GlobalLoadingIndicator from './components/common/GlobalLoadingIndicator';
+import PageLoader from './components/common/PageLoader';
+
+// CRITICAL: Keep these components loaded immediately (needed for initial render)
 import LandingPage from './components/LandingPage';
 import AuthPage from './components/auth/AuthPage';
 import EmailVerification from './components/auth/EmailVerification';
 import PasswordReset from './components/auth/PasswordReset';
-import Dashboard from './components/Dashboard';
 import UserDropdown from './components/header/UserDropdown';
-import UserSettings from './components/settings/UserSettings';
 import Footer from './components/Footer';
-import PrivacyPolicy from './components/legal/PrivacyPolicy';
-import TermsOfService from './components/legal/TermsOfService';
-import CookiePolicy from './components/legal/CookiePolicy';
-import DataProtection from './components/legal/DataProtection';
-import Imprint from './components/legal/Imprint';
-
-import SubscriptionPage from './components/subscription/SubscriptionPage';
 import Sidebar from './components/Sidebar';
-import AdvancedSearchPage from './components/search/AdvancedSearchPage';
-import MyListingsPage from './components/listings/MyListingsPage';
-import FavoritesPage from './components/favorites/FavoritesPage';
-import AdminPanel from './components/admin/AdminPanel';
-import UserManagement from './components/admin/UserManagement';
-import ListingManagement from './components/admin/ListingManagement';
+
+// OPTIMIZED: Lazy load heavy components for better performance
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const UserSettings = lazy(() => import('./components/settings/UserSettings'));
+const PrivacyPolicy = lazy(() => import('./components/legal/PrivacyPolicy'));
+const TermsOfService = lazy(() => import('./components/legal/TermsOfService'));
+const CookiePolicy = lazy(() => import('./components/legal/CookiePolicy'));
+const DataProtection = lazy(() => import('./components/legal/DataProtection'));
+const Imprint = lazy(() => import('./components/legal/Imprint'));
+const SubscriptionPage = lazy(() => import('./components/subscription/SubscriptionPage'));
+const AdvancedSearchPage = lazy(() => import('./components/search/AdvancedSearchPage'));
+const MyListingsPage = lazy(() => import('./components/listings/MyListingsPage'));
+const FavoritesPage = lazy(() => import('./components/favorites/FavoritesPage'));
+const AdminPanel = lazy(() => import('./components/admin/AdminPanel'));
+const UserManagement = lazy(() => import('./components/admin/UserManagement'));
+const ListingManagement = lazy(() => import('./components/admin/ListingManagement'));
 
 function AppContent() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -321,18 +327,47 @@ function AppContent() {
         {/* Page Content */}
         <main className="p-6">
           {currentPage === 'dashboard' && (
-            <Dashboard
-              onNavigateToSearch={() => setCurrentPage('search')}
-              onNavigateToSubscription={() => setCurrentPage('subscription')}
-              onNavigateToMyListings={() => setCurrentPage('listings')}
-            />
+            <Suspense fallback={
+              <PageLoader
+                loadingKey="dashboard"
+                showProgress={true}
+                skeleton={
+                  <div className="animate-pulse space-y-6 p-6">
+                    <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {[1, 2, 3, 4, 5, 6].map(i => (
+                        <div key={i} className="bg-gray-200 rounded-lg h-48"></div>
+                      ))}
+                    </div>
+                  </div>
+                }
+              />
+            }>
+              <Dashboard
+                onNavigateToSearch={() => setCurrentPage('search')}
+                onNavigateToSubscription={() => setCurrentPage('subscription')}
+                onNavigateToMyListings={() => setCurrentPage('listings')}
+              />
+            </Suspense>
           )}
 
-          {currentPage === 'search' && <AdvancedSearchPage />}
+          {currentPage === 'search' && (
+            <Suspense fallback={<PageLoader loadingKey="search" showProgress={true} />}>
+              <AdvancedSearchPage />
+            </Suspense>
+          )}
 
-          {currentPage === 'listings' && <MyListingsPage />}
+          {currentPage === 'listings' && (
+            <Suspense fallback={<PageLoader loadingKey="listings" showProgress={true} />}>
+              <MyListingsPage />
+            </Suspense>
+          )}
 
-          {currentPage === 'favorites' && <FavoritesPage />}
+          {currentPage === 'favorites' && (
+            <Suspense fallback={<PageLoader loadingKey="favorites" showProgress={true} />}>
+              <FavoritesPage />
+            </Suspense>
+          )}
 
           {currentPage === 'profile' && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -343,7 +378,9 @@ function AppContent() {
 
           {currentPage === 'settings' && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <UserSettings onClose={() => setCurrentPage('dashboard')} />
+              <Suspense fallback={<PageLoader loadingKey="settings" />}>
+                <UserSettings onClose={() => setCurrentPage('dashboard')} />
+              </Suspense>
             </div>
           )}
 
@@ -373,7 +410,11 @@ function AppContent() {
             </div>
           )}
 
-          {currentPage === 'subscription' && <SubscriptionPage />}
+          {currentPage === 'subscription' && (
+            <Suspense fallback={<PageLoader loadingKey="subscription" showProgress={true} />}>
+              <SubscriptionPage />
+            </Suspense>
+          )}
         </main>
 
         {/* Footer */}
@@ -385,11 +426,14 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <FavoritesProvider>
-        <AppContent />
-      </FavoritesProvider>
-    </AuthProvider>
+    <PerformanceProvider>
+      <AuthProvider>
+        <FavoritesProvider>
+          <GlobalLoadingIndicator />
+          <AppContent />
+        </FavoritesProvider>
+      </AuthProvider>
+    </PerformanceProvider>
   );
 }
 

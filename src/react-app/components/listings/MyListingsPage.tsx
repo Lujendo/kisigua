@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePerformance } from '../../contexts/PerformanceContext';
 import ListingImageUpload from './ListingImageUpload';
 import RichTextEditor from '../RichTextEditor';
 import ListingDetail from './ListingDetail';
@@ -87,28 +88,45 @@ const MyListingsPage: React.FC = () => {
     message: string;
   } | null>(null);
 
-  // Preload categories function - optimized with caching and localStorage
+  // SUPER OPTIMIZED: Categories loading with performance context
+  const { getFromCache, setCache, startTimer, endTimer } = usePerformance();
+
   const preloadCategories = async () => {
     if (categoriesLoaded || categoriesLoading) {
       return globalCategories; // Return cached categories immediately
     }
 
-    // Try to load from localStorage first for instant loading
+    startTimer('categories-load');
+
+    // Check performance cache first (fastest)
+    const cachedCategories = getFromCache<Array<{ id: string; label: string; color?: string; icon?: string }>>('categories');
+    if (cachedCategories) {
+      setGlobalCategories(cachedCategories);
+      setCategoriesLoaded(true);
+      endTimer('categories-load');
+      console.log('⚡ Categories loaded from performance cache instantly:', cachedCategories.length, 'categories');
+      return cachedCategories;
+    }
+
+    // Try localStorage as fallback
     try {
-      const cachedCategories = localStorage.getItem('kisigua_categories');
+      const storedCategories = localStorage.getItem('kisigua_categories');
       const cacheTimestamp = localStorage.getItem('kisigua_categories_timestamp');
       const cacheAge = Date.now() - (parseInt(cacheTimestamp || '0'));
       const maxCacheAge = 10 * 60 * 1000; // 10 minutes
 
-      if (cachedCategories && cacheAge < maxCacheAge) {
-        const parsedCategories = JSON.parse(cachedCategories);
+      if (storedCategories && cacheAge < maxCacheAge) {
+        const parsedCategories = JSON.parse(storedCategories);
         setGlobalCategories(parsedCategories);
         setCategoriesLoaded(true);
-        console.log('⚡ Categories loaded from cache instantly:', parsedCategories.length, 'categories');
+        // Also cache in performance context for next time
+        setCache('categories', parsedCategories, maxCacheAge);
+        endTimer('categories-load');
+        console.log('⚡ Categories loaded from localStorage and cached:', parsedCategories.length, 'categories');
         return parsedCategories;
       }
     } catch (error) {
-      console.warn('⚠️ Failed to load categories from cache:', error);
+      console.warn('⚠️ Failed to load categories from localStorage:', error);
     }
 
     setCategoriesLoading(true);

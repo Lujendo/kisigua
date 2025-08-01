@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFavorites } from '../contexts/FavoritesContext';
+import { usePerformance } from '../contexts/PerformanceContext';
+import useOptimizedFetch from '../hooks/useOptimizedFetch';
 import AdminPanel from './admin/AdminPanel';
 import LocationDetail from './locations/LocationDetail';
 import Map from './Map';
@@ -58,18 +60,36 @@ interface DashboardProps {
 const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
   const { user, token } = useAuth();
   const { toggleFavorite, isFavorite } = useFavorites();
+  const { getFromCache, setCache, isLoading } = usePerformance();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'admin'>('dashboard');
+
+  // OPTIMIZED: Use optimized fetch for locations with caching
+  const {
+    data: locations,
+    loading: locationsLoading
+  } = useOptimizedFetch<Location[]>('/api/locations/search-multi', {
+    method: 'GET',
+    cache: true,
+    cacheTTL: 10 * 60 * 1000, // 10 minutes cache
+    immediate: true,
+    onSuccess: (data) => {
+      console.log('⚡ Dashboard locations loaded from optimized fetch:', data?.length || 0);
+      setFilteredLocations(data || []);
+    }
+  });
 
   // Search Engine State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory] = useState(''); // Category filtering - can be extended later
-  const [locations, setLocations] = useState<Location[]>([]);
   const [filteredLocations, setFilteredLocations] = useState<Location[]>([]);
   const [searchHistory, setSearchHistory] = useState<SearchHistory[]>([]);
 
   const [recentlyViewed, setRecentlyViewed] = useState<Location[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Combine loading states for UI
+  const isPageLoading = locationsLoading || isLoading('search-history') || loading;
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -245,112 +265,45 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
     console.log(`🔧 Location filters updated. User can click search to apply changes.`);
   };
 
-  // Fetch real data from API
-  useEffect(() => {
-    const fetchLocations = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/listings');
-        if (!response.ok) {
-          throw new Error('Failed to fetch listings');
-        }
-        const data = await response.json();
+  // OLD FETCH FUNCTION REMOVED - using optimized fetch hook
 
-        // Transform API data to match Location interface
-        const transformedLocations: Location[] = data.listings.map((listing: {
-          id: string;
-          title: string;
-          description: string;
-          category: string;
-          location?: { address?: string; city?: string; country?: string; latitude?: number; longitude?: number };
-          images?: string[];
-          priceRange?: string;
-          tags?: string[];
-          userId: string;
-          createdAt: string;
-          isCertified?: boolean;
-          views?: number;
-          rating?: number;
-          reviewCount?: number;
-          price?: number;
-          contactEmail?: string;
-          contactPhone?: string;
-          website?: string;
-        }) => ({
-          id: listing.id,
-          title: listing.title,
-          description: listing.description,
-          category: listing.category,
-          location: {
-            address: listing.location?.address || '',
-            city: listing.location?.city || '',
-            country: listing.location?.country || '',
-            coordinates: {
-              lat: listing.location?.latitude || 0,
-              lng: listing.location?.longitude || 0
-            }
-          },
-          images: listing.images || [],
-          thumbnail: listing.images?.[0] || '/api/placeholder/300/200',
-          rating: listing.rating || 0,
-          reviews: listing.reviewCount || 0,
-          price: listing.price,
-          priceType: listing.price ? 'paid' : 'free',
-          tags: listing.tags || [],
-          createdBy: listing.userId,
-          createdAt: listing.createdAt,
-          isVerified: listing.isCertified || false,
-          isFeatured: false,
-          views: listing.views || 0,
-          favorites: 0, // Will be loaded separately if needed
-          lastViewed: undefined,
-          contact: {
-            email: listing.contactEmail || '',
-            phone: listing.contactPhone || '',
-            website: listing.website || ''
-          }
-        }));
-
-        setLocations(transformedLocations);
-        setFilteredLocations(transformedLocations);
-
-      } catch (error) {
-        console.error('Error fetching locations:', error);
-        // Fallback to empty arrays on error
-        setLocations([]);
-        setFilteredLocations([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    // Load search history from localStorage
+    // OPTIMIZED: Load search history with caching
     const loadSearchHistory = () => {
       try {
+        // Check performance cache first
+        const cached = getFromCache<SearchHistory[]>('search-history');
+        if (cached) {
+          setSearchHistory(cached);
+          return;
+        }
+
         const stored = localStorage.getItem('kisigua_search_history');
         if (stored) {
           const history = JSON.parse(stored);
-          setSearchHistory(history.slice(0, 10)); // Keep last 10
+          const recentHistory = history.slice(0, 10); // Keep last 10
+          setSearchHistory(recentHistory);
+          // Cache for 30 minutes
+          setCache('search-history', recentHistory, 30 * 60 * 1000);
         }
       } catch (error) {
         console.error('Error loading search history:', error);
       }
     };
 
-    // Load real data from API
-    fetchLocations();
+  // Load search history on component mount
+  useEffect(() => {
     loadSearchHistory();
-  }, []);
+  }, [getFromCache, setCache]);
 
   // Load recently viewed after locations are loaded
   useEffect(() => {
-    if (locations.length > 0) {
+    if (locations && locations.length > 0) {
       const loadRecentlyViewed = () => {
         try {
           const stored = localStorage.getItem('kisigua_recently_viewed');
           if (stored) {
             const recentIds = JSON.parse(stored);
-            const recentItems = locations.filter(loc => recentIds.includes(loc.id));
+            const recentItems = (locations || []).filter(loc => recentIds.includes(loc.id));
             setRecentlyViewed(recentItems.slice(0, 5));
           }
         } catch (error) {
@@ -645,7 +598,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
     setUserLocation(null);
     setCurrentPage(1);
     // Reset to show all locations
-    setFilteredLocations(locations);
+    setFilteredLocations(locations || []);
     // Hide any open panels
     setShowLocationFilters(false);
     setShowSearchHistory(false);
@@ -732,7 +685,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
       localStorage.setItem('kisigua_recently_viewed', JSON.stringify(recentIds));
 
       // Update recently viewed state
-      const recentItems = locations.filter(loc => recentIds.includes(loc.id));
+      const recentItems = (locations || []).filter(loc => recentIds.includes(loc.id));
       setRecentlyViewed(recentItems.slice(0, 5));
     } catch (error) {
       console.error('Error updating recently viewed:', error);
@@ -972,7 +925,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
           {/* Detail Card */}
           {showDetailCard && selectedLocationId && (
             <DetailCard
-              location={locations.find(loc => loc.id === selectedLocationId)!}
+              location={(locations || []).find(loc => loc.id === selectedLocationId)!}
             />
           )}
 
@@ -1193,7 +1146,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
           {/* Quick Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">{locations.length}</div>
+              <div className="text-2xl font-bold text-green-600">{locations?.length || 0}</div>
               <div className="text-sm text-gray-600">Total Locations</div>
             </div>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 text-center">
@@ -1234,7 +1187,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                         Clear
                       </button>
                     )}
-                    {loading && (
+                    {isPageLoading && (
                       <div className="flex items-center space-x-2">
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-600"></div>
                         <span className="text-sm text-gray-500">Searching...</span>
@@ -1253,7 +1206,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                     </p>
 
                     {/* Search performance indicator */}
-                    {!loading && searchQuery && (
+                    {!isPageLoading && searchQuery && (
                       <div className="flex items-center text-xs text-gray-500">
                         <svg className="w-3 h-3 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />

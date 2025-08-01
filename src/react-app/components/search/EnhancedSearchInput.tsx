@@ -263,7 +263,7 @@ const EnhancedSearchInput: React.FC<EnhancedSearchInputProps> = ({
               }`}
             >
               <div className="flex items-center space-x-3">
-                <div className="text-gray-500">
+                <div className="text-gray-400">
                   {suggestion.iconType && <Icon type={suggestion.iconType} className="w-5 h-5" />}
                 </div>
                 <div>

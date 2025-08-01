@@ -974,12 +974,12 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                 {/* Quick Filter Buttons */}
                 <div className="flex flex-wrap justify-center gap-2 mt-4">
                   {[
-                    { label: 'Organic', icon: 'leaf', filter: 'organic', color: 'green' },
-                    { label: 'Water Sources', icon: 'droplet', filter: 'water', color: 'blue' },
-                    { label: 'Free', icon: 'shield-check', filter: 'free', color: 'gray' },
-                    { label: 'Nearby', icon: 'location-marker', filter: 'nearby', color: 'purple' },
-                    { label: 'Markets', icon: 'shopping-cart', filter: 'market', color: 'orange' },
-                    { label: 'Crafts', icon: 'paint-brush', filter: 'craft', color: 'pink' }
+                    { label: 'Organic', icon: 'leaf', filter: 'organic' },
+                    { label: 'Water Sources', icon: 'droplet', filter: 'water' },
+                    { label: 'Free', icon: 'shield-check', filter: 'free' },
+                    { label: 'Nearby', icon: 'location-marker', filter: 'nearby' },
+                    { label: 'Markets', icon: 'shopping-cart', filter: 'market' },
+                    { label: 'Crafts', icon: 'paint-brush', filter: 'craft' }
                   ].map((quickFilter) => (
                     <button
                       key={quickFilter.filter}
@@ -999,16 +999,9 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                         setSearchQuery(filterQuery);
                         handleSearch(filterQuery);
                       }}
-                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all hover:scale-105 flex items-center space-x-2 ${
-                        quickFilter.color === 'green' ? 'bg-green-100 text-green-700 hover:bg-green-200' :
-                        quickFilter.color === 'blue' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' :
-                        quickFilter.color === 'gray' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' :
-                        quickFilter.color === 'purple' ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' :
-                        quickFilter.color === 'orange' ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' :
-                        'bg-pink-100 text-pink-700 hover:bg-pink-200'
-                      }`}
+                      className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2 text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 hover:text-gray-900"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         {quickFilter.icon === 'leaf' && (
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.5 2.5L16 5.5 13.5 3M7 7l2.5 2.5L7 12.5 4.5 10M13 13l2.5 2.5L13 18.5 10.5 16M21 21l-2.5-2.5L21 15.5 23.5 18" />
                         )}
@@ -1046,9 +1039,9 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                 <div className="flex justify-center space-x-6 mt-3">
                   <button
                     onClick={() => setShowLocationFilters(!showLocationFilters)}
-                    className="text-sm text-green-600 hover:text-green-800 transition-colors flex items-center space-x-1"
+                    className="text-sm text-gray-700 hover:text-gray-900 transition-colors flex items-center space-x-1"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
                     </svg>
                     <span>{showLocationFilters ? 'Hide' : 'Show'} Filters</span>
@@ -1056,9 +1049,9 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
 
                   <button
                     onClick={() => setShowSearchHistory(!showSearchHistory)}
-                    className="text-sm text-blue-600 hover:text-blue-800 transition-colors flex items-center space-x-1"
+                    className="text-sm text-gray-700 hover:text-gray-900 transition-colors flex items-center space-x-1"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <span>{showSearchHistory ? 'Hide' : 'Show'} History</span>
@@ -1139,7 +1132,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                     <p className="text-sm text-gray-600">
                       <span className="font-medium text-gray-900">{filteredLocations.length}</span> {filteredLocations.length === 1 ? 'location' : 'locations'} found
                       {userLocation && (
-                        <span className="ml-2 text-green-600 font-medium">
+                        <span className="ml-2 text-gray-700 font-medium">
                           • within {searchRadius} km of {locationSearch}
                         </span>
                       )}
@@ -1148,7 +1141,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                     {/* Search performance indicator */}
                     {!loading && searchQuery && (
                       <div className="flex items-center text-xs text-gray-500">
-                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3 h-3 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
                         {user && ['admin', 'premium', 'supporter'].includes(user.role) ? 'AI-powered' : 'Standard'} search

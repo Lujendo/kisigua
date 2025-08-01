@@ -332,6 +332,59 @@ app.get("/api/locations/postal/:code", async (c) => {
   }
 });
 
+// Multi-country search endpoint (optimized)
+app.get("/api/locations/search-multi", async (c) => {
+  try {
+    const services = c.get('services');
+    const query = c.req.query('q') || '';
+    const countriesParam = c.req.query('countries') || 'DE';
+    const countries = countriesParam.split(',');
+    const maxResults = parseInt(c.req.query('limit') || '20');
+
+    if (!query || query.length < 2) {
+      return c.json({
+        error: "Query must be at least 2 characters long",
+        results: []
+      }, 400);
+    }
+
+    if (!services.postalCodeService) {
+      services.postalCodeService = new PostalCodeService(services.databaseService.db);
+    }
+
+    // Search all countries in a single optimized query
+    const allResults = [];
+
+    for (const country of countries) {
+      const results = await services.postalCodeService.searchLocations(query, {
+        country: country.trim(),
+        maxResults: Math.ceil(maxResults / countries.length),
+        includeCoordinates: true,
+        fuzzySearch: true
+      });
+      allResults.push(...results);
+    }
+
+    // Sort by relevance and limit
+    const sortedResults = allResults
+      .sort((a, b) => b.relevanceScore - a.relevanceScore)
+      .slice(0, maxResults);
+
+    return c.json({
+      query,
+      countries,
+      results: sortedResults,
+      count: sortedResults.length
+    });
+  } catch (error) {
+    console.error('Multi-country search error:', error);
+    return c.json({
+      error: "Multi-country search failed",
+      results: []
+    }, 500);
+  }
+});
+
 // Get nearby locations endpoint
 app.get("/api/locations/nearby", async (c) => {
   try {
@@ -895,11 +948,48 @@ app.put("/api/admin/users/:id/role", authMiddleware, roleMiddleware(['admin']), 
 
 // Listings routes
 
-// Public search endpoint
+// Enhanced search endpoint with location integration
 app.post("/api/listings/search", async (c) => {
   try {
     const services = c.get('services');
-    const searchQuery = await c.req.json() as SearchQuery;
+    const searchQuery = await c.req.json() as SearchQuery & {
+      locationQuery?: string;
+      country?: string;
+      radius?: number;
+    };
+
+    // Initialize PostalCodeService if location-based search is needed
+    if (searchQuery.locationQuery && !services.postalCodeService) {
+      services.postalCodeService = new PostalCodeService(services.databaseService.db);
+    }
+
+    // If location query is provided, resolve it first
+    if (searchQuery.locationQuery) {
+      try {
+        const locationResults = await services.postalCodeService.searchLocations(searchQuery.locationQuery, {
+          country: searchQuery.country || 'DE',
+          maxResults: 1,
+          includeCoordinates: true,
+          fuzzySearch: true
+        });
+
+        if (locationResults.length > 0) {
+          const location = locationResults[0];
+          // Add resolved location to search filters
+          searchQuery.filters = {
+            ...searchQuery.filters,
+            location: {
+              latitude: location.coordinates.lat,
+              longitude: location.coordinates.lng,
+              radius: searchQuery.radius || 25
+            }
+          };
+        }
+      } catch (error) {
+        console.warn('Location resolution failed:', error);
+      }
+    }
+
     const result = await services.listingsService.searchListings(searchQuery);
     return c.json(result);
   } catch (error) {

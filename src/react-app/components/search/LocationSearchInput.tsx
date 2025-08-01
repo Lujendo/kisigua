@@ -50,22 +50,48 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
 
       setIsLoading(true);
       try {
-        // Search across all supported countries
-        const allResults: LocationSearchResult[] = [];
+        // Optimized: Single API call for all countries
+        const response = await fetch(`/api/locations/search-multi?q=${encodeURIComponent(inputValue)}&countries=${countries.join(',')}&limit=8`);
 
-        for (const country of countries) {
-          const results = await GeocodingService.searchLocations(inputValue, 3, country);
-          allResults.push(...results);
+        if (response.ok) {
+          const data = await response.json();
+          const results = data.results.map((result: any) => ({
+            name: result.name,
+            displayName: result.displayName,
+            coordinates: result.coordinates,
+            hierarchy: {
+              country: result.country,
+              countryCode: result.country,
+              region: result.region,
+              district: result.district,
+              city: result.name,
+              coordinates: result.coordinates,
+              population: 0,
+              locationType: 'city'
+            },
+            relevanceScore: result.relevanceScore
+          }));
+
+          setSuggestions(results);
+          setShowDropdown(results.length > 0 && showSuggestions);
+          setSelectedIndex(-1);
+        } else {
+          // Fallback to original method
+          const allResults: LocationSearchResult[] = [];
+
+          for (const country of countries) {
+            const results = await GeocodingService.searchLocations(inputValue, 2, country);
+            allResults.push(...results);
+          }
+
+          const sortedResults = allResults
+            .sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0))
+            .slice(0, 8);
+
+          setSuggestions(sortedResults);
+          setShowDropdown(sortedResults.length > 0 && showSuggestions);
+          setSelectedIndex(-1);
         }
-
-        // Sort by relevance score and limit results
-        const sortedResults = allResults
-          .sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0))
-          .slice(0, 8);
-
-        setSuggestions(sortedResults);
-        setShowDropdown(sortedResults.length > 0 && showSuggestions);
-        setSelectedIndex(-1);
       } catch (error) {
         console.error('Error searching locations:', error);
         setSuggestions([]);

@@ -54,7 +54,7 @@ export class PostalCodeService {
   }
 
   /**
-   * Search locations by query with country filtering
+   * Optimized search locations by query with country filtering
    */
   async searchLocations(
     query: string,
@@ -73,35 +73,35 @@ export class PostalCodeService {
     }
 
     // Check cache first
-    const cacheKey = `${country}:${normalizedQuery}:${maxResults}`;
+    const cacheKey = `${country}:${normalizedQuery}:${maxResults}:${fuzzySearch}`;
     if (this.cache.has(cacheKey)) {
       return this.cache.get(cacheKey)!;
     }
 
     try {
+      // Optimized single query approach
       let results: LocationSearchResult[] = [];
 
-      // 1. Exact postal code match (highest priority)
-      const exactPostalResults = await this.searchByPostalCode(normalizedQuery, country, maxResults);
-      results.push(...exactPostalResults);
+      // Check if query looks like a postal code (digits only or starts with digits)
+      const isPostalCodeQuery = /^\d+/.test(normalizedQuery);
 
-      // 2. Exact place name match
-      if (results.length < maxResults) {
-        const exactPlaceResults = await this.searchByPlaceName(normalizedQuery, country, maxResults - results.length, true);
-        results.push(...exactPlaceResults.filter(r => !results.some(existing => existing.id === r.id)));
+      if (isPostalCodeQuery) {
+        // Prioritize postal code search
+        const postalResults = await this.searchByPostalCode(normalizedQuery, country, maxResults);
+        results.push(...postalResults);
+
+        // If we have enough results, return early
+        if (results.length >= maxResults) {
+          results = results.slice(0, maxResults);
+          this.cache.set(cacheKey, results);
+          setTimeout(() => this.cache.delete(cacheKey), this.cacheTimeout);
+          return results;
+        }
       }
 
-      // 3. Fuzzy search if enabled and still need more results
-      if (fuzzySearch && results.length < maxResults) {
-        const fuzzyResults = await this.searchByPlaceName(normalizedQuery, country, maxResults - results.length, false);
-        results.push(...fuzzyResults.filter(r => !results.some(existing => existing.id === r.id)));
-      }
-
-      // 4. Full-text search for comprehensive results
-      if (results.length < maxResults) {
-        const ftsResults = await this.fullTextSearch(normalizedQuery, country, maxResults - results.length);
-        results.push(...ftsResults.filter(r => !results.some(existing => existing.id === r.id)));
-      }
+      // Combined place name search (exact + fuzzy in one query)
+      const placeResults = await this.searchByPlaceNameOptimized(normalizedQuery, country, maxResults - results.length, fuzzySearch);
+      results.push(...placeResults.filter(r => !results.some(existing => existing.id === r.id)));
 
       // Sort by relevance score (descending)
       results.sort((a, b) => b.relevanceScore - a.relevanceScore);
@@ -118,6 +118,57 @@ export class PostalCodeService {
       console.error('PostalCodeService search error:', error);
       return [];
     }
+  }
+
+  /**
+   * Optimized place name search combining exact and fuzzy in one query
+   */
+  private async searchByPlaceNameOptimized(
+    placeName: string,
+    country: string,
+    limit: number,
+    includeFuzzy: boolean = true
+  ): Promise<LocationSearchResult[]> {
+    const stmt = this.db.prepare(`
+      SELECT *,
+        CASE
+          WHEN LOWER(place_name) = ? THEN 1.0
+          WHEN LOWER(place_name) LIKE ? THEN 0.9
+          WHEN LOWER(place_name) LIKE ? THEN 0.7
+          ELSE 0.5
+        END as relevance_score
+      FROM postal_codes
+      WHERE country_code = ?
+        AND (
+          LOWER(place_name) = ? OR
+          LOWER(place_name) LIKE ? OR
+          ${includeFuzzy ? 'LOWER(place_name) LIKE ? OR' : ''}
+          LOWER(admin_name1) LIKE ? OR
+          LOWER(admin_name2) LIKE ?
+        )
+      ORDER BY relevance_score DESC, place_name
+      LIMIT ?
+    `);
+
+    const exactMatch = placeName;
+    const startsWithPattern = `${placeName}%`;
+    const containsPattern = `%${placeName}%`;
+
+    const params = [
+      exactMatch, startsWithPattern, containsPattern, // For CASE statement
+      country, // WHERE country_code
+      exactMatch, startsWithPattern, // Exact and starts with
+      ...(includeFuzzy ? [containsPattern] : []), // Contains (fuzzy)
+      containsPattern, containsPattern, // Admin names
+      limit
+    ];
+
+    const result = await stmt.bind(...params).all();
+
+    return result.results?.map(record => {
+      const r = record as unknown as PostalCodeRecord & { relevance_score: number };
+      return this.transformRecord(r, r.relevance_score);
+    }) || [];
   }
 
   /**
@@ -141,8 +192,9 @@ export class PostalCodeService {
   }
 
   /**
-   * Search by place name (exact or fuzzy)
+   * Search by place name (exact or fuzzy) - kept for compatibility
    */
+  // @ts-ignore - kept for compatibility
   private async searchByPlaceName(
     placeName: string,
     country: string,
@@ -185,8 +237,9 @@ export class PostalCodeService {
   }
 
   /**
-   * Full-text search using FTS5
+   * Full-text search using FTS5 (kept for future use)
    */
+  // @ts-ignore - kept for future use
   private async fullTextSearch(
     query: string,
     country: string,
@@ -207,7 +260,7 @@ export class PostalCodeService {
     } catch (error) {
       console.error('FTS search error:', error);
       // Fallback to simple LIKE search
-      return this.searchByPlaceName(query, country, limit, false);
+      return this.searchByPlaceNameOptimized(query, country, limit, false);
     }
   }
 

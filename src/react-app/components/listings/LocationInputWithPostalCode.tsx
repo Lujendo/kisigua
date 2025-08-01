@@ -54,14 +54,19 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
   // Region input state
   const [regionQuery, setRegionQuery] = useState(value.region || '');
   const [isLoadingRegions, setIsLoadingRegions] = useState(false);
+
+  // Postal code selection state
+  const [showPostalCodeSelection, setShowPostalCodeSelection] = useState(false);
+  const [selectedCityForPostalCodes, setSelectedCityForPostalCodes] = useState<CityLookupResult | null>(null);
   
   const cityInputRef = useRef<HTMLInputElement>(null);
   const postalInputRef = useRef<HTMLInputElement>(null);
 
   // Enhanced postal code lookup
   const performPostalLookup = useCallback(async (postalCode: string) => {
-    if (!postalCode || postalCode.length < 3) {
+    if (!postalCode || postalCode.length < 2) {
       setPostalLookupResults([]);
+      setCityLookupResults([]);
       setShowLookupSuggestions(false);
       return;
     }
@@ -69,13 +74,29 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
     setIsLoadingPostal(true);
     try {
       const countryCode = PostalCodeLookupService.getCountryCode(value.country);
-      const results = await PostalCodeLookupService.lookupByPostalCode(postalCode, countryCode);
-      setPostalLookupResults(results);
-      setLookupType('postal');
-      setShowLookupSuggestions(results.length > 0);
+
+      // Check if input looks like a postal code (numbers) or city name (letters)
+      const isNumeric = /^\d+/.test(postalCode);
+
+      if (isNumeric) {
+        // Search by postal code
+        const results = await PostalCodeLookupService.lookupByPostalCode(postalCode, countryCode);
+        setPostalLookupResults(results);
+        setCityLookupResults([]);
+        setLookupType('postal');
+        setShowLookupSuggestions(results.length > 0);
+      } else {
+        // Search by city name in postal code field
+        const results = await PostalCodeLookupService.lookupByCity(postalCode, countryCode);
+        setCityLookupResults(results);
+        setPostalLookupResults([]);
+        setLookupType('city');
+        setShowLookupSuggestions(results.length > 0);
+      }
     } catch (error) {
       console.error('Postal lookup error:', error);
       setPostalLookupResults([]);
+      setCityLookupResults([]);
     } finally {
       setIsLoadingPostal(false);
     }
@@ -292,22 +313,36 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
     setRegionQuery(result.region);
     setShowLookupSuggestions(false);
 
-    // If only one postal code, auto-fill it
-    if (result.postalCodes.length === 1) {
+    // If multiple postal codes, show selection dialog
+    if (result.postalCodes.length > 1) {
+      setSelectedCityForPostalCodes(result);
+      setShowPostalCodeSelection(true);
+
+      // Update location without postal code for now
+      const newLocation: LocationData = {
+        ...value,
+        city: result.city,
+        region: result.region,
+        country: result.country,
+        latitude: result.coordinates.lat,
+        longitude: result.coordinates.lng
+      };
+      onChange(newLocation);
+    } else {
+      // If only one postal code, auto-fill it
       setPostalQuery(result.postalCodes[0]);
+
+      const newLocation: LocationData = {
+        ...value,
+        city: result.city,
+        region: result.region,
+        country: result.country,
+        postalCode: result.postalCodes[0],
+        latitude: result.coordinates.lat,
+        longitude: result.coordinates.lng
+      };
+      onChange(newLocation);
     }
-
-    const newLocation: LocationData = {
-      ...value,
-      city: result.city,
-      region: result.region,
-      country: result.country,
-      postalCode: result.postalCodes.length === 1 ? result.postalCodes[0] : value.postalCode,
-      latitude: result.coordinates.lat,
-      longitude: result.coordinates.lng
-    };
-
-    onChange(newLocation);
   };
 
   // Handle enhanced region lookup selection
@@ -324,6 +359,26 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
     };
 
     onChange(newLocation);
+  };
+
+  // Handle postal code selection from multiple options
+  const handlePostalCodeSelect = (postalCode: string) => {
+    setPostalQuery(postalCode);
+    setShowPostalCodeSelection(false);
+
+    const newLocation: LocationData = {
+      ...value,
+      postalCode: postalCode
+    };
+
+    onChange(newLocation);
+    setSelectedCityForPostalCodes(null);
+  };
+
+  // Close postal code selection
+  const closePostalCodeSelection = () => {
+    setShowPostalCodeSelection(false);
+    setSelectedCityForPostalCodes(null);
   };
 
   // Handle manual input changes
@@ -432,7 +487,7 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
               performPostalLookup(e.target.value);
             }}
             onFocus={() => postalSuggestions.length > 0 && setShowPostalSuggestions(true)}
-            placeholder="e.g., 72654, 10115"
+            placeholder="e.g., 72654 or Berlin"
             className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
           />
           
@@ -442,7 +497,12 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
               <div className="animate-spin w-4 h-4 border-2 border-gray-300 border-t-green-500 rounded-full"></div>
             </div>
           )}
-          
+
+          {/* Helper text */}
+          <p className="text-xs text-gray-500 mt-1">
+            💡 You can type a postal code or city name
+          </p>
+
           {/* Postal Code Suggestions */}
           {showPostalSuggestions && postalSuggestions.length > 0 && (
             <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
@@ -571,15 +631,38 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
                   onClick={() => handleEnhancedCitySelect(result)}
                 >
                   <div className="flex-1">
-                    <div className="font-medium text-green-900">{result.city}</div>
+                    <div className="flex items-center space-x-2">
+                      <div className="font-medium text-green-900">{result.city}</div>
+                      {result.postalCodes.length > 1 && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {result.postalCodes.length} codes
+                        </span>
+                      )}
+                    </div>
                     <div className="text-sm text-green-700">{result.displayName}</div>
                     <div className="text-xs text-green-600 mt-1">
-                      Postal codes: {result.postalCodes.slice(0, 3).join(', ')}
-                      {result.postalCodes.length > 3 && ` +${result.postalCodes.length - 3} more`}
+                      {result.postalCodes.length === 1 ? (
+                        `Postal code: ${result.postalCodes[0]}`
+                      ) : (
+                        <>
+                          Postal codes: {result.postalCodes.slice(0, 3).join(', ')}
+                          {result.postalCodes.length > 3 && ` +${result.postalCodes.length - 3} more`}
+                          <span className="ml-2 text-blue-600 font-medium">
+                            → Click to choose
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
-                  <div className="text-xs text-green-600">
-                    {(result.confidence * 100).toFixed(0)}% match
+                  <div className="flex flex-col items-end">
+                    <div className="text-xs text-green-600">
+                      {(result.confidence * 100).toFixed(0)}% match
+                    </div>
+                    {result.postalCodes.length > 1 && (
+                      <div className="text-xs text-blue-600 mt-1">
+                        Multiple options
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -616,6 +699,70 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
           >
             Close suggestions
           </button>
+        </div>
+      )}
+
+      {/* Postal Code Selection Modal */}
+      {showPostalCodeSelection && selectedCityForPostalCodes && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-96 overflow-hidden">
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Choose Postal Code
+                </h3>
+                <button
+                  onClick={closePostalCodeSelection}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">
+                {selectedCityForPostalCodes.city} has multiple postal codes. Please select one:
+              </p>
+            </div>
+
+            <div className="p-4 max-h-64 overflow-y-auto">
+              <div className="space-y-2">
+                {selectedCityForPostalCodes.postalCodes.map((postalCode, index) => (
+                  <button
+                    key={`postal-${postalCode}-${index}`}
+                    onClick={() => handlePostalCodeSelect(postalCode)}
+                    className="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-green-300 hover:bg-green-50 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-gray-900">{postalCode}</div>
+                        <div className="text-sm text-gray-600">
+                          {selectedCityForPostalCodes.city}, {selectedCityForPostalCodes.region}
+                        </div>
+                      </div>
+                      <div className="text-green-600">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-gray-200 bg-gray-50">
+              <div className="flex justify-between items-center text-sm text-gray-600">
+                <span>{selectedCityForPostalCodes.postalCodes.length} postal codes available</span>
+                <button
+                  onClick={closePostalCodeSelection}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -591,6 +591,23 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
     }
   };
 
+  // Handle clear all search and filters
+  const handleClearAll = () => {
+    setSearchQuery('');
+    setLocationSearch('');
+    setLocationFilters({
+      radius: 10,
+      country: 'Germany' // Keep default country
+    });
+    setUserLocation(null);
+    setCurrentPage(1);
+    // Reset to show all locations
+    setFilteredLocations(locations);
+    // Hide any open panels
+    setShowLocationFilters(false);
+    setShowSearchHistory(false);
+  };
+
   // Client-side search fallback for development
   const performClientSideSearch = (query: string) => {
     if (!query.trim()) {
@@ -1091,6 +1108,19 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                     </svg>
                     <span>{showSearchHistory ? 'Hide' : 'Show'} History</span>
                   </button>
+
+                  {/* Clear All Button */}
+                  {(searchQuery || locationSearch || Object.keys(locationFilters).some(key => key !== 'country' && locationFilters[key as keyof LocationFiltersType])) && (
+                    <button
+                      onClick={handleClearAll}
+                      className="text-sm text-red-600 hover:text-red-800 transition-colors flex items-center space-x-1"
+                    >
+                      <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      <span>Clear All</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Enhanced Location Filters */}
@@ -1155,6 +1185,21 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                     <h2 className="text-xl font-semibold text-gray-900">
                       {searchQuery ? `Search Results for "${searchQuery}"` : 'All Locations'}
                     </h2>
+                    {searchQuery && (
+                      <button
+                        onClick={() => {
+                          setSearchQuery('');
+                          handleSearch('');
+                        }}
+                        className="inline-flex items-center px-2 py-1 text-xs font-medium text-red-600 bg-red-50 rounded-full hover:bg-red-100 transition-colors"
+                        title="Clear search"
+                      >
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Clear
+                      </button>
+                    )}
                     {loading && (
                       <div className="flex items-center space-x-2">
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-600"></div>

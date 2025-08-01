@@ -198,6 +198,16 @@ const EnhancedSearchInput: React.FC<EnhancedSearchInputProps> = ({
     }
   };
 
+  // Handle clear search
+  const handleClear = () => {
+    onChange('');
+    setShowSuggestions(false);
+    setSelectedIndex(-1);
+    inputRef.current?.focus();
+    // Trigger search with empty query to show all results
+    onSearch('');
+  };
+
   // Get suggestion type label
   const getSuggestionTypeLabel = (type: string) => {
     switch (type) {
@@ -221,11 +231,24 @@ const EnhancedSearchInput: React.FC<EnhancedSearchInputProps> = ({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         disabled={disabled}
-        className="w-full px-6 py-3 text-gray-900 bg-transparent rounded-full focus:outline-none text-lg"
+        className="w-full px-6 py-3 text-gray-900 bg-transparent rounded-full focus:outline-none text-lg pr-20"
       />
-      
+
+      {/* Clear Button */}
+      {value.trim() && (
+        <button
+          onClick={handleClear}
+          className="absolute right-16 top-1/2 transform -translate-y-1/2 p-1 rounded-full hover:bg-gray-100 transition-colors"
+          title="Clear search"
+        >
+          <svg className="w-4 h-4 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      )}
+
       {/* AI Badge */}
-      {showAIBadge && (
+      {showAIBadge && !isLoading && (
         <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex items-center bg-gradient-to-r from-purple-500 to-blue-500 text-white px-2 py-1 rounded-full text-xs font-medium">
           <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>

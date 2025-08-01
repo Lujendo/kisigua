@@ -54,12 +54,13 @@ interface DashboardProps {
 }
 
 const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { toggleFavorite, isFavorite } = useFavorites();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'admin'>('dashboard');
 
   // Search Engine State
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory] = useState(''); // Category filtering - can be extended later
   const [locations, setLocations] = useState<Location[]>([]);
   const [filteredLocations, setFilteredLocations] = useState<Location[]>([]);
   const [searchHistory, setSearchHistory] = useState<SearchHistory[]>([]);
@@ -438,64 +439,47 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
     return sorted;
   };
 
-  // Search functionality
-  const handleSearch = (query: string) => {
+  // Unified search functionality
+  const handleSearch = async (query: string) => {
     setSearchQuery(query);
     setLoading(true);
     setCurrentPage(1); // Reset to first page when searching
 
-    // Simulate API call delay
-    setTimeout(() => {
-      let filtered: Location[];
+    try {
+      // Determine search type based on user role and query
+      const shouldUseAISearch = user && ['admin', 'premium', 'supporter'].includes(user.role) && query.trim().length > 0;
 
-      // First apply text search filter
-      if (!query.trim()) {
-        filtered = locations;
+      let searchResults = [];
+
+      if (shouldUseAISearch) {
+        // Use hybrid search for premium users with AI capabilities
+        console.log('🤖 Using AI hybrid search for premium user');
+        searchResults = await performHybridSearch(query);
       } else {
-        filtered = locations.filter(location =>
-          location.title.toLowerCase().includes(query.toLowerCase()) ||
-          location.description.toLowerCase().includes(query.toLowerCase()) ||
-          location.tags.some(tag => tag.toLowerCase().includes(query.toLowerCase())) ||
-          location.location.city.toLowerCase().includes(query.toLowerCase())
-        );
+        // Use traditional search for free users or empty queries
+        console.log('🔍 Using traditional search');
+        searchResults = await performTraditionalSearch(query);
       }
 
-      // Apply enhanced location-based filters
+      // Transform search results to Location format if needed
+      const transformedResults = searchResults.map(transformSearchResultToLocation);
+
+      // Apply client-side location filtering if coordinates are set
+      let filtered = transformedResults;
       if (locationFilters.coordinates || userLocation) {
         const searchCoords = locationFilters.coordinates || userLocation;
         if (searchCoords) {
-          console.log(`🗺️ Applying enhanced location filter: radius: ${locationFilters.radius}km`);
-          filtered = filtered.filter(location => {
+          console.log(`🗺️ Applying location filter: radius: ${locationFilters.radius}km`);
+          filtered = filtered.filter((location: Location) => {
             const distance = calculateDistance(
               searchCoords.lat,
               searchCoords.lng,
               location.location.coordinates.lat,
               location.location.coordinates.lng
             );
-            console.log(`📍 Distance to ${location.title}: ${distance.toFixed(1)}km`);
             return distance <= locationFilters.radius;
           });
         }
-      }
-
-      // Apply hierarchical location filters
-      if (locationFilters.country) {
-        filtered = filtered.filter(location =>
-          location.location.country.toLowerCase().includes(locationFilters.country!.toLowerCase())
-        );
-      }
-
-      if (locationFilters.region) {
-        filtered = filtered.filter(location =>
-          (location.location as any).region?.toLowerCase().includes(locationFilters.region!.toLowerCase()) ||
-          location.location.city.toLowerCase().includes(locationFilters.region!.toLowerCase())
-        );
-      }
-
-      if (locationFilters.city) {
-        filtered = filtered.filter(location =>
-          location.location.city.toLowerCase().includes(locationFilters.city!.toLowerCase())
-        );
       }
 
       // Add to search history if there was a text query
@@ -510,11 +494,123 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
         setSearchHistory(prev => [newHistoryItem, ...prev.slice(0, 4)]);
       }
 
-      // Apply sorting
+      // Apply sorting and update state
       const sortedFiltered = applySorting(filtered);
       setFilteredLocations(sortedFiltered);
+
+    } catch (error) {
+      console.error('Search error:', error);
+      // Fallback to existing locations on error
+      setFilteredLocations(locations);
+    } finally {
       setLoading(false);
-    }, 300);
+    }
+  };
+
+  // Traditional search implementation
+  const performTraditionalSearch = async (query: string) => {
+    const searchPayload = {
+      query: query.trim() || undefined,
+      filters: {
+        ...(selectedCategory && { category: selectedCategory }),
+        ...(locationFilters.coordinates && {
+          location: {
+            lat: locationFilters.coordinates.lat,
+            lng: locationFilters.coordinates.lng,
+            radius: locationFilters.radius || 25
+          }
+        })
+      },
+      page: 1,
+      limit: 100
+    };
+
+    const response = await fetch('/api/listings/search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      },
+      body: JSON.stringify(searchPayload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Traditional search failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.listings || [];
+  };
+
+  // AI hybrid search implementation
+  const performHybridSearch = async (query: string) => {
+    const searchPayload = {
+      query: query.trim(),
+      limit: 100,
+      minScore: 0.6,
+      ...(selectedCategory && { category: selectedCategory }),
+      ...(locationFilters.coordinates && {
+        location: {
+          lat: locationFilters.coordinates.lat,
+          lng: locationFilters.coordinates.lng,
+          radius: locationFilters.radius || 25
+        }
+      })
+    };
+
+    const response = await fetch('/api/listings/hybrid-search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      },
+      body: JSON.stringify(searchPayload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Hybrid search failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.combinedResults || [];
+  };
+
+  // Transform search result to Location format
+  const transformSearchResultToLocation = (result: any): Location => {
+    // Handle both traditional search results and AI search results
+    return {
+      id: result.id,
+      title: result.title,
+      description: result.description,
+      category: result.category,
+      location: {
+        address: result.location?.address || `${result.location?.city || ''}, ${result.location?.country || ''}`,
+        city: result.location?.city || '',
+        country: result.location?.country || '',
+        coordinates: {
+          lat: result.location?.latitude || result.location?.coordinates?.lat || 0,
+          lng: result.location?.longitude || result.location?.coordinates?.lng || 0
+        }
+      },
+      images: result.images || [],
+      thumbnail: result.thumbnail || (result.images && result.images[0]) || '/placeholder-image.jpg',
+      price: result.price || 0,
+      priceType: (result.priceType || result.price_type || 'free') as 'free' | 'paid' | 'donation',
+      rating: result.rating || 0,
+      reviews: result.reviews || 0,
+      tags: result.tags || [],
+      views: result.views || 0,
+      favorites: result.favorites || 0,
+      isVerified: result.isVerified || result.is_verified || false,
+      isFeatured: result.isFeatured || result.is_featured || false,
+      createdBy: result.userId || result.user_id || '',
+      createdAt: result.createdAt || result.created_at || new Date().toISOString(),
+      contact: {
+        phone: result.contactInfo?.phone || result.contact?.phone,
+        email: result.contactInfo?.email || result.contact?.email,
+        website: result.contactInfo?.website || result.contact?.website
+      }
+    };
   };
 
   // Handle sorting change
@@ -802,12 +898,24 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
               <div className="relative max-w-2xl mx-auto">
                 <input
                   type="text"
-                  placeholder="Search for organic farms, water sources, sustainable businesses..."
+                  placeholder={
+                    user && ['admin', 'premium', 'supporter'].includes(user.role)
+                      ? "🤖 AI-powered search: organic farms, water sources, sustainable businesses..."
+                      : "Search for organic farms, water sources, sustainable businesses..."
+                  }
                   value={searchQuery}
                   onChange={(e) => handleSearch(e.target.value)}
                   className="w-full px-6 py-4 text-gray-900 bg-white rounded-full shadow-lg focus:outline-none focus:ring-4 focus:ring-green-300 text-lg"
                 />
-                <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
+                  {user && ['admin', 'premium', 'supporter'].includes(user.role) && (
+                    <div className="flex items-center bg-gradient-to-r from-purple-500 to-blue-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                      </svg>
+                      AI
+                    </div>
+                  )}
                   <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>

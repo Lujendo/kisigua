@@ -517,21 +517,49 @@ app.get("/api/locations/region-lookup", async (c) => {
       }, 400);
     }
 
-    // Search by region/state name
-    const results = await services.postalCodeService.searchByPlaceName(
-      regionName,
-      { country, maxResults, includeCoordinates: true, fuzzySearch: true }
-    );
+    if (!services.postalCodeService) {
+      services.postalCodeService = new PostalCodeService(services.databaseService.db);
+    }
 
-    // Filter to only include results where the region matches
-    const regionResults = results.filter((result: any) =>
-      result.region && result.region.toLowerCase().includes(regionName.toLowerCase())
-    );
+    // Search by region/state name using admin_name1 field
+    const stmt = services.databaseService.db.prepare(`
+      SELECT DISTINCT
+        postal_code,
+        place_name,
+        admin_name1 as region,
+        admin_name2 as district,
+        country_code,
+        latitude,
+        longitude
+      FROM postal_codes
+      WHERE country_code = ?
+        AND admin_name1 LIKE ?
+      ORDER BY place_name
+      LIMIT ?
+    `);
+
+    const searchPattern = `%${regionName}%`;
+    const result = await stmt.bind(country, searchPattern, maxResults).all();
+
+    const results = result.results?.map((record: any) => ({
+      id: `${record.postal_code}-${record.place_name}`,
+      name: record.place_name,
+      displayName: `${record.place_name}, ${record.region}`,
+      postalCode: record.postal_code,
+      country: country,
+      region: record.region,
+      district: record.district,
+      coordinates: {
+        lat: record.latitude,
+        lng: record.longitude
+      },
+      relevanceScore: record.region.toLowerCase().includes(regionName.toLowerCase()) ? 0.9 : 0.7
+    })) || [];
 
     return c.json({
       success: true,
-      results: regionResults,
-      total: regionResults.length,
+      results: results,
+      total: results.length,
       query: regionName,
       country
     });

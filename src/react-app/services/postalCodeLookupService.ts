@@ -189,11 +189,34 @@ export class PostalCodeLookupService {
       }
 
       const data = await response.json();
+      console.log('Region lookup response:', data); // Debug logging
+
+      // If no results, try a fallback approach using city lookup
+      if (!data.results || data.results.length === 0) {
+        console.log('No direct region results, trying fallback city search');
+        const cityResponse = await fetch(
+          `/api/locations/city-lookup?city=${encodeURIComponent(regionName)}&country=${countryCode}&limit=50`
+        );
+
+        if (cityResponse.ok) {
+          const cityData = await cityResponse.json();
+          console.log('Fallback city lookup response:', cityData);
+
+          // Filter city results that have the region name in their region field
+          const filteredResults = cityData.results?.filter((item: any) =>
+            item.region && item.region.toLowerCase().includes(regionName.toLowerCase())
+          ) || [];
+
+          if (filteredResults.length > 0) {
+            data.results = filteredResults;
+          }
+        }
+      }
 
       // Group by region to get all cities and postal codes
       const regionGroups = new Map<string, any[]>();
       data.results?.forEach((item: any) => {
-        const regionKey = item.region || item.admin_name1 || 'Unknown';
+        const regionKey = item.region || 'Unknown';
         if (!regionGroups.has(regionKey)) {
           regionGroups.set(regionKey, []);
         }
@@ -213,8 +236,8 @@ export class PostalCodeLookupService {
           region,
           cities,
           postalCodeRanges: this.getPostalCodeRanges(postalCodes),
-          country: this.getCountryName(firstItem.country),
-          countryCode: firstItem.country,
+          country: this.getCountryName(firstItem.country || countryCode),
+          countryCode: firstItem.country || countryCode,
           coordinates: { lat: avgLat, lng: avgLng },
           confidence: 0.9
         };

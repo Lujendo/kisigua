@@ -270,6 +270,12 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
           createdAt: string;
           isCertified?: boolean;
           views?: number;
+          rating?: number;
+          reviewCount?: number;
+          price?: number;
+          contactEmail?: string;
+          contactPhone?: string;
+          website?: string;
         }) => ({
           id: listing.id,
           title: listing.title,
@@ -285,62 +291,75 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
             }
           },
           images: listing.images || [],
-          thumbnail: listing.images?.[0] || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300&h=200&fit=crop',
-          rating: 4.5, // Default rating since not in database
-          reviews: Math.floor(Math.random() * 50) + 10, // Mock reviews
-          price: listing.priceRange === 'low' ? 10 : listing.priceRange === 'medium' ? 25 : listing.priceRange === 'high' ? 50 : undefined,
-          priceType: listing.priceRange ? 'paid' : 'free',
+          thumbnail: listing.images?.[0] || '/api/placeholder/300/200',
+          rating: listing.rating || 0,
+          reviews: listing.reviewCount || 0,
+          price: listing.price,
+          priceType: listing.price ? 'paid' : 'free',
           tags: listing.tags || [],
           createdBy: listing.userId,
           createdAt: listing.createdAt,
           isVerified: listing.isCertified || false,
-          isFeatured: false, // Default to false
+          isFeatured: false,
           views: listing.views || 0,
-          favorites: Math.floor(Math.random() * 20) + 5, // Mock favorites
+          favorites: 0, // Will be loaded separately if needed
           lastViewed: undefined,
           contact: {
-            email: `contact@${listing.title.toLowerCase().replace(/\s+/g, '')}.com`,
-            phone: '+49 123 456 789',
-            website: `https://${listing.title.toLowerCase().replace(/\s+/g, '')}.com`
+            email: listing.contactEmail || '',
+            phone: listing.contactPhone || '',
+            website: listing.website || ''
           }
         }));
 
         setLocations(transformedLocations);
         setFilteredLocations(transformedLocations);
 
-        // Set recently viewed (first 3 items as mock)
-        setRecentlyViewed(transformedLocations.slice(0, 3));
-
       } catch (error) {
         console.error('Error fetching locations:', error);
-        // Set empty array on error instead of mock data
+        // Fallback to empty arrays on error
         setLocations([]);
         setFilteredLocations([]);
-        setRecentlyViewed([]);
       } finally {
         setLoading(false);
       }
     };
 
-    // Mock search history
-    const mockSearchHistory: SearchHistory[] = [
-      {
-        id: '1',
-        query: 'organic farm',
-        timestamp: new Date(Date.now() - 86400000).toISOString(),
-        results: 3
-      },
-      {
-        id: '2',
-        query: 'water source',
-        timestamp: new Date(Date.now() - 172800000).toISOString(),
-        results: 2
+    // Load search history from localStorage
+    const loadSearchHistory = () => {
+      try {
+        const stored = localStorage.getItem('kisigua_search_history');
+        if (stored) {
+          const history = JSON.parse(stored);
+          setSearchHistory(history.slice(0, 10)); // Keep last 10
+        }
+      } catch (error) {
+        console.error('Error loading search history:', error);
       }
-    ];
-    setSearchHistory(mockSearchHistory);
+    };
 
+    // Load real data from API
     fetchLocations();
+    loadSearchHistory();
   }, []);
+
+  // Load recently viewed after locations are loaded
+  useEffect(() => {
+    if (locations.length > 0) {
+      const loadRecentlyViewed = () => {
+        try {
+          const stored = localStorage.getItem('kisigua_recently_viewed');
+          if (stored) {
+            const recentIds = JSON.parse(stored);
+            const recentItems = locations.filter(loc => recentIds.includes(loc.id));
+            setRecentlyViewed(recentItems.slice(0, 5));
+          }
+        } catch (error) {
+          console.error('Error loading recently viewed:', error);
+        }
+      };
+      loadRecentlyViewed();
+    }
+  }, [locations]);
 
   // Remove automatic re-search on location changes to prevent interference
   // Users will manually trigger search using the search button
@@ -403,9 +422,25 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
           bValue = b.price || 0;
           break;
         case 'distance':
-          // Mock distance calculation - in real app, calculate from user location
-          aValue = Math.random() * 50; // Random distance for demo
-          bValue = Math.random() * 50;
+          // Calculate real distance from user location if available
+          if (userLocation) {
+            aValue = calculateDistance(
+              userLocation.lat,
+              userLocation.lng,
+              a.location.coordinates.lat,
+              a.location.coordinates.lng
+            );
+            bValue = calculateDistance(
+              userLocation.lat,
+              userLocation.lng,
+              b.location.coordinates.lat,
+              b.location.coordinates.lng
+            );
+          } else {
+            // If no user location, sort by creation date as fallback
+            aValue = new Date(a.createdAt).getTime();
+            bValue = new Date(b.createdAt).getTime();
+          }
           break;
         case 'newest':
           aValue = new Date(a.createdAt).getTime();
@@ -491,7 +526,16 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
           timestamp: new Date().toISOString(),
           results: filtered.length
         };
-        setSearchHistory(prev => [newHistoryItem, ...prev.slice(0, 4)]);
+
+        // Update state and localStorage
+        const updatedHistory = [newHistoryItem, ...searchHistory.slice(0, 9)]; // Keep last 10
+        setSearchHistory(updatedHistory);
+
+        try {
+          localStorage.setItem('kisigua_search_history', JSON.stringify(updatedHistory));
+        } catch (error) {
+          console.error('Error saving search history:', error);
+        }
       }
 
       // Apply sorting and update state
@@ -500,8 +544,9 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
 
     } catch (error) {
       console.error('Search error:', error);
-      // Fallback to existing locations on error
-      setFilteredLocations(locations);
+      // Show empty results on search error
+      setFilteredLocations([]);
+      // You could also show a toast notification here
     } finally {
       setLoading(false);
     }
@@ -544,9 +589,8 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
       const data = await response.json();
       return data.listings || [];
     } catch (error) {
-      console.warn('🚧 API not available during development, using fallback search');
-      // Fallback to client-side filtering of existing locations
-      return performClientSideSearch(query);
+      console.error('Traditional search failed:', error);
+      throw error; // Re-throw to be handled by main search function
     }
   };
 
@@ -585,9 +629,8 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
       const data = await response.json();
       return data.combinedResults || [];
     } catch (error) {
-      console.warn('🚧 AI API not available during development, using fallback search');
-      // Fallback to client-side filtering of existing locations
-      return performClientSideSearch(query);
+      console.error('Hybrid search failed:', error);
+      throw error; // Re-throw to be handled by main search function
     }
   };
 
@@ -608,28 +651,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
     setShowSearchHistory(false);
   };
 
-  // Client-side search fallback for development
-  const performClientSideSearch = (query: string) => {
-    if (!query.trim()) {
-      return locations; // Return all locations if no query
-    }
 
-    const searchTerm = query.toLowerCase().trim();
-    return locations.filter(location => {
-      // Search in title, description, category, tags, and location
-      const searchableText = [
-        location.title,
-        location.description,
-        location.category,
-        ...location.tags,
-        location.location.address,
-        location.location.city,
-        location.location.country
-      ].join(' ').toLowerCase();
-
-      return searchableText.includes(searchTerm);
-    });
-  };
 
   // Transform search result to Location format
   const transformSearchResultToLocation = (result: any): Location => {
@@ -695,16 +717,28 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
   };
 
   const handleLocationClick = (locationId: string) => {
-    // Update recently viewed
-    const location = locations.find(loc => loc.id === locationId);
-    if (location) {
-      const updatedLocation = { ...location, lastViewed: new Date().toISOString() };
-      setRecentlyViewed(prev => {
-        const filtered = prev.filter(loc => loc.id !== locationId);
-        return [updatedLocation, ...filtered.slice(0, 4)];
-      });
+    // Update recently viewed in localStorage
+    try {
+      const stored = localStorage.getItem('kisigua_recently_viewed');
+      let recentIds = stored ? JSON.parse(stored) : [];
+
+      // Remove if already exists and add to front
+      recentIds = recentIds.filter((id: string) => id !== locationId);
+      recentIds.unshift(locationId);
+
+      // Keep only last 10 items
+      recentIds = recentIds.slice(0, 10);
+
+      localStorage.setItem('kisigua_recently_viewed', JSON.stringify(recentIds));
+
+      // Update recently viewed state
+      const recentItems = locations.filter(loc => recentIds.includes(loc.id));
+      setRecentlyViewed(recentItems.slice(0, 5));
+    } catch (error) {
+      console.error('Error updating recently viewed:', error);
     }
-    // Show detail card instead of modal
+
+    // Show detail card
     setSelectedLocationId(locationId);
     setShowDetailCard(true);
     // Scroll to top to show the detail card

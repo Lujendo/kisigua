@@ -16,6 +16,7 @@ import { EmailVerificationService } from "./services/emailVerificationService";
 import { EmbeddingService } from "./services/embeddingService";
 import { SemanticSearchService } from "./services/semanticSearchService";
 import { UserBehaviorService } from "./services/userBehaviorService";
+import { PostalCodeService } from "./services/postalCodeService";
 import {
   createAuthMiddleware,
   createRoleMiddleware
@@ -254,6 +255,123 @@ app.get("/api/info", (c) => c.json({
     "Sustainable goods finder"
   ]
 }));
+
+// Location search endpoint - Global postal code search
+app.get("/api/locations/search", async (c) => {
+  try {
+    const services = c.get('services');
+    const query = c.req.query('q') || '';
+    const country = c.req.query('country') || 'DE';
+    const maxResults = parseInt(c.req.query('limit') || '20');
+
+    if (!query || query.length < 2) {
+      return c.json({
+        error: "Query must be at least 2 characters long",
+        results: []
+      }, 400);
+    }
+
+    // Initialize PostalCodeService if not already available
+    if (!services.postalCodeService) {
+      services.postalCodeService = new PostalCodeService(services.databaseService.db);
+    }
+
+    const results = await services.postalCodeService.searchLocations(query, {
+      country,
+      maxResults,
+      includeCoordinates: true,
+      fuzzySearch: true
+    });
+
+    return c.json({
+      query,
+      country,
+      results,
+      count: results.length
+    });
+  } catch (error) {
+    console.error('Location search error:', error);
+    return c.json({
+      error: "Location search failed",
+      results: []
+    }, 500);
+  }
+});
+
+// Get location by postal code endpoint
+app.get("/api/locations/postal/:code", async (c) => {
+  try {
+    const services = c.get('services');
+    const postalCode = c.req.param('code');
+    const country = c.req.query('country') || 'DE';
+
+    if (!services.postalCodeService) {
+      services.postalCodeService = new PostalCodeService(services.databaseService.db);
+    }
+
+    const result = await services.postalCodeService.getByPostalCode(postalCode, country);
+
+    if (!result) {
+      return c.json({
+        error: "Postal code not found",
+        postalCode,
+        country
+      }, 404);
+    }
+
+    return c.json({
+      postalCode,
+      country,
+      result
+    });
+  } catch (error) {
+    console.error('Postal code lookup error:', error);
+    return c.json({
+      error: "Postal code lookup failed"
+    }, 500);
+  }
+});
+
+// Get nearby locations endpoint
+app.get("/api/locations/nearby", async (c) => {
+  try {
+    const services = c.get('services');
+    const lat = parseFloat(c.req.query('lat') || '0');
+    const lng = parseFloat(c.req.query('lng') || '0');
+    const radius = parseInt(c.req.query('radius') || '25');
+    const country = c.req.query('country') || 'DE';
+    const limit = parseInt(c.req.query('limit') || '20');
+
+    if (!lat || !lng) {
+      return c.json({
+        error: "Latitude and longitude are required",
+        results: []
+      }, 400);
+    }
+
+    if (!services.postalCodeService) {
+      services.postalCodeService = new PostalCodeService(services.databaseService.db);
+    }
+
+    const results = await services.postalCodeService.getNearbyLocations(
+      lat, lng, radius, country, limit
+    );
+
+    return c.json({
+      center: { lat, lng },
+      radius,
+      country,
+      results,
+      count: results.length
+    });
+  } catch (error) {
+    console.error('Nearby locations error:', error);
+    return c.json({
+      error: "Nearby locations search failed",
+      results: []
+    }, 500);
+  }
+});
 
 // Authentication routes
 app.post("/api/auth/login", async (c) => {

@@ -722,9 +722,48 @@ export class GeocodingService {
 
   /**
    * Search for locations with autocomplete suggestions
+   * Now uses database API for comprehensive results
    */
-  static searchLocations(
-    query: string, 
+  static async searchLocations(
+    query: string,
+    maxResults: number = 10,
+    country: string = 'DE'
+  ): Promise<LocationSearchResult[]> {
+    // Try database search first
+    try {
+      const response = await fetch(`/api/locations/search?q=${encodeURIComponent(query)}&country=${country}&limit=${maxResults}`);
+      if (response.ok) {
+        const data = await response.json();
+        return data.results.map((result: any) => ({
+          name: result.name,
+          displayName: result.displayName,
+          coordinates: result.coordinates,
+          hierarchy: {
+            country: result.country,
+            countryCode: result.country,
+            region: result.region,
+            district: result.district,
+            city: result.name,
+            coordinates: result.coordinates,
+            population: 0,
+            locationType: 'city'
+          },
+          relevanceScore: result.relevanceScore
+        }));
+      }
+    } catch (error) {
+      console.warn('Database location search failed, falling back to static data:', error);
+    }
+
+    // Fallback to static search
+    return this.searchLocationsStatic(query, maxResults);
+  }
+
+  /**
+   * Static location search (fallback)
+   */
+  private static searchLocationsStatic(
+    query: string,
     maxResults: number = 10
   ): LocationSearchResult[] {
     if (!query || query.length < 2) return [];

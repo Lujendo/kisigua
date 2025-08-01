@@ -48,7 +48,7 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
 
       setIsLoading(true);
       try {
-        const results = GeocodingService.searchLocations(inputValue, 8);
+        const results = await GeocodingService.searchLocations(inputValue, 8, 'DE');
         setSuggestions(results);
         setShowDropdown(results.length > 0 && showSuggestions);
         setSelectedIndex(-1);

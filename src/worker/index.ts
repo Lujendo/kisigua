@@ -441,10 +441,14 @@ app.get("/api/locations/postal-lookup", async (c) => {
       }, 400);
     }
 
-    // Search by postal code
-    const results = await services.postalCodeService.searchByPostalCode(
+    if (!services.postalCodeService) {
+      services.postalCodeService = new PostalCodeService(services.databaseService.db);
+    }
+
+    // Search by postal code using the correct method
+    const results = await services.postalCodeService.searchLocations(
       postalCode,
-      { country, maxResults, includeCoordinates: true }
+      { country, maxResults, includeCoordinates: true, fuzzySearch: false }
     );
 
     return c.json({
@@ -479,8 +483,12 @@ app.get("/api/locations/city-lookup", async (c) => {
       }, 400);
     }
 
-    // Search by city name
-    const results = await services.postalCodeService.searchByPlaceName(
+    if (!services.postalCodeService) {
+      services.postalCodeService = new PostalCodeService(services.databaseService.db);
+    }
+
+    // Search by city name using the correct method
+    const results = await services.postalCodeService.searchLocations(
       cityName,
       { country, maxResults, includeCoordinates: true, fuzzySearch: true }
     );

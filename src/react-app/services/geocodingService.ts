@@ -646,17 +646,53 @@ export class GeocodingService {
    * Main geocoding function with hybrid approach
    */
   static async geocode(
-    locationName: string, 
+    locationName: string,
     options: GeocodingOptions = {}
   ): Promise<GeocodingResult | null> {
     const normalizedName = locationName.toLowerCase().trim();
-    
+
     // Check cache first
     if (options.useCache !== false && this.cache.has(normalizedName)) {
       return this.cache.get(normalizedName)!;
     }
 
-    // Try static geocoding first
+    // Try database search first (more comprehensive than static)
+    try {
+      const countries = ['DE', 'IT', 'ES', 'FR'];
+      for (const country of countries) {
+        const response = await fetch(`/api/locations/search?q=${encodeURIComponent(locationName)}&country=${country}&limit=1`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.results && data.results.length > 0) {
+            const result = data.results[0];
+            const geocodingResult: GeocodingResult = {
+              coordinates: result.coordinates,
+              hierarchy: {
+                country: this.getCountryName(result.country),
+                countryCode: result.country,
+                region: result.region,
+                district: result.district,
+                city: result.name,
+                coordinates: result.coordinates,
+                population: 0,
+                locationType: 'city'
+              },
+              source: 'database',
+              confidence: result.relevanceScore || 0.8
+            };
+
+            if (options.useCache !== false) {
+              this.cache.set(normalizedName, geocodingResult);
+            }
+            return geocodingResult;
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Database geocoding failed, falling back to static:', error);
+    }
+
+    // Fallback to static geocoding
     const staticResult = this.staticGeocode(normalizedName, options);
     if (staticResult) {
       if (options.useCache !== false) {
@@ -1008,6 +1044,19 @@ export class GeocodingService {
    */
   static clearCache(): void {
     this.cache.clear();
+  }
+
+  /**
+   * Get country name from country code
+   */
+  private static getCountryName(countryCode: string): string {
+    const countryNames: Record<string, string> = {
+      'DE': 'Germany',
+      'IT': 'Italy',
+      'ES': 'Spain',
+      'FR': 'France'
+    };
+    return countryNames[countryCode] || countryCode;
   }
 
   /**

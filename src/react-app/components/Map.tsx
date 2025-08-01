@@ -1,6 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { MapService, MapLocation } from '../services/mapService';
+
 
 // Fix for default markers in Leaflet with Webpack
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -15,6 +17,9 @@ interface MapMarker {
   title: string;
   description?: string;
   isMain?: boolean;
+  postalCode?: string;
+  country?: string;
+  distance?: number;
 }
 
 interface MapProps {
@@ -27,6 +32,13 @@ interface MapProps {
   searchLocation?: { lat: number; lng: number };
   searchRadius?: number; // in kilometers
   onMapClick?: (lat: number, lng: number) => void;
+  // Enhanced features
+  showNearbyLocations?: boolean;
+  nearbyRadius?: number;
+  enableReverseGeocode?: boolean;
+
+  countries?: string[];
+  onLocationFound?: (location: MapLocation) => void;
 }
 
 const Map: React.FC<MapProps> = ({
@@ -38,11 +50,48 @@ const Map: React.FC<MapProps> = ({
   className = '',
   searchLocation,
   searchRadius,
-  onMapClick
+  onMapClick,
+  showNearbyLocations = false,
+  nearbyRadius = 25,
+  enableReverseGeocode = false,
+
+  countries = ['DE', 'IT', 'ES', 'FR'],
+  onLocationFound
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
+  const nearbyMarkersRef = useRef<L.Marker[]>([]);
+
+  // State for nearby locations
+  const [nearbyLocations, setNearbyLocations] = useState<MapLocation[]>([]);
+  const [isLoadingNearby, setIsLoadingNearby] = useState(false);
+
+  // Helper function to create nearby location icons
+  const createNearbyLocationIcon = (location: MapLocation) => {
+    const countryColors: Record<string, string> = {
+      'DE': 'bg-yellow-500',
+      'IT': 'bg-green-500',
+      'ES': 'bg-red-500',
+      'FR': 'bg-blue-500'
+    };
+
+    const color = countryColors[location.country] || 'bg-gray-500';
+
+    return L.divIcon({
+      className: 'nearby-location-marker',
+      html: `
+        <div class="relative">
+          <div class="w-4 h-4 ${color} rounded-full border border-white shadow-md flex items-center justify-center">
+            <div class="w-1 h-1 bg-white rounded-full"></div>
+          </div>
+        </div>
+      `,
+      iconSize: [16, 16],
+      iconAnchor: [8, 8],
+      popupAnchor: [0, -16]
+    });
+  };
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -77,6 +126,8 @@ const Map: React.FC<MapProps> = ({
         popupAnchor: [0, -32],
       });
     };
+
+
 
     // Add markers
     markers.forEach((markerData) => {
@@ -158,12 +209,27 @@ const Map: React.FC<MapProps> = ({
       map.setView([searchLocation.lat, searchLocation.lng], Math.max(zoom, 12));
     }
 
-    // Add map click handler
-    if (onMapClick) {
-      map.on('click', (e: L.LeafletMouseEvent) => {
-        onMapClick(e.latlng.lat, e.latlng.lng);
-      });
-    }
+    // Enhanced map click handler with reverse geocoding
+    map.on('click', async (e: L.LeafletMouseEvent) => {
+      const { lat, lng } = e.latlng;
+
+      // Call original click handler
+      if (onMapClick) {
+        onMapClick(lat, lng);
+      }
+
+      // Reverse geocode if enabled
+      if (enableReverseGeocode) {
+        try {
+          const location = await MapService.reverseGeocode({ lat, lng });
+          if (location && onLocationFound) {
+            onLocationFound(location);
+          }
+        } catch (error) {
+          console.error('Reverse geocoding failed:', error);
+        }
+      }
+    });
 
     // Cleanup function
     return () => {
@@ -180,6 +246,75 @@ const Map: React.FC<MapProps> = ({
       markersRef.current = [];
     };
   }, [center[0], center[1], zoom, markers.length, searchLocation?.lat, searchLocation?.lng, searchRadius]); // Optimize dependencies
+
+  // Load nearby locations when enabled
+  useEffect(() => {
+    if (!showNearbyLocations || !searchLocation || !mapInstanceRef.current) return;
+
+    const loadNearbyLocations = async () => {
+      setIsLoadingNearby(true);
+      try {
+        const result = await MapService.searchNearbyLocations({
+          center: searchLocation,
+          radiusKm: nearbyRadius,
+          countries,
+          maxResults: 50,
+          includeDistance: true
+        });
+
+        setNearbyLocations(result.locations);
+
+        // Clear existing nearby markers
+        nearbyMarkersRef.current.forEach(marker => marker.remove());
+        nearbyMarkersRef.current = [];
+
+        // Add nearby location markers
+        result.locations.forEach((location) => {
+          const marker = L.marker([location.coordinates.lat, location.coordinates.lng], {
+            icon: createNearbyLocationIcon(location)
+          }).addTo(mapInstanceRef.current!);
+
+          // Enhanced popup with postal code info
+          const popupContent = `
+            <div class="p-3 min-w-48">
+              <div class="flex items-center space-x-2 mb-2">
+                <span class="text-lg">${MapService.getCountryFlag(location.country)}</span>
+                <h3 class="font-semibold text-gray-900">${location.name}</h3>
+              </div>
+              ${location.postalCode ? `<p class="text-sm text-blue-600 font-medium mb-1">📮 ${location.postalCode}</p>` : ''}
+              ${location.region ? `<p class="text-xs text-gray-600 mb-1">📍 ${location.region}${location.district ? `, ${location.district}` : ''}</p>` : ''}
+              ${location.distance ? `<p class="text-xs text-green-600 font-medium">📏 ${MapService.formatDistance(location.distance)} away</p>` : ''}
+            </div>
+          `;
+          marker.bindPopup(popupContent);
+
+          // Add click handler
+          marker.on('click', () => {
+            if (onLocationFound) {
+              onLocationFound(location);
+            }
+          });
+
+          nearbyMarkersRef.current.push(marker);
+        });
+
+      } catch (error) {
+        console.error('Failed to load nearby locations:', error);
+      } finally {
+        setIsLoadingNearby(false);
+      }
+    };
+
+    loadNearbyLocations();
+  }, [showNearbyLocations, searchLocation?.lat, searchLocation?.lng, nearbyRadius, countries.join(',')]);
+
+  // Cleanup nearby markers
+  useEffect(() => {
+    return () => {
+      nearbyMarkersRef.current.forEach(marker => marker.remove());
+      nearbyMarkersRef.current = [];
+    };
+  }, []);
 
   // Update map view when center changes
   useEffect(() => {
@@ -241,17 +376,52 @@ const Map: React.FC<MapProps> = ({
         </button>
       </div>
 
-      {/* Map Legend */}
-      <div className="absolute bottom-2 left-2 bg-white bg-opacity-90 backdrop-blur-sm rounded-lg p-3 shadow-sm border border-gray-200">
-        <div className="flex items-center space-x-4 text-xs">
-          <div className="flex items-center space-x-1">
-            <div className="w-3 h-3 bg-green-600 rounded-full"></div>
-            <span className="text-gray-700">Main Location</span>
-          </div>
-          {markers.some(m => !m.isMain) && (
+      {/* Enhanced Map Legend */}
+      <div className="absolute bottom-2 left-2 bg-white bg-opacity-95 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-gray-200">
+        <div className="space-y-2">
+          <div className="flex items-center space-x-6 text-xs">
             <div className="flex items-center space-x-1">
-              <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
-              <span className="text-gray-700">Nearby</span>
+              <div className="w-3 h-3 bg-green-600 rounded-full"></div>
+              <span className="text-gray-700">Main Location</span>
+            </div>
+            {markers.some(m => !m.isMain) && (
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                <span className="text-gray-700">Listings</span>
+              </div>
+            )}
+          </div>
+
+          {/* Nearby locations legend */}
+          {showNearbyLocations && nearbyLocations.length > 0 && (
+            <div className="border-t border-gray-200 pt-2">
+              <div className="text-xs text-gray-500 mb-1">Postal Codes:</div>
+              <div className="flex items-center space-x-3 text-xs">
+                <div className="flex items-center space-x-1">
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                  <span className="text-gray-600">🇩🇪</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-gray-600">🇮🇹</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                  <span className="text-gray-600">🇪🇸</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span className="text-gray-600">🇫🇷</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Loading indicator */}
+          {isLoadingNearby && (
+            <div className="flex items-center space-x-2 text-xs text-gray-500">
+              <div className="animate-spin w-3 h-3 border border-gray-300 border-t-blue-500 rounded-full"></div>
+              <span>Loading postal codes...</span>
             </div>
           )}
         </div>

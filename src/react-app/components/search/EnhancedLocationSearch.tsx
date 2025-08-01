@@ -1,35 +1,46 @@
+/**
+ * Enhanced Location Search with Map Integration
+ * Deep integration with postal codes database and MapService
+ */
+
 import React, { useState, useEffect, useRef } from 'react';
+import { MapService, MapLocation } from '../../services/mapService';
 import { GeocodingService } from '../../services/geocodingService';
 import { LocationSearchResult, GeographicCoordinates } from '../../types/location';
 
-interface LocationSearchInputProps {
+interface EnhancedLocationSearchProps {
   placeholder?: string;
   value?: string;
-  onLocationSelect: (location: LocationSearchResult) => void;
+  onLocationSelect: (location: MapLocation) => void;
   onCoordinatesSelect?: (coordinates: GeographicCoordinates) => void;
   showSuggestions?: boolean;
-  includeMinorLocations?: boolean;
   className?: string;
   disabled?: boolean;
-  countries?: string[]; // Support multiple countries
+  countries?: string[];
+  showNearbyCount?: boolean;
+  nearbyRadius?: number;
+  showPostalCodes?: boolean;
 }
 
-const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
-  placeholder = "Enter city, town, or address...",
+const EnhancedLocationSearch: React.FC<EnhancedLocationSearchProps> = ({
+  placeholder = "Search cities, postal codes, or click on map...",
   value = "",
   onLocationSelect,
   onCoordinatesSelect,
   showSuggestions = true,
-  // includeMinorLocations = true,
   className = "",
   disabled = false,
-  countries = ['DE', 'IT', 'ES', 'FR'] // Default to our supported countries
+  countries = ['DE', 'IT', 'ES', 'FR'],
+  showNearbyCount = true,
+  nearbyRadius = 25,
+  showPostalCodes = true
 }) => {
   const [inputValue, setInputValue] = useState(value);
   const [suggestions, setSuggestions] = useState<LocationSearchResult[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [isLoading, setIsLoading] = useState(false);
+  const [, setNearbyCount] = useState<number>(0);
   
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -39,37 +50,66 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
     setInputValue(value);
   }, [value]);
 
-  // Handle input changes and search for suggestions
+  // Enhanced search with postal codes and nearby count
   useEffect(() => {
     const searchSuggestions = async () => {
       if (!inputValue.trim() || inputValue.length < 2) {
         setSuggestions([]);
         setShowDropdown(false);
+        setNearbyCount(0);
         return;
       }
 
       setIsLoading(true);
       try {
-        // Search across all supported countries
-        const allResults: LocationSearchResult[] = [];
-
+        // Search across all supported countries with enhanced results
+        const allResults: (LocationSearchResult & { nearbyCount?: number })[] = [];
+        
         for (const country of countries) {
           const results = await GeocodingService.searchLocations(inputValue, 3, country);
-          allResults.push(...results);
+          
+          // For each result, get nearby count if enabled
+          for (const result of results) {
+            let enhancedResult = { ...result };
+            
+            if (showNearbyCount && result.coordinates) {
+              try {
+                const nearbyResult = await MapService.searchNearbyLocations({
+                  center: result.coordinates,
+                  radiusKm: nearbyRadius,
+                  countries,
+                  maxResults: 100,
+                  includeDistance: false
+                });
+                (enhancedResult as any).nearbyCount = nearbyResult.totalFound;
+              } catch (error) {
+                console.warn('Failed to get nearby count:', error);
+              }
+            }
+            
+            allResults.push(enhancedResult);
+          }
         }
-
+        
         // Sort by relevance score and limit results
         const sortedResults = allResults
           .sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0))
           .slice(0, 8);
-
+        
         setSuggestions(sortedResults);
         setShowDropdown(sortedResults.length > 0 && showSuggestions);
         setSelectedIndex(-1);
+        
+        // Set nearby count for the first result
+        if (sortedResults.length > 0 && sortedResults[0].nearbyCount) {
+          setNearbyCount(sortedResults[0].nearbyCount);
+        }
+        
       } catch (error) {
         console.error('Error searching locations:', error);
         setSuggestions([]);
         setShowDropdown(false);
+        setNearbyCount(0);
       } finally {
         setIsLoading(false);
       }
@@ -77,99 +117,81 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
 
     const debounceTimer = setTimeout(searchSuggestions, 300);
     return () => clearTimeout(debounceTimer);
-  }, [inputValue, showSuggestions]);
+  }, [inputValue, showSuggestions, countries.join(','), nearbyRadius, showNearbyCount]);
 
-  // Handle keyboard navigation
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!showDropdown || suggestions.length === 0) return;
-
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setSelectedIndex(prev => 
-          prev < suggestions.length - 1 ? prev + 1 : 0
-        );
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setSelectedIndex(prev => 
-          prev > 0 ? prev - 1 : suggestions.length - 1
-        );
-        break;
-      case 'Enter':
-        e.preventDefault();
-        if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
-          handleSuggestionSelect(suggestions[selectedIndex]);
-        }
-        break;
-      case 'Escape':
-        setShowDropdown(false);
-        setSelectedIndex(-1);
-        inputRef.current?.blur();
-        break;
-    }
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value);
   };
 
-  // Handle suggestion selection
-  const handleSuggestionSelect = (suggestion: LocationSearchResult) => {
+  const handleSuggestionSelect = async (suggestion: LocationSearchResult) => {
     setInputValue(suggestion.displayName);
     setShowDropdown(false);
-    setSelectedIndex(-1);
-    onLocationSelect(suggestion);
+    
+    // Convert to MapLocation format
+    const mapLocation: MapLocation = {
+      id: `search-${suggestion.name}`,
+      name: suggestion.name,
+      coordinates: suggestion.coordinates,
+      country: suggestion.hierarchy.countryCode,
+      region: suggestion.hierarchy.region,
+      district: suggestion.hierarchy.district,
+      type: 'search',
+      relevanceScore: suggestion.relevanceScore
+    };
+    
+    onLocationSelect(mapLocation);
     
     if (onCoordinatesSelect) {
       onCoordinatesSelect(suggestion.coordinates);
     }
   };
 
-  // Handle input change
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value);
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showDropdown || suggestions.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedIndex(prev => (prev + 1) % suggestions.length);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedIndex(prev => prev <= 0 ? suggestions.length - 1 : prev - 1);
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (selectedIndex >= 0) {
+          handleSuggestionSelect(suggestions[selectedIndex]);
+        }
+        break;
+      case 'Escape':
+        setShowDropdown(false);
+        setSelectedIndex(-1);
+        break;
+    }
   };
 
-  // Handle input focus
   const handleInputFocus = () => {
     if (suggestions.length > 0) {
       setShowDropdown(true);
     }
   };
 
-  // Handle click outside to close dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current && 
-        !dropdownRef.current.contains(event.target as Node) &&
-        !inputRef.current?.contains(event.target as Node)
-      ) {
-        setShowDropdown(false);
-        setSelectedIndex(-1);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   // Get location type icon
-  const getLocationTypeIcon = (locationType: string) => {
-    switch (locationType) {
-      case 'city':
-        return '🏙️';
-      case 'town':
-        return '🏘️';
-      case 'village':
-        return '🏡';
-      case 'region':
-        return '🗺️';
-      default:
-        return '📍';
-    }
+  const getLocationIcon = (location: LocationSearchResult) => {
+    const countryFlags: Record<string, string> = {
+      'DE': '🇩🇪',
+      'IT': '🇮🇹', 
+      'ES': '🇪🇸',
+      'FR': '🇫🇷'
+    };
+    
+    return countryFlags[location.hierarchy.countryCode] || '🌍';
   };
 
   return (
     <div className={`relative ${className}`}>
-      {/* Search Input */}
+      {/* Enhanced Search Input */}
       <div className="relative">
         <input
           ref={inputRef}
@@ -186,20 +208,20 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
         {/* Search Icon */}
         <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
           {isLoading ? (
-            <div className="animate-spin w-5 h-5 border-2 border-green-500 border-t-transparent rounded-full"></div>
+            <div className="animate-spin w-5 h-5 border-2 border-gray-300 border-t-green-500 rounded-full"></div>
           ) : (
             <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 12.414a6 6 0 111.414-1.414l4.243 4.243a1 1 0 01-1.414 1.414z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           )}
         </div>
       </div>
 
-      {/* Suggestions Dropdown */}
+      {/* Enhanced Suggestions Dropdown */}
       {showDropdown && suggestions.length > 0 && (
         <div
           ref={dropdownRef}
-          className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto"
+          className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-80 overflow-y-auto"
         >
           {suggestions.map((suggestion, index) => (
             <div
@@ -211,33 +233,29 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
               } ${index === suggestions.length - 1 ? '' : 'border-b border-gray-100'}`}
               onClick={() => handleSuggestionSelect(suggestion)}
             >
-              <div className="flex items-center space-x-3">
-                {/* Location Type Icon */}
-                <span className="text-lg">
-                  {getLocationTypeIcon(suggestion.hierarchy.locationType)}
-                </span>
-                
-                {/* Location Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-gray-900 truncate">
-                    {suggestion.name}
-                  </div>
-                  <div className="text-sm text-gray-500 truncate">
-                    {suggestion.displayName}
-                  </div>
-                  {suggestion.hierarchy.population && (
-                    <div className="text-xs text-gray-400">
-                      {suggestion.hierarchy.population.toLocaleString()} inhabitants
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  {/* Country Flag */}
+                  <span className="text-lg">{getLocationIcon(suggestion)}</span>
+                  
+                  <div>
+                    <div className="font-medium text-gray-900">{suggestion.name}</div>
+                    <div className="text-sm text-gray-600">
+                      {suggestion.hierarchy.region}
+                      {suggestion.hierarchy.district && `, ${suggestion.hierarchy.district}`}
                     </div>
-                  )}
+                    {showPostalCodes && (suggestion as any).postalCode && (
+                      <div className="text-xs text-blue-600 font-medium">
+                        📮 {(suggestion as any).postalCode}
+                      </div>
+                    )}
+                  </div>
                 </div>
-
-                {/* Relevance Indicator */}
-                {suggestion.relevanceScore && suggestion.relevanceScore > 0.9 && (
-                  <div className="flex-shrink-0">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Exact match
-                    </span>
+                
+                {/* Nearby Count */}
+                {showNearbyCount && (suggestion as any).nearbyCount && (
+                  <div className="text-xs text-green-600 font-medium">
+                    {(suggestion as any).nearbyCount} nearby
                   </div>
                 )}
               </div>
@@ -266,4 +284,4 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
   );
 };
 
-export default LocationSearchInput;
+export default EnhancedLocationSearch;

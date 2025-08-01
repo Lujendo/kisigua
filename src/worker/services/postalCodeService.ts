@@ -192,17 +192,23 @@ export class PostalCodeService {
     country: string,
     limit: number
   ): Promise<LocationSearchResult[]> {
-    const stmt = this.db.prepare(`
-      SELECT pc.* FROM postal_codes pc
-      JOIN postal_codes_fts fts ON pc.id = fts.rowid
-      WHERE pc.country_code = ? AND postal_codes_fts MATCH ?
-      ORDER BY rank
-      LIMIT ?
-    `);
+    try {
+      const stmt = this.db.prepare(`
+        SELECT pc.* FROM postal_codes pc
+        JOIN postal_codes_fts fts ON pc.id = fts.rowid
+        WHERE pc.country_code = ? AND postal_codes_fts MATCH ?
+        ORDER BY bm25(postal_codes_fts)
+        LIMIT ?
+      `);
 
-    const result = await stmt.bind(country, query, limit).all();
-    
-    return result.results?.map(record => this.transformRecord(record as unknown as PostalCodeRecord, 0.6)) || [];
+      const result = await stmt.bind(country, `"${query}"*`, limit).all();
+
+      return result.results?.map(record => this.transformRecord(record as unknown as PostalCodeRecord, 0.6)) || [];
+    } catch (error) {
+      console.error('FTS search error:', error);
+      // Fallback to simple LIKE search
+      return this.searchByPlaceName(query, country, limit, false);
+    }
   }
 
   /**

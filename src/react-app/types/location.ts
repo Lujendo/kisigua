@@ -55,7 +55,7 @@ export interface StaticLocationEntry {
 export interface GeocodingResult {
   coordinates: GeographicCoordinates;
   hierarchy: LocationHierarchy;
-  source: 'static' | 'nominatim' | 'cache';
+  source: 'static' | 'nominatim' | 'cache' | 'database';
   confidence: number; // 0-1 score
 }
 

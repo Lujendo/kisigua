@@ -112,11 +112,7 @@ const SearchHistory: React.FC<SearchHistoryProps> = ({
     return date.toLocaleDateString();
   };
 
-  // Expose methods for parent component
-  React.useImperativeHandle(React.forwardRef(() => null), () => ({
-    addToHistory,
-    saveSearch
-  }));
+  // Note: Methods can be accessed via props instead of imperative handle
 
   return (
     <div className={`bg-white rounded-lg shadow-sm border border-gray-200 ${className}`}>

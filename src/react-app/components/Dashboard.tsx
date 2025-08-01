@@ -907,15 +907,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
             />
           )}
 
-          {/* Compact Search Card */}
-          <CompactSearchCard
-            onListingClick={(listing) => {
-              // Handle listing click - could open detail view or navigate
-              console.log('Listing clicked:', listing);
-              // You can add navigation logic here
-            }}
-            className="mb-6"
-          />
+
 
           {/* Quick Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

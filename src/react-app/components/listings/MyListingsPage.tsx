@@ -1176,7 +1176,7 @@ const MyListingsPage: React.FC = () => {
                               longitude: locationData.longitude
                             });
                           }}
-                          countries={['DE', 'IT', 'ES', 'FR']}
+
                           required={true}
                           className="w-full"
                         />

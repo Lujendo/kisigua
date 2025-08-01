@@ -6,7 +6,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { LocationSearchResult } from '../../types/location';
 import { MapService } from '../../services/mapService';
-import { PostalCodeLookupService, PostalCodeLookupResult, CityLookupResult, RegionLookupResult } from '../../services/postalCodeLookupService';
+import { PostalCodeLookupService } from '../../services/postalCodeLookupService';
 
 interface LocationData {
   street?: string;
@@ -22,7 +22,6 @@ interface LocationData {
 interface LocationInputWithPostalCodeProps {
   value: LocationData;
   onChange: (location: LocationData) => void;
-  countries?: string[];
   required?: boolean;
   className?: string;
 }
@@ -30,7 +29,6 @@ interface LocationInputWithPostalCodeProps {
 const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = ({
   value,
   onChange,
-  countries = ['DE', 'IT', 'ES', 'FR'],
   required = false,
   className = ""
 }) => {
@@ -44,223 +42,199 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
   const [showPostalSuggestions, setShowPostalSuggestions] = useState(false);
   const [isLoadingPostal, setIsLoadingPostal] = useState(false);
 
-  // Enhanced lookup states
-  const [postalLookupResults, setPostalLookupResults] = useState<PostalCodeLookupResult[]>([]);
-  const [cityLookupResults, setCityLookupResults] = useState<CityLookupResult[]>([]);
-  const [regionLookupResults, setRegionLookupResults] = useState<RegionLookupResult[]>([]);
-  const [showLookupSuggestions, setShowLookupSuggestions] = useState(false);
-  const [lookupType, setLookupType] = useState<'postal' | 'city' | 'region' | null>(null);
-
   // Region input state
   const [regionQuery, setRegionQuery] = useState(value.region || '');
-  const [isLoadingRegions, setIsLoadingRegions] = useState(false);
 
-  // Postal code selection state - simplified (no modal needed)
-  // Postal codes now show directly in the postal code field dropdown
+  // REMOVED: Multiple lookup systems - now using unified approach
+  // REMOVED: Enhanced lookup states, separate modal systems, etc.
   
   const cityInputRef = useRef<HTMLInputElement>(null);
   const postalInputRef = useRef<HTMLInputElement>(null);
 
-  // Enhanced postal code lookup
-  const performPostalLookup = useCallback(async (postalCode: string) => {
-    if (!postalCode || postalCode.length < 2) {
-      setPostalLookupResults([]);
-      setCityLookupResults([]);
-      setShowLookupSuggestions(false);
-      return;
-    }
-
-    setIsLoadingPostal(true);
-    try {
-      const countryCode = PostalCodeLookupService.getCountryCode(value.country);
-
-      // Check if input looks like a postal code (numbers) or city name (letters)
-      const isNumeric = /^\d+/.test(postalCode);
-
-      if (isNumeric) {
-        // Search by postal code
-        const results = await PostalCodeLookupService.lookupByPostalCode(postalCode, countryCode);
-        setPostalLookupResults(results);
-        setCityLookupResults([]);
-        setLookupType('postal');
-        setShowLookupSuggestions(results.length > 0);
-      } else {
-        // Search by city name in postal code field
-        const results = await PostalCodeLookupService.lookupByCity(postalCode, countryCode);
-        setCityLookupResults(results);
-        setPostalLookupResults([]);
-        setLookupType('city');
-        setShowLookupSuggestions(results.length > 0);
-      }
-    } catch (error) {
-      console.error('Postal lookup error:', error);
-      setPostalLookupResults([]);
-      setCityLookupResults([]);
-    } finally {
-      setIsLoadingPostal(false);
-    }
-  }, [value.country]);
-
-  // Enhanced city lookup
-  const performCityLookup = useCallback(async (cityName: string) => {
-    if (!cityName || cityName.length < 2) {
-      setCityLookupResults([]);
-      setShowLookupSuggestions(false);
-      return;
-    }
-
-    setIsLoadingCities(true);
-    try {
-      const countryCode = PostalCodeLookupService.getCountryCode(value.country);
-      const results = await PostalCodeLookupService.lookupByCity(cityName, countryCode);
-      setCityLookupResults(results);
-      setLookupType('city');
-      setShowLookupSuggestions(results.length > 0);
-    } catch (error) {
-      console.error('City lookup error:', error);
-      setCityLookupResults([]);
-    } finally {
-      setIsLoadingCities(false);
-    }
-  }, [value.country]);
-
-  // Enhanced region lookup
-  const performRegionLookup = useCallback(async (regionName: string) => {
-    if (!regionName || regionName.length < 2) {
-      setRegionLookupResults([]);
-      setShowLookupSuggestions(false);
-      return;
-    }
-
-    setIsLoadingRegions(true);
-    try {
-      const countryCode = PostalCodeLookupService.getCountryCode(value.country);
-      const results = await PostalCodeLookupService.lookupByRegion(regionName, countryCode);
-      setRegionLookupResults(results);
-      setLookupType('region');
-      setShowLookupSuggestions(results.length > 0);
-    } catch (error) {
-      console.error('Region lookup error:', error);
-      setRegionLookupResults([]);
-    } finally {
-      setIsLoadingRegions(false);
-    }
-  }, [value.country]);
-
-  // Debounced city search
-  const searchCities = useCallback(async (query: string) => {
+  // UNIFIED LOOKUP SYSTEM - respects country selection
+  const performUnifiedLookup = useCallback(async (query: string, type: 'city' | 'postal') => {
     if (!query || query.length < 2) {
-      setCitySuggestions([]);
-      setShowCitySuggestions(false);
+      if (type === 'city') {
+        setCitySuggestions([]);
+        setShowCitySuggestions(false);
+      } else {
+        setPostalSuggestions([]);
+        setShowPostalSuggestions(false);
+      }
       return;
     }
 
-    setIsLoadingCities(true);
+    // COUNTRY MUST BE SELECTED FIRST
+    if (!value.country) {
+      console.warn('⚠️ Country must be selected before performing location lookup');
+      return;
+    }
+
+    const isLoading = type === 'city' ? setIsLoadingCities : setIsLoadingPostal;
+    isLoading(true);
+
     try {
-      const response = await fetch(
-        `/api/locations/search-multi?q=${encodeURIComponent(query)}&countries=${countries.join(',')}&limit=8`
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        const suggestions: LocationSearchResult[] = data.results.map((result: any) => ({
-          name: result.name,
+      const countryCode = PostalCodeLookupService.getCountryCode(value.country);
+      console.log(`🔍 Performing ${type} lookup for "${query}" in country: ${value.country} (${countryCode})`);
+
+      if (type === 'city') {
+        // City lookup - returns cities with postal code information
+        const results = await PostalCodeLookupService.lookupByCity(query, countryCode);
+
+        // Convert to city suggestions format
+        const citySuggestions = results.map(result => ({
+          name: result.city,
           displayName: result.displayName,
           coordinates: result.coordinates,
           hierarchy: {
-            country: result.country,
-            countryCode: result.country,
+            country: value.country, // Use selected country
+            countryCode: countryCode,
             region: result.region,
-            district: result.district,
-            city: result.name,
-            postalCode: result.postalCode,
+            district: '',
+            city: result.city,
+            postalCode: result.postalCodes[0],
             coordinates: result.coordinates,
-            population: 0,
-            locationType: 'city'
+            locationType: 'city' as const
           },
-          relevanceScore: result.relevanceScore
+          enhancedData: {
+            postalCodes: result.postalCodes,
+            confidence: result.confidence,
+            displayName: result.displayName
+          }
         }));
-        
-        setCitySuggestions(suggestions);
-        setShowCitySuggestions(suggestions.length > 0);
+
+        setCitySuggestions(citySuggestions);
+        setShowCitySuggestions(citySuggestions.length > 0);
+
+      } else {
+        // Postal code lookup
+        const isNumeric = /^\d+/.test(query);
+
+        if (isNumeric) {
+          // Numeric postal code lookup
+          const results = await PostalCodeLookupService.lookupByPostalCode(query, countryCode);
+
+          const postalSuggestions = results.map(result => ({
+            name: result.city,
+            displayName: `${result.postalCode} ${result.city}, ${result.region}`,
+            coordinates: result.coordinates,
+            hierarchy: {
+              country: value.country, // Use selected country
+              countryCode: countryCode,
+              region: result.region,
+              district: '',
+              city: result.city,
+              postalCode: result.postalCode,
+              coordinates: result.coordinates,
+              locationType: 'city' as const
+            }
+          }));
+
+          setPostalSuggestions(postalSuggestions);
+          setShowPostalSuggestions(postalSuggestions.length > 0);
+        } else {
+          // Text-based city lookup for postal field
+          const results = await PostalCodeLookupService.lookupByCity(query, countryCode);
+
+          const postalSuggestions = results.flatMap(result =>
+            result.postalCodes.map(postalCode => ({
+              name: result.city,
+              displayName: `${postalCode} ${result.city}, ${result.region}`,
+              coordinates: result.coordinates,
+              hierarchy: {
+                country: value.country, // Use selected country
+                countryCode: countryCode,
+                region: result.region,
+                district: '',
+                city: result.city,
+                postalCode: postalCode,
+                coordinates: result.coordinates,
+                locationType: 'city' as const
+              }
+            }))
+          );
+
+          setPostalSuggestions(postalSuggestions);
+          setShowPostalSuggestions(postalSuggestions.length > 0);
+        }
       }
     } catch (error) {
-      console.error('City search error:', error);
+      console.error(`❌ ${type} lookup error:`, error);
     } finally {
-      setIsLoadingCities(false);
+      isLoading(false);
     }
-  }, [countries]);
+  }, [value.country]);
 
-  // Debounced postal code search
-  const searchPostalCodes = useCallback(async (query: string) => {
-    if (!query || query.length < 2) {
-      setPostalSuggestions([]);
-      setShowPostalSuggestions(false);
-      return;
-    }
+  // OLD LOOKUP FUNCTIONS REMOVED - using unified system
 
-    setIsLoadingPostal(true);
-    try {
-      const response = await fetch(
-        `/api/locations/search-multi?q=${encodeURIComponent(query)}&countries=${countries.join(',')}&limit=8`
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        // Filter for postal code matches
-        const postalMatches = data.results.filter((result: any) => 
-          result.postalCode && result.postalCode.toLowerCase().includes(query.toLowerCase())
-        );
-        
-        const suggestions: LocationSearchResult[] = postalMatches.map((result: any) => ({
-          name: result.name,
-          displayName: `${result.postalCode} ${result.name}, ${result.region}`,
-          coordinates: result.coordinates,
-          hierarchy: {
-            country: result.country,
-            countryCode: result.country,
-            region: result.region,
-            district: result.district,
-            city: result.name,
-            postalCode: result.postalCode,
-            coordinates: result.coordinates,
-            population: 0,
-            locationType: 'city'
-          },
-          relevanceScore: result.relevanceScore
-        }));
-        
-        setPostalSuggestions(suggestions);
-        setShowPostalSuggestions(suggestions.length > 0);
-      }
-    } catch (error) {
-      console.error('Postal code search error:', error);
-    } finally {
-      setIsLoadingPostal(false);
-    }
-  }, [countries]);
+  // OLD SEARCH FUNCTIONS REMOVED - using unified lookup system
 
-  // Handle city selection
+  // ALL OLD SEARCH FUNCTIONS REMOVED - using unified lookup system
+
+  // Handle city selection - now works with enhanced data
   const handleCitySelect = (suggestion: LocationSearchResult) => {
+    const enhancedData = (suggestion as any).enhancedData;
+
     setCityQuery(suggestion.name);
     setShowCitySuggestions(false);
-    
-    // Auto-fill location data
-    const newLocation: LocationData = {
-      ...value,
-      city: suggestion.name,
-      region: suggestion.hierarchy.region,
-      country: suggestion.hierarchy.country,
-      postalCode: suggestion.hierarchy.postalCode || value.postalCode,
-      latitude: suggestion.coordinates.lat,
-      longitude: suggestion.coordinates.lng
-    };
-    
-    onChange(newLocation);
-    
-    // Update postal code input if available
-    if (suggestion.hierarchy.postalCode) {
-      setPostalQuery(suggestion.hierarchy.postalCode);
+
+    // If city has multiple postal codes, show them in postal code field
+    if (enhancedData?.postalCodes?.length > 1) {
+      console.log(`🏙️ City ${suggestion.name} has ${enhancedData.postalCodes.length} postal codes, showing in postal code field`);
+
+      // Create postal code suggestions for the postal code field
+      const postalCodeSuggestions = enhancedData.postalCodes.map((postalCode: string) => ({
+        name: suggestion.name,
+        displayName: `${postalCode} ${suggestion.name}, ${suggestion.hierarchy.region}`,
+        coordinates: suggestion.coordinates,
+        hierarchy: {
+          country: suggestion.hierarchy.country,
+          countryCode: suggestion.hierarchy.countryCode,
+          region: suggestion.hierarchy.region,
+          district: '',
+          city: suggestion.name,
+          postalCode: postalCode,
+          coordinates: suggestion.coordinates,
+          locationType: 'city' as const
+        }
+      }));
+
+      // Show postal code suggestions
+      setPostalSuggestions(postalCodeSuggestions);
+      setShowPostalSuggestions(true);
+
+      // Focus postal code field to show suggestions
+      if (postalInputRef.current) {
+        postalInputRef.current.focus();
+      }
+
+      // Update location without postal code for now
+      const newLocation: LocationData = {
+        ...value,
+        city: suggestion.name,
+        region: suggestion.hierarchy.region,
+        country: suggestion.hierarchy.country,
+        latitude: suggestion.coordinates.lat,
+        longitude: suggestion.coordinates.lng
+      };
+      onChange(newLocation);
+    } else {
+      // Single postal code, auto-fill everything
+      const postalCode = enhancedData?.postalCodes?.[0] || suggestion.hierarchy.postalCode;
+      if (postalCode) {
+        setPostalQuery(postalCode);
+      }
+
+      const newLocation: LocationData = {
+        ...value,
+        city: suggestion.name,
+        region: suggestion.hierarchy.region,
+        country: suggestion.hierarchy.country,
+        postalCode: postalCode,
+        latitude: suggestion.coordinates.lat,
+        longitude: suggestion.coordinates.lng
+      };
+      onChange(newLocation);
     }
   };
 
@@ -287,110 +261,27 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
     onChange(newLocation);
   };
 
-  // Handle enhanced postal code lookup selection
-  const handleEnhancedPostalSelect = (result: PostalCodeLookupResult) => {
-    setPostalQuery(result.postalCode);
-    setCityQuery(result.city);
-    setRegionQuery(result.region);
-    setShowLookupSuggestions(false);
+  // OLD HANDLER FUNCTIONS REMOVED - using unified system
 
-    const newLocation: LocationData = {
-      ...value,
-      city: result.city,
-      region: result.region,
-      country: result.country,
-      postalCode: result.postalCode,
-      latitude: result.coordinates.lat,
-      longitude: result.coordinates.lng
-    };
-
-    onChange(newLocation);
-  };
-
-  // Handle enhanced city lookup selection
-  const handleEnhancedCitySelect = (result: CityLookupResult) => {
-    setCityQuery(result.city);
-    setRegionQuery(result.region);
-    setShowLookupSuggestions(false);
-
-    // If multiple postal codes, show them in the postal code field
-    if (result.postalCodes.length > 1) {
-      console.log(`🏙️ City ${result.city} has ${result.postalCodes.length} postal codes, showing in postal code field`);
-
-      // Create postal code suggestions for the postal code field
-      const postalCodeSuggestions = result.postalCodes.map(postalCode => ({
-        name: result.city,
-        displayName: `${postalCode} ${result.city}, ${result.region}`,
-        coordinates: result.coordinates,
-        hierarchy: {
-          country: result.country,
-          countryCode: result.country === 'Germany' ? 'DE' : result.country === 'Italy' ? 'IT' : 'DE',
-          region: result.region,
-          district: '',
-          city: result.city,
-          postalCode: postalCode,
-          coordinates: result.coordinates,
-          locationType: 'city' as const
-        }
-      }));
-
-      // Show postal code suggestions
-      setPostalSuggestions(postalCodeSuggestions);
-      setShowPostalSuggestions(true);
-
-      // Focus postal code field to show suggestions
-      if (postalInputRef.current) {
-        postalInputRef.current.focus();
-      }
-
-      // Update location without postal code for now
-      const newLocation: LocationData = {
-        ...value,
-        city: result.city,
-        region: result.region,
-        country: result.country,
-        latitude: result.coordinates.lat,
-        longitude: result.coordinates.lng
-      };
-      onChange(newLocation);
-    } else {
-      // If only one postal code, auto-fill it
-      setPostalQuery(result.postalCodes[0]);
-
-      const newLocation: LocationData = {
-        ...value,
-        city: result.city,
-        region: result.region,
-        country: result.country,
-        postalCode: result.postalCodes[0],
-        latitude: result.coordinates.lat,
-        longitude: result.coordinates.lng
-      };
-      onChange(newLocation);
-    }
-  };
-
-  // Handle enhanced region lookup selection
-  const handleEnhancedRegionSelect = (result: RegionLookupResult) => {
-    setRegionQuery(result.region);
-    setShowLookupSuggestions(false);
-
-    const newLocation: LocationData = {
-      ...value,
-      region: result.region,
-      country: result.country,
-      latitude: result.coordinates.lat,
-      longitude: result.coordinates.lng
-    };
-
-    onChange(newLocation);
-  };
+  // ALL OLD HANDLER FUNCTIONS REMOVED - using unified system
 
   // Modal-related functions removed - postal codes now show in dropdown
 
-  // Handle manual input changes
+  // Handle manual input changes - COUNTRY IS NEVER OVERRIDDEN
   const handleInputChange = (field: keyof LocationData, inputValue: string) => {
-    const newLocation = { ...value, [field]: inputValue };
+    // Preserve country selection - never allow it to be overridden
+    const currentCountry = value.country;
+
+    const newLocation = {
+      ...value,
+      [field]: inputValue
+    };
+
+    // Ensure country is never overridden by other field inputs
+    if (field !== 'country' && currentCountry) {
+      newLocation.country = currentCountry;
+    }
+
     onChange(newLocation);
   };
 
@@ -405,13 +296,13 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
           value={value.country || ''}
           onChange={(e) => {
             handleInputChange('country', e.target.value);
-            // Clear location data when country changes
+            // Clear location data when country changes - COUNTRY IS PRIMARY RULE
             setCityQuery('');
             setPostalQuery('');
             setRegionQuery('');
-            setShowLookupSuggestions(false);
             setShowCitySuggestions(false);
             setShowPostalSuggestions(false);
+            console.log('🌍 Country changed to:', e.target.value, '- All location data cleared');
           }}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
           required={required}
@@ -475,8 +366,7 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
             onChange={(e) => {
               setCityQuery(e.target.value);
               handleInputChange('city', e.target.value);
-              searchCities(e.target.value);
-              performCityLookup(e.target.value);
+              performUnifiedLookup(e.target.value, 'city');
             }}
             onFocus={() => citySuggestions.length > 0 && setShowCitySuggestions(true)}
             placeholder="Enter city name..."
@@ -491,24 +381,58 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
             </div>
           )}
           
-          {/* City Suggestions */}
+          {/* Enhanced City Suggestions */}
           {showCitySuggestions && citySuggestions.length > 0 && (
-            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-              {citySuggestions.map((suggestion, index) => (
-                <div
-                  key={`${suggestion.name}-${index}`}
-                  className="px-3 py-2 cursor-pointer hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-                  onClick={() => handleCitySelect(suggestion)}
-                >
-                  <div className="flex items-center space-x-2">
-                    <span>{MapService.getCountryFlag(suggestion.hierarchy.countryCode)}</span>
-                    <div>
-                      <div className="font-medium text-gray-900">{suggestion.name}</div>
-                      <div className="text-sm text-gray-600">{suggestion.hierarchy.region}</div>
+            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+              {citySuggestions.map((suggestion, index) => {
+                const enhancedData = (suggestion as any).enhancedData;
+                const hasMultiplePostalCodes = enhancedData?.postalCodes?.length > 1;
+
+                return (
+                  <div
+                    key={`${suggestion.name}-${index}`}
+                    className="px-3 py-3 cursor-pointer hover:bg-gray-50 border-b border-gray-100 last:border-b-0 transition-colors"
+                    onClick={() => handleCitySelect(suggestion)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2 flex-1">
+                        <span>{MapService.getCountryFlag(suggestion.hierarchy.countryCode)}</span>
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2">
+                            <div className="font-medium text-gray-900">{suggestion.name}</div>
+                            {hasMultiplePostalCodes && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {enhancedData.postalCodes.length} codes
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-600">{suggestion.hierarchy.region}</div>
+                          {enhancedData && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              {hasMultiplePostalCodes ? (
+                                <>
+                                  Postal codes: {enhancedData.postalCodes.slice(0, 3).join(', ')}
+                                  {enhancedData.postalCodes.length > 3 && ` +${enhancedData.postalCodes.length - 3} more`}
+                                  <span className="ml-2 text-blue-600 font-medium">
+                                    → Click to see postal codes
+                                  </span>
+                                </>
+                              ) : (
+                                `Postal code: ${enhancedData.postalCodes[0]}`
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {enhancedData?.confidence && (
+                        <div className="text-xs text-green-600 ml-2">
+                          {(enhancedData.confidence * 100).toFixed(0)}% match
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -525,8 +449,7 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
             onChange={(e) => {
               setPostalQuery(e.target.value);
               handleInputChange('postalCode', e.target.value);
-              searchPostalCodes(e.target.value);
-              performPostalLookup(e.target.value);
+              performUnifiedLookup(e.target.value, 'postal');
             }}
             onFocus={() => postalSuggestions.length > 0 && setShowPostalSuggestions(true)}
             placeholder="e.g., 72654 or Berlin"
@@ -580,19 +503,12 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
             onChange={(e) => {
               setRegionQuery(e.target.value);
               handleInputChange('region', e.target.value);
-              performRegionLookup(e.target.value);
             }}
-            onFocus={() => regionLookupResults.length > 0 && setShowLookupSuggestions(true)}
             placeholder="e.g., Baden-Württemberg, Lombardy"
             className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
           />
 
-          {/* Loading indicator */}
-          {isLoadingRegions && (
-            <div className="absolute right-3 top-9">
-              <div className="animate-spin w-4 h-4 border-2 border-gray-300 border-t-green-500 rounded-full"></div>
-            </div>
-          )}
+          {/* Region loading removed - simplified input */}
         </div>
       </div>
 
@@ -615,116 +531,8 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
         </div>
       )}
 
-      {/* Enhanced Lookup Suggestions */}
-      {showLookupSuggestions && (
-        <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-4 mt-4">
-          <div className="text-sm font-medium text-gray-700 mb-3">
-            {lookupType === 'postal' && 'Postal Code Suggestions'}
-            {lookupType === 'city' && 'City Suggestions'}
-            {lookupType === 'region' && 'Region Suggestions'}
-          </div>
-
-          {/* Postal Code Results */}
-          {lookupType === 'postal' && postalLookupResults.length > 0 && (
-            <div className="space-y-2">
-              {postalLookupResults.slice(0, 5).map((result, index) => (
-                <div
-                  key={`postal-${result.postalCode}-${index}`}
-                  className="flex items-center justify-between p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors"
-                  onClick={() => handleEnhancedPostalSelect(result)}
-                >
-                  <div className="flex-1">
-                    <div className="font-medium text-blue-900">{result.postalCode}</div>
-                    <div className="text-sm text-blue-700">{result.displayName}</div>
-                  </div>
-                  <div className="text-xs text-blue-600">
-                    {(result.confidence * 100).toFixed(0)}% match
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* City Results */}
-          {lookupType === 'city' && cityLookupResults.length > 0 && (
-            <div className="space-y-2">
-              {cityLookupResults.slice(0, 5).map((result, index) => (
-                <div
-                  key={`city-${result.city}-${index}`}
-                  className="flex items-center justify-between p-3 bg-green-50 rounded-lg cursor-pointer hover:bg-green-100 transition-colors"
-                  onClick={() => handleEnhancedCitySelect(result)}
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <div className="font-medium text-green-900">{result.city}</div>
-                      {result.postalCodes.length > 1 && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {result.postalCodes.length} codes
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-sm text-green-700">{result.displayName}</div>
-                    <div className="text-xs text-green-600 mt-1">
-                      {result.postalCodes.length === 1 ? (
-                        `Postal code: ${result.postalCodes[0]}`
-                      ) : (
-                        <>
-                          Postal codes: {result.postalCodes.slice(0, 3).join(', ')}
-                          {result.postalCodes.length > 3 && ` +${result.postalCodes.length - 3} more`}
-                          <span className="ml-2 text-blue-600 font-medium">
-                            → Click to see postal codes
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end">
-                    <div className="text-xs text-green-600">
-                      {(result.confidence * 100).toFixed(0)}% match
-                    </div>
-                    {result.postalCodes.length > 1 && (
-                      <div className="text-xs text-blue-600 mt-1">
-                        Multiple options
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Region Results */}
-          {lookupType === 'region' && regionLookupResults.length > 0 && (
-            <div className="space-y-2">
-              {regionLookupResults.slice(0, 3).map((result, index) => (
-                <div
-                  key={`region-${result.region}-${index}`}
-                  className="flex items-center justify-between p-3 bg-purple-50 rounded-lg cursor-pointer hover:bg-purple-100 transition-colors"
-                  onClick={() => handleEnhancedRegionSelect(result)}
-                >
-                  <div className="flex-1">
-                    <div className="font-medium text-purple-900">{result.region}</div>
-                    <div className="text-sm text-purple-700">{result.country}</div>
-                    <div className="text-xs text-purple-600 mt-1">
-                      {result.cities.length} cities • {result.postalCodeRanges.join(', ')}
-                    </div>
-                  </div>
-                  <div className="text-xs text-purple-600">
-                    {(result.confidence * 100).toFixed(0)}% match
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <button
-            onClick={() => setShowLookupSuggestions(false)}
-            className="mt-3 text-xs text-gray-500 hover:text-gray-700"
-          >
-            Close suggestions
-          </button>
-        </div>
-      )}
+      {/* Enhanced Lookup Suggestions Panel - REMOVED
+          City suggestions now appear directly in the City field dropdown */}
 
       {/* Postal Code Selection Modal - REMOVED
           Postal codes now show directly in the postal code field dropdown */}

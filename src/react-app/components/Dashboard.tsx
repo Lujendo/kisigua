@@ -6,6 +6,8 @@ import LocationDetail from './locations/LocationDetail';
 import Map from './Map';
 import LocationSearchInput from './search/LocationSearchInput';
 import LocationFilters from './search/LocationFilters';
+import EnhancedSearchInput from './search/EnhancedSearchInput';
+import SearchHistory from './search/SearchHistory';
 import { LocationFilters as LocationFiltersType, LocationSearchResult } from '../types/location';
 
 interface Location {
@@ -100,6 +102,9 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
     country: 'Germany' // Default to Germany
   });
   const [showLocationFilters, setShowLocationFilters] = useState(false);
+
+  // Search History State
+  const [showSearchHistory, setShowSearchHistory] = useState(false);
 
   // Detail card states
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
@@ -220,8 +225,8 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
       console.log(`🎯 User has selected view: ${viewMode}, respecting their choice`);
     }
 
-    // Trigger search with new location
-    handleSearch(searchQuery);
+    // Don't automatically trigger search - let user click search button
+    console.log(`📍 Location set to: ${location.displayName}. User can now click search to apply location filter.`);
   };
 
   const handleLocationFiltersChange = (filters: LocationFiltersType) => {
@@ -236,8 +241,8 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
       setUserLocation(filters.coordinates);
     }
 
-    // Trigger search with new filters
-    handleSearch(searchQuery);
+    // Don't automatically trigger search - let user click search button
+    console.log(`🔧 Location filters updated. User can click search to apply changes.`);
   };
 
   // Fetch real data from API
@@ -337,13 +342,8 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
     fetchLocations();
   }, []);
 
-  // Re-run search when location parameters change (but avoid infinite loops)
-  useEffect(() => {
-    if (userLocation) {
-      console.log(`🔄 Location parameters changed, re-running search...`);
-      handleSearch(searchQuery);
-    }
-  }, [searchRadius]); // Only trigger on radius change, not location change
+  // Remove automatic re-search on location changes to prevent interference
+  // Users will manually trigger search using the search button
 
   if (!user) {
     return null;
@@ -898,77 +898,45 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                 Find eco-friendly places, organic farms, sustainable businesses, and more in your community
               </p>
 
-              {/* Search Bar */}
-              <div className="relative max-w-2xl mx-auto">
-                <input
-                  type="text"
-                  placeholder={
-                    user && ['admin', 'premium', 'supporter'].includes(user.role)
-                      ? "🤖 AI-powered search: organic farms, water sources, sustainable businesses..."
-                      : "Search for organic farms, water sources, sustainable businesses..."
-                  }
-                  value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="w-full px-6 py-4 text-gray-900 bg-white rounded-full shadow-lg focus:outline-none focus:ring-4 focus:ring-green-300 text-lg"
-                />
-                <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
-                  {user && ['admin', 'premium', 'supporter'].includes(user.role) && (
-                    <div className="flex items-center bg-gradient-to-r from-purple-500 to-blue-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                      </svg>
-                      AI
-                    </div>
-                  )}
-                  <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-              </div>
+              {/* Compact Search Bar with Location */}
+              <div className="max-w-4xl mx-auto">
+                <div className="bg-white rounded-full shadow-lg p-2 flex items-center gap-2">
+                  {/* Enhanced Search Input with Autocomplete */}
+                  <EnhancedSearchInput
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    onSearch={handleSearch}
+                    placeholder={
+                      user && ['admin', 'premium', 'supporter'].includes(user.role)
+                        ? "🤖 AI-powered search: organic farms, water sources, sustainable businesses..."
+                        : "Search for organic farms, water sources, sustainable businesses..."
+                    }
+                    showAIBadge={user && ['admin', 'premium', 'supporter'].includes(user.role)}
+                    className="flex-1"
+                  />
 
-              {/* Enhanced Location-Based Search */}
-              <div className="max-w-2xl mx-auto mt-4">
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-2">
-                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <span className="text-sm font-medium text-gray-700">Search by Location</span>
-                    </div>
-                    <button
-                      onClick={() => setShowLocationFilters(!showLocationFilters)}
-                      className="text-xs text-green-600 hover:text-green-800 transition-colors flex items-center space-x-1"
-                    >
-                      <span>{showLocationFilters ? 'Hide' : 'Show'} Filters</span>
-                      <svg className={`w-4 h-4 transition-transform ${showLocationFilters ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {/* Enhanced Location Search Input */}
-                    <div className="md:col-span-2 relative">
+                  {/* Location Search */}
+                  <div className="w-px h-8 bg-gray-300"></div>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="relative flex-1 min-w-[200px]">
                       <LocationSearchInput
-                        placeholder="Enter city, town, or address (e.g., Berlin, Stuttgart, Reutlingen)..."
+                        placeholder="Location..."
                         value={locationSearch}
                         onLocationSelect={handleEnhancedLocationSelect}
                         showSuggestions={true}
                         includeMinorLocations={true}
-                        className="w-full"
+                        className="w-full px-4 py-3 text-gray-900 bg-transparent rounded-full focus:outline-none text-sm"
                       />
                       <button
                         onClick={getCurrentLocation}
                         disabled={isGettingLocation}
-                        className="absolute right-12 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-green-600 disabled:opacity-50 z-10"
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-green-600 disabled:opacity-50"
                         title="Use current location"
                       >
                         {isGettingLocation ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-green-600"></div>
                         ) : (
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                           </svg>
                         )}
@@ -976,35 +944,127 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                     </div>
 
                     {/* Distance Range */}
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm text-gray-600 whitespace-nowrap">Within</span>
-                      <select
-                        value={locationFilters.radius}
-                        onChange={(e) => handleLocationFiltersChange({ ...locationFilters, radius: Number(e.target.value) })}
-                        className="flex-1 px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm text-gray-900 bg-white"
-                      >
-                        <option value={1}>1 km</option>
-                        <option value={2}>2 km</option>
-                        <option value={5}>5 km</option>
-                        <option value={10}>10 km</option>
-                        <option value={20}>20 km</option>
-                        <option value={50}>50 km</option>
-                        <option value={100}>100 km</option>
-                      </select>
-                    </div>
-                  </div>
+                    <select
+                      value={locationFilters.radius}
+                      onChange={(e) => handleLocationFiltersChange({ ...locationFilters, radius: Number(e.target.value) })}
+                      className="px-3 py-3 border-0 bg-transparent rounded-full focus:outline-none text-sm text-gray-700 min-w-[80px]"
+                    >
+                      <option value={1}>1km</option>
+                      <option value={2}>2km</option>
+                      <option value={5}>5km</option>
+                      <option value={10}>10km</option>
+                      <option value={20}>20km</option>
+                      <option value={50}>50km</option>
+                      <option value={100}>100km</option>
+                    </select>
 
-                  {/* Enhanced Location Filters */}
-                  {showLocationFilters && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <LocationFilters
-                        filters={locationFilters}
-                        onFiltersChange={handleLocationFiltersChange}
-                        showAdvanced={true}
-                      />
-                    </div>
-                  )}
+                    {/* Search Button */}
+                    <button
+                      onClick={() => handleSearch(searchQuery)}
+                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-full font-medium transition-colors flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      Search
+                    </button>
+                  </div>
                 </div>
+
+                {/* Quick Filter Buttons */}
+                <div className="flex flex-wrap justify-center gap-2 mt-4">
+                  {[
+                    { label: '🌱 Organic', filter: 'organic', color: 'green' },
+                    { label: '💧 Water Sources', filter: 'water', color: 'blue' },
+                    { label: '🆓 Free', filter: 'free', color: 'gray' },
+                    { label: '📍 Nearby', filter: 'nearby', color: 'purple' },
+                    { label: '🏪 Markets', filter: 'market', color: 'orange' },
+                    { label: '🎨 Crafts', filter: 'craft', color: 'pink' }
+                  ].map((quickFilter) => (
+                    <button
+                      key={quickFilter.filter}
+                      onClick={() => {
+                        const filterQuery = quickFilter.filter === 'nearby'
+                          ? (userLocation ? searchQuery : 'nearby locations')
+                          : quickFilter.filter === 'free'
+                          ? 'free'
+                          : quickFilter.filter === 'organic'
+                          ? 'organic'
+                          : quickFilter.filter === 'water'
+                          ? 'water sources'
+                          : quickFilter.filter === 'market'
+                          ? 'local markets'
+                          : 'crafts';
+
+                        setSearchQuery(filterQuery);
+                        handleSearch(filterQuery);
+                      }}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all hover:scale-105 ${
+                        quickFilter.color === 'green' ? 'bg-green-100 text-green-700 hover:bg-green-200' :
+                        quickFilter.color === 'blue' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' :
+                        quickFilter.color === 'gray' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' :
+                        quickFilter.color === 'purple' ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' :
+                        quickFilter.color === 'orange' ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' :
+                        'bg-pink-100 text-pink-700 hover:bg-pink-200'
+                      }`}
+                    >
+                      {quickFilter.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Advanced Options */}
+                <div className="flex justify-center space-x-6 mt-3">
+                  <button
+                    onClick={() => setShowLocationFilters(!showLocationFilters)}
+                    className="text-sm text-green-600 hover:text-green-800 transition-colors flex items-center space-x-1"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+                    </svg>
+                    <span>{showLocationFilters ? 'Hide' : 'Show'} Filters</span>
+                  </button>
+
+                  <button
+                    onClick={() => setShowSearchHistory(!showSearchHistory)}
+                    className="text-sm text-blue-600 hover:text-blue-800 transition-colors flex items-center space-x-1"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>{showSearchHistory ? 'Hide' : 'Show'} History</span>
+                  </button>
+                </div>
+
+                {/* Enhanced Location Filters */}
+                {showLocationFilters && (
+                  <div className="mt-4 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                    <LocationFilters
+                      filters={locationFilters}
+                      onFiltersChange={handleLocationFiltersChange}
+                      showAdvanced={true}
+                    />
+                  </div>
+                )}
+
+                {/* Search History */}
+                {showSearchHistory && (
+                  <div className="mt-4">
+                    <SearchHistory
+                      onSearchSelect={(query, filters) => {
+                        setSearchQuery(query);
+                        if (filters) {
+                          // Apply any saved filters
+                          if (filters.location) {
+                            setLocationFilters(prev => ({ ...prev, ...filters.location }));
+                          }
+                        }
+                        handleSearch(query);
+                        setShowSearchHistory(false);
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1033,20 +1093,42 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
           <div className="dashboard-results bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="p-6 border-b border-gray-200">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    {searchQuery ? `Search Results for "${searchQuery}"` : 'All Locations'}
-                  </h2>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {filteredLocations.length} {filteredLocations.length === 1 ? 'location' : 'locations'} found
-                    {userLocation && (
-                      <span className="ml-2 text-green-600 font-medium">
-                        • within {searchRadius} km of {locationSearch}
-                      </span>
+                <div className="flex-1">
+                  <div className="flex items-center space-x-3">
+                    <h2 className="text-xl font-semibold text-gray-900">
+                      {searchQuery ? `Search Results for "${searchQuery}"` : 'All Locations'}
+                    </h2>
+                    {loading && (
+                      <div className="flex items-center space-x-2">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-600"></div>
+                        <span className="text-sm text-gray-500">Searching...</span>
+                      </div>
                     )}
-                  </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-4 mt-2">
+                    <p className="text-sm text-gray-600">
+                      <span className="font-medium text-gray-900">{filteredLocations.length}</span> {filteredLocations.length === 1 ? 'location' : 'locations'} found
+                      {userLocation && (
+                        <span className="ml-2 text-green-600 font-medium">
+                          • within {searchRadius} km of {locationSearch}
+                        </span>
+                      )}
+                    </p>
+
+                    {/* Search performance indicator */}
+                    {!loading && searchQuery && (
+                      <div className="flex items-center text-xs text-gray-500">
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        {user && ['admin', 'premium', 'supporter'].includes(user.role) ? 'AI-powered' : 'Standard'} search
+                      </div>
+                    )}
+                  </div>
+
                   {userLocation && viewMode === 'map' && (
-                    <p className="text-xs text-blue-600 mt-1 flex items-center">
+                    <p className="text-xs text-blue-600 mt-2 flex items-center">
                       <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
@@ -1064,15 +1146,16 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                         const [newSortBy, newSortOrder] = e.target.value.split('-') as [typeof sortBy, 'asc' | 'desc'];
                         handleSortChange(newSortBy, newSortOrder);
                       }}
-                      className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 hover:border-gray-400 transition-colors"
+                      className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 hover:border-gray-400 transition-colors min-w-[200px]"
                     >
-                      <option value="relevance-desc">Relevance</option>
-                      <option value="rating-desc">Rating: High to Low</option>
-                      <option value="rating-asc">Rating: Low to High</option>
-                      <option value="newest-desc">Newest First</option>
-                      <option value="popular-desc">Most Popular</option>
-                      <option value="price-asc">Price: Low to High</option>
-                      <option value="price-desc">Price: High to Low</option>
+                      <option value="relevance-desc">🎯 Best Match</option>
+                      <option value="rating-desc">⭐ Highest Rated</option>
+                      <option value="rating-asc">⭐ Lowest Rated</option>
+                      <option value="newest-desc">🆕 Newest First</option>
+                      <option value="popular-desc">🔥 Most Popular</option>
+                      <option value="price-asc">💰 Price: Low to High</option>
+                      <option value="price-desc">💰 Price: High to Low</option>
+                      {userLocation && <option value="distance-asc">📍 Nearest First</option>}
                     </select>
                     <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
                       <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1133,19 +1216,59 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
             {/* Results Content */}
             <div className="p-6">
               {loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-                  <span className="ml-3 text-gray-600">Searching...</span>
+                <div className="text-center py-12">
+                  <div className="relative">
+                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-green-600 mx-auto mb-4"></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-6 h-6 bg-green-600 rounded-full animate-pulse"></div>
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Searching locations...</h3>
+                  <p className="text-gray-600">
+                    {user && ['admin', 'premium', 'supporter'].includes(user.role)
+                      ? '🤖 Using AI-powered search for better results'
+                      : 'Finding the best matches for you'
+                    }
+                  </p>
+                  <div className="mt-4 flex justify-center space-x-1">
+                    <div className="w-2 h-2 bg-green-600 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-green-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-2 h-2 bg-green-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  </div>
                 </div>
               ) : filteredLocations.length === 0 ? (
                 <div className="text-center py-12">
-                  <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
+                  <div className="relative">
+                    <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <div className="absolute top-0 right-0 w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center">
+                      <span className="text-yellow-600 text-xs">!</span>
+                    </div>
+                  </div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No locations found</h3>
-                  <p className="text-gray-600">
-                    {searchQuery ? `No results for "${searchQuery}". Try different keywords.` : 'No locations available at the moment.'}
+                  <p className="text-gray-600 mb-4">
+                    {searchQuery ? `No results for "${searchQuery}". Try different keywords or expand your search area.` : 'No locations available at the moment.'}
                   </p>
+
+                  {/* Suggestions for empty results */}
+                  <div className="bg-gray-50 rounded-lg p-4 max-w-md mx-auto">
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Try searching for:</h4>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {['organic farms', 'water sources', 'local markets', 'sustainable shops'].map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          onClick={() => {
+                            setSearchQuery(suggestion);
+                            handleSearch(suggestion);
+                          }}
+                          className="px-3 py-1 bg-white border border-gray-200 rounded-full text-sm text-gray-700 hover:bg-green-50 hover:border-green-300 hover:text-green-700 transition-colors"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               ) : viewMode === 'map' ? (
                 <div className="h-96 rounded-lg overflow-hidden">

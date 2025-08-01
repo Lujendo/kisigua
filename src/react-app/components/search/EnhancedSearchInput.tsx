@@ -1,6 +1,67 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SearchSuggestionsService, SearchSuggestion } from '../../services/searchSuggestionsService';
 
+// Icon component for rendering SVG icons
+const Icon: React.FC<{ type: string; className?: string }> = ({ type, className = "w-4 h-4" }) => {
+  const getIconPath = (iconType: string) => {
+    const icons: Record<string, React.ReactElement> = {
+      'leaf': (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.5 2.5L16 5.5 13.5 3M7 7l2.5 2.5L7 12.5 4.5 10M13 13l2.5 2.5L13 18.5 10.5 16M21 21l-2.5-2.5L21 15.5 23.5 18" />
+      ),
+      'droplet': (
+        <>
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7.5 14.25c0-1.5 1.5-3 3.75-3s3.75 1.5 3.75 3-1.5 3-3.75 3-3.75-1.5-3.75-3z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2.25c-1.5 0-3 1.5-3 3.75 0 2.25 3 6.75 3 6.75s3-4.5 3-6.75c0-2.25-1.5-3.75-3-3.75z" />
+        </>
+      ),
+      'shopping-cart': (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0L17 18m-7.5 0h7.5" />
+      ),
+      'recycle': (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      ),
+      'building-storefront': (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+      ),
+      'paint-brush': (
+        <>
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM7 5H5v12a2 2 0 002 2 2 2 0 002-2V5z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5l4-4 4 4-4 4-4-4z" />
+        </>
+      ),
+      'beaker': (
+        <>
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547A1.934 1.934 0 004 17.5a2 2 0 002 2 2 2 0 002-2 2 2 0 012-2 2 2 0 012 2 2 2 0 002 2 2 2 0 002-2 2 2 0 012-2 2 2 0 012 2 2 2 0 002 2 2 2 0 002-2 1.934 1.934 0 00-.244-1.757z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8.5c0 .5-.5 1.5-1 2.5H9c-.5-1-1-2-1-2.5a4 4 0 118 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v6.5" />
+        </>
+      ),
+      'carrot': (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+      ),
+      'sparkles': (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.5 2.5L16 5.5 13.5 3M7 7l2.5 2.5L7 12.5 4.5 10M13 13l2.5 2.5L13 18.5 10.5 16M21 21l-2.5-2.5L21 15.5 23.5 18" />
+      ),
+      'sun': (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+      ),
+      'clock': (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      ),
+      'bookmark': (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+      )
+    };
+    return icons[iconType] || icons['sparkles'];
+  };
+
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {getIconPath(type)}
+    </svg>
+  );
+};
+
 interface EnhancedSearchInputProps {
   value: string;
   onChange: (value: string) => void;
@@ -202,7 +263,9 @@ const EnhancedSearchInput: React.FC<EnhancedSearchInputProps> = ({
               }`}
             >
               <div className="flex items-center space-x-3">
-                <span className="text-lg">{suggestion.icon}</span>
+                <div className="text-gray-500">
+                  {suggestion.iconType && <Icon type={suggestion.iconType} className="w-5 h-5" />}
+                </div>
                 <div>
                   <div className="text-gray-900 font-medium">{suggestion.text}</div>
                   {suggestion.type !== 'category' && (

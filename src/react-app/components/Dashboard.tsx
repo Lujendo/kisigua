@@ -908,7 +908,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                     onSearch={handleSearch}
                     placeholder={
                       user && ['admin', 'premium', 'supporter'].includes(user.role)
-                        ? "🤖 AI-powered search: organic farms, water sources, sustainable businesses..."
+                        ? "AI-powered search: organic farms, water sources, sustainable businesses..."
                         : "Search for organic farms, water sources, sustainable businesses..."
                     }
                     showAIBadge={user && ['admin', 'premium', 'supporter'].includes(user.role)}
@@ -974,12 +974,12 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                 {/* Quick Filter Buttons */}
                 <div className="flex flex-wrap justify-center gap-2 mt-4">
                   {[
-                    { label: '🌱 Organic', filter: 'organic', color: 'green' },
-                    { label: '💧 Water Sources', filter: 'water', color: 'blue' },
-                    { label: '🆓 Free', filter: 'free', color: 'gray' },
-                    { label: '📍 Nearby', filter: 'nearby', color: 'purple' },
-                    { label: '🏪 Markets', filter: 'market', color: 'orange' },
-                    { label: '🎨 Crafts', filter: 'craft', color: 'pink' }
+                    { label: 'Organic', icon: 'leaf', filter: 'organic', color: 'green' },
+                    { label: 'Water Sources', icon: 'droplet', filter: 'water', color: 'blue' },
+                    { label: 'Free', icon: 'shield-check', filter: 'free', color: 'gray' },
+                    { label: 'Nearby', icon: 'location-marker', filter: 'nearby', color: 'purple' },
+                    { label: 'Markets', icon: 'shopping-cart', filter: 'market', color: 'orange' },
+                    { label: 'Crafts', icon: 'paint-brush', filter: 'craft', color: 'pink' }
                   ].map((quickFilter) => (
                     <button
                       key={quickFilter.filter}
@@ -999,7 +999,7 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                         setSearchQuery(filterQuery);
                         handleSearch(filterQuery);
                       }}
-                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all hover:scale-105 ${
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all hover:scale-105 flex items-center space-x-2 ${
                         quickFilter.color === 'green' ? 'bg-green-100 text-green-700 hover:bg-green-200' :
                         quickFilter.color === 'blue' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' :
                         quickFilter.color === 'gray' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' :
@@ -1008,7 +1008,36 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                         'bg-pink-100 text-pink-700 hover:bg-pink-200'
                       }`}
                     >
-                      {quickFilter.label}
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        {quickFilter.icon === 'leaf' && (
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.5 2.5L16 5.5 13.5 3M7 7l2.5 2.5L7 12.5 4.5 10M13 13l2.5 2.5L13 18.5 10.5 16M21 21l-2.5-2.5L21 15.5 23.5 18" />
+                        )}
+                        {quickFilter.icon === 'droplet' && (
+                          <>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7.5 14.25c0-1.5 1.5-3 3.75-3s3.75 1.5 3.75 3-1.5 3-3.75 3-3.75-1.5-3.75-3z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2.25c-1.5 0-3 1.5-3 3.75 0 2.25 3 6.75 3 6.75s3-4.5 3-6.75c0-2.25-1.5-3.75-3-3.75z" />
+                          </>
+                        )}
+                        {quickFilter.icon === 'shield-check' && (
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        )}
+                        {quickFilter.icon === 'location-marker' && (
+                          <>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </>
+                        )}
+                        {quickFilter.icon === 'shopping-cart' && (
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0L17 18m-7.5 0h7.5" />
+                        )}
+                        {quickFilter.icon === 'paint-brush' && (
+                          <>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM7 5H5v12a2 2 0 002 2 2 2 0 002-2V5z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5l4-4 4 4-4 4-4-4z" />
+                          </>
+                        )}
+                      </svg>
+                      <span>{quickFilter.label}</span>
                     </button>
                   ))}
                 </div>
@@ -1148,14 +1177,14 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                       }}
                       className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 hover:border-gray-400 transition-colors min-w-[200px]"
                     >
-                      <option value="relevance-desc">🎯 Best Match</option>
-                      <option value="rating-desc">⭐ Highest Rated</option>
-                      <option value="rating-asc">⭐ Lowest Rated</option>
-                      <option value="newest-desc">🆕 Newest First</option>
-                      <option value="popular-desc">🔥 Most Popular</option>
-                      <option value="price-asc">💰 Price: Low to High</option>
-                      <option value="price-desc">💰 Price: High to Low</option>
-                      {userLocation && <option value="distance-asc">📍 Nearest First</option>}
+                      <option value="relevance-desc">Best Match</option>
+                      <option value="rating-desc">Highest Rated</option>
+                      <option value="rating-asc">Lowest Rated</option>
+                      <option value="newest-desc">Newest First</option>
+                      <option value="popular-desc">Most Popular</option>
+                      <option value="price-asc">Price: Low to High</option>
+                      <option value="price-desc">Price: High to Low</option>
+                      {userLocation && <option value="distance-asc">Nearest First</option>}
                     </select>
                     <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
                       <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1224,11 +1253,17 @@ const Dashboard = ({ onNavigateToMyListings }: DashboardProps) => {
                     </div>
                   </div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">Searching locations...</h3>
-                  <p className="text-gray-600">
-                    {user && ['admin', 'premium', 'supporter'].includes(user.role)
-                      ? '🤖 Using AI-powered search for better results'
-                      : 'Finding the best matches for you'
-                    }
+                  <p className="text-gray-600 flex items-center justify-center space-x-2">
+                    {user && ['admin', 'premium', 'supporter'].includes(user.role) ? (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                        <span>Using AI-powered search for better results</span>
+                      </>
+                    ) : (
+                      <span>Finding the best matches for you</span>
+                    )}
                   </p>
                   <div className="mt-4 flex justify-center space-x-1">
                     <div className="w-2 h-2 bg-green-600 rounded-full animate-bounce"></div>

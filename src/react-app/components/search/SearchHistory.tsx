@@ -158,8 +158,12 @@ const SearchHistory: React.FC<SearchHistoryProps> = ({
                         </svg>
                         <span className="font-medium text-gray-900">{item.query}</span>
                         {item.location && (
-                          <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                            📍 {item.location}
+                          <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full flex items-center space-x-1">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span>{item.location}</span>
                           </span>
                         )}
                       </div>
@@ -216,8 +220,8 @@ const SearchHistory: React.FC<SearchHistoryProps> = ({
                 >
                   <div className="flex-1">
                     <div className="flex items-center space-x-2">
-                      <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                      <svg className="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                       </svg>
                       <span className="font-medium text-gray-900">{item.name}</span>
                     </div>

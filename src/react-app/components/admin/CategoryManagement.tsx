@@ -173,8 +173,26 @@ const CategoryManagement: React.FC = () => {
   ];
 
   const predefinedIcons = [
-    '🌱', '💧', '🏪', '🎨', '♻️', '🌿', '🍽️', '📚', '⚡', '🚲',
-    '🏠', '🛠️', '🎯', '💡', '🌟', '🔧', '📦', '🎪', '🌈', '🎭'
+    { name: 'leaf', icon: 'leaf' },
+    { name: 'droplet', icon: 'droplet' },
+    { name: 'building-storefront', icon: 'building-storefront' },
+    { name: 'paint-brush', icon: 'paint-brush' },
+    { name: 'recycle', icon: 'recycle' },
+    { name: 'sparkles', icon: 'sparkles' },
+    { name: 'utensils', icon: 'utensils' },
+    { name: 'book-open', icon: 'book-open' },
+    { name: 'lightning-bolt', icon: 'lightning-bolt' },
+    { name: 'bicycle', icon: 'bicycle' },
+    { name: 'home', icon: 'home' },
+    { name: 'wrench', icon: 'wrench' },
+    { name: 'target', icon: 'target' },
+    { name: 'light-bulb', icon: 'light-bulb' },
+    { name: 'star', icon: 'star' },
+    { name: 'cog', icon: 'cog' },
+    { name: 'package', icon: 'package' },
+    { name: 'tent', icon: 'tent' },
+    { name: 'color-swatch', icon: 'color-swatch' },
+    { name: 'mask', icon: 'mask' }
   ];
 
   if (loading) {
@@ -312,7 +330,17 @@ const CategoryManagement: React.FC = () => {
                     className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-medium"
                     style={{ backgroundColor: category.color }}
                   >
-                    {category.icon || '📁'}
+                    {category.icon ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z" />
+                      </svg>
+                    )}
                   </div>
                   <div>
                     <h4 className="text-lg font-medium text-gray-900">{category.name}</h4>
@@ -411,16 +439,19 @@ const CategoryManagement: React.FC = () => {
                     Icon
                   </label>
                   <div className="flex flex-wrap gap-2 mb-2">
-                    {predefinedIcons.map((icon) => (
+                    {predefinedIcons.map((iconItem) => (
                       <button
-                        key={icon}
+                        key={iconItem.icon}
                         type="button"
-                        onClick={() => setFormData({ ...formData, icon })}
+                        onClick={() => setFormData({ ...formData, icon: iconItem.icon })}
                         className={`w-8 h-8 rounded border-2 flex items-center justify-center ${
-                          formData.icon === icon ? 'border-green-500 bg-green-50' : 'border-gray-300'
+                          formData.icon === iconItem.icon ? 'border-green-500 bg-green-50' : 'border-gray-300'
                         }`}
+                        title={iconItem.name}
                       >
-                        {icon}
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.5 2.5L16 5.5 13.5 3M7 7l2.5 2.5L7 12.5 4.5 10M13 13l2.5 2.5L13 18.5 10.5 16M21 21l-2.5-2.5L21 15.5 23.5 18" />
+                        </svg>
                       </button>
                     ))}
                   </div>
@@ -429,7 +460,7 @@ const CategoryManagement: React.FC = () => {
                     value={formData.icon}
                     onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    placeholder="Or enter custom emoji/icon"
+                    placeholder="Or enter custom icon name"
                   />
                 </div>
 

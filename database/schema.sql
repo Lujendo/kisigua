@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS listings (
     is_certified BOOLEAN NOT NULL DEFAULT false,
     certification_details TEXT,
     price_range TEXT CHECK (price_range IN ('free', 'low', 'medium', 'high')),
+    hide_address BOOLEAN NOT NULL DEFAULT false,
     
     -- Operating hours (JSON format)
     operating_hours TEXT, -- JSON string

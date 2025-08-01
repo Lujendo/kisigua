@@ -78,14 +78,19 @@ export class PostalCodeLookupService {
       const data = await response.json();
       const results: PostalCodeLookupResult[] = data.results?.map((item: any) => ({
         postalCode: item.postalCode,
-        city: item.name,
+        city: item.city || item.name, // Use new city field or fallback to name
         region: item.region || item.admin_name1 || '',
         district: item.district || item.admin_name2,
-        country: this.getCountryName(item.country),
-        countryCode: item.country,
+        country: this.getCountryName(item.countryCode || item.country),
+        countryCode: item.countryCode || item.country,
         coordinates: item.coordinates,
-        confidence: item.relevanceScore || 0.9,
-        displayName: this.formatDisplayName(item.name, item.region || item.admin_name1, item.postalCode, this.getCountryName(item.country))
+        confidence: item.confidence || item.relevanceScore || 0.9,
+        displayName: this.formatDisplayName(
+          item.city || item.name,
+          item.region || item.admin_name1,
+          item.postalCode,
+          this.getCountryName(item.countryCode || item.country)
+        )
       })) || [];
 
       // Cache results
@@ -141,15 +146,20 @@ export class PostalCodeLookupService {
         const region = firstItem.region || firstItem.admin_name1 || '';
 
         return {
-          city: firstItem.name,
+          city: firstItem.city || firstItem.name, // Use new city field or fallback
           postalCodes,
           region,
           district: firstItem.district || firstItem.admin_name2,
-          country: this.getCountryName(firstItem.country),
-          countryCode: firstItem.country,
+          country: this.getCountryName(firstItem.countryCode || firstItem.country),
+          countryCode: firstItem.countryCode || firstItem.country,
           coordinates: firstItem.coordinates,
-          confidence: firstItem.relevanceScore || 0.8,
-          displayName: this.formatDisplayName(firstItem.name, region, postalCodes[0], this.getCountryName(firstItem.country))
+          confidence: firstItem.confidence || firstItem.relevanceScore || 0.8,
+          displayName: this.formatDisplayName(
+            firstItem.city || firstItem.name,
+            region,
+            postalCodes[0],
+            this.getCountryName(firstItem.countryCode || firstItem.country)
+          )
         };
       });
 

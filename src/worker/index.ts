@@ -451,10 +451,18 @@ app.get("/api/locations/postal-lookup", async (c) => {
       { country, maxResults, includeCoordinates: true, fuzzySearch: false }
     );
 
+    // Transform results to match frontend expectations
+    const transformedResults = results.map((result: any) => ({
+      ...result,
+      city: result.name,           // Add city field
+      countryCode: result.country, // Add countryCode field
+      confidence: result.relevanceScore // Add confidence field
+    }));
+
     return c.json({
       success: true,
-      results: results,
-      total: results.length,
+      results: transformedResults,
+      total: transformedResults.length,
       query: postalCode,
       country
     });
@@ -493,10 +501,18 @@ app.get("/api/locations/city-lookup", async (c) => {
       { country, maxResults, includeCoordinates: true, fuzzySearch: true }
     );
 
+    // Transform results to match frontend expectations
+    const transformedResults = results.map((result: any) => ({
+      ...result,
+      city: result.name,           // Add city field
+      countryCode: result.country, // Add countryCode field
+      confidence: result.relevanceScore // Add confidence field
+    }));
+
     return c.json({
       success: true,
-      results: results,
-      total: results.length,
+      results: transformedResults,
+      total: transformedResults.length,
       query: cityName,
       country
     });

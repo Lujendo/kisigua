@@ -57,6 +57,27 @@ interface Listing {
   favorites?: number;
 }
 
+// Map category labels to database values
+const getCategoryDatabaseValue = (categoryLabel: string): string => {
+  const categoryMapping: { [key: string]: string } = {
+    'Organic Farm': 'organic_farm',
+    'Local Product': 'local_product',
+    'Water Source': 'water_source',
+    'Vending Machine': 'vending_machine',
+    'Craft': 'craft',
+    'Sustainable Good': 'sustainable_good',
+    // Add more mappings as needed
+    'Organic Farms': 'organic_farm',
+    'Local Products': 'local_product',
+    'Water Sources': 'water_source',
+    'Vending Machines': 'vending_machine',
+    'Crafts': 'craft',
+    'Sustainable Goods': 'sustainable_good'
+  };
+
+  return categoryMapping[categoryLabel] || 'local_product'; // Default fallback
+};
+
 const MyListingsPage: React.FC = () => {
   const { token } = useAuth();
   const [listings, setListings] = useState<Listing[]>([]);
@@ -1121,11 +1142,15 @@ const MyListingsPage: React.FC = () => {
                             <option value="">
                               {loadingCategories ? 'Loading categories...' : 'Select a category'}
                             </option>
-                            {!loadingCategories && categories.map(category => (
-                              <option key={category.id} value={category.id}>
-                                {category.icon ? `${category.icon} ` : ''}{category.label}
-                              </option>
-                            ))}
+                            {!loadingCategories && categories.map(category => {
+                              // Map category labels to database values
+                              const categoryValue = getCategoryDatabaseValue(category.label);
+                              return (
+                                <option key={category.id} value={categoryValue}>
+                                  {category.icon ? `${category.icon} ` : ''}{category.label}
+                                </option>
+                              );
+                            })}
                             {loadingCategories && (
                               <option disabled>⏳ Loading categories...</option>
                             )}

@@ -68,7 +68,7 @@ export class PostalCodeLookupService {
 
     try {
       const response = await fetch(
-        `/api/locations/postal-lookup?postal_code=${encodeURIComponent(postalCode)}&country=${countryCode}&limit=10`
+        `/api/locations/postal-lookup?postal_code=${encodeURIComponent(postalCode)}&country=${countryCode}&limit=8`
       );
 
       if (!response.ok) {
@@ -116,7 +116,7 @@ export class PostalCodeLookupService {
 
     try {
       const response = await fetch(
-        `/api/locations/city-lookup?city=${encodeURIComponent(cityName)}&country=${countryCode}&limit=10`
+        `/api/locations/city-lookup?city=${encodeURIComponent(cityName)}&country=${countryCode}&limit=8`
       );
 
       if (!response.ok) {

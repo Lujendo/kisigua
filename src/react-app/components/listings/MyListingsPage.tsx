@@ -727,44 +727,32 @@ const MyListingsPage: React.FC = () => {
     const isEditing = editingListing !== null;
     const isLoadingCompleteData = loadingEditData === editingListingId;
 
-    // Optimized form data initialization with memoization
+    // LAZY FORM INITIALIZATION - minimal data upfront, load details on demand
     const [formData, setFormData] = useState(() => {
-      if (!editingListing) {
+      // Always start with minimal default data for instant form opening
+      const defaultData = {
+        title: '', description: '', category: '', street: '', houseNumber: '',
+        city: '', region: '', country: '', postalCode: '', latitude: undefined as number | undefined, longitude: undefined as number | undefined,
+        phone: '', mobile: '', email: '', website: '', facebook: '', instagram: '', twitter: '', linkedin: '',
+        priceType: 'free' as 'free' | 'paid' | 'donation', price: '', tags: '',
+        status: 'active' as 'active' | 'inactive' | 'pending' | 'rejected', hideAddress: false
+      };
+
+      // If editing, populate only essential fields immediately for instant form opening
+      if (editingListing) {
         return {
-          title: '', description: '', category: '', street: '', houseNumber: '',
-          city: '', region: '', country: '', postalCode: '', latitude: undefined, longitude: undefined,
-          phone: '', mobile: '', email: '', website: '', facebook: '', instagram: '', twitter: '', linkedin: '',
-          priceType: 'free' as 'free' | 'paid' | 'donation', price: '', tags: '',
-          status: 'active' as 'active' | 'inactive' | 'pending' | 'rejected', hideAddress: false
+          ...defaultData,
+          title: editingListing.title || '',
+          description: editingListing.description || '',
+          category: editingListing.category || '',
+          city: editingListing.location?.city || '',
+          country: editingListing.location?.country || '',
+          postalCode: editingListing.location?.postalCode || '',
+          status: (editingListing.status || 'active') as 'active' | 'inactive' | 'pending' | 'rejected'
         };
       }
 
-      return {
-        title: editingListing.title || '',
-        description: editingListing.description || '',
-        category: editingListing.category || '',
-        street: editingListing.location?.street || '',
-        houseNumber: editingListing.location?.houseNumber || '',
-        city: editingListing.location?.city || '',
-        region: editingListing.location?.region || '',
-        country: editingListing.location?.country || '',
-        postalCode: editingListing.location?.postalCode || '',
-        latitude: editingListing.location?.latitude || editingListing.location?.coordinates?.lat,
-        longitude: editingListing.location?.longitude || editingListing.location?.coordinates?.lng,
-        phone: editingListing.contactInfo?.phone || editingListing.contact?.phone || '',
-        mobile: editingListing.contact?.mobile || '',
-        email: editingListing.contactInfo?.email || editingListing.contact?.email || '',
-        website: editingListing.contactInfo?.website || editingListing.contact?.website || '',
-        facebook: editingListing.contact?.socials?.facebook || '',
-        instagram: editingListing.contact?.socials?.instagram || '',
-        twitter: editingListing.contact?.socials?.twitter || '',
-        linkedin: editingListing.contact?.socials?.linkedin || '',
-        priceType: (editingListing.priceType || 'free') as 'free' | 'paid' | 'donation',
-        price: editingListing.price?.toString() || '',
-        tags: editingListing.tags?.join(', ') || '',
-        status: (editingListing.status || 'active') as 'active' | 'inactive' | 'pending' | 'rejected',
-        hideAddress: (editingListing as any)?.hideAddress || false
-      };
+      return defaultData;
     });
     const [images, setImages] = useState<string[]>([]);
     // Use global categories cache instead of local state
@@ -780,36 +768,46 @@ const MyListingsPage: React.FC = () => {
       }
     }, [editingListing]);
 
-    // Update form data when complete listing data is loaded
+    // PROGRESSIVE FORM LOADING - update form data incrementally as complete data loads
     useEffect(() => {
       if (editingListing && !isLoadingCompleteData) {
-        console.log('🔄 Updating form with complete listing data');
-        setFormData({
-          title: editingListing.title || '',
-          description: editingListing.description || '',
-          category: editingListing.category || '',
-          street: editingListing.location?.street || '',
-          houseNumber: editingListing.location?.houseNumber || '',
-          city: editingListing.location?.city || '',
-          region: editingListing.location?.region || '',
-          country: editingListing.location?.country || '',
-          postalCode: editingListing.location?.postalCode || '',
-          latitude: editingListing.location?.latitude || editingListing.location?.coordinates?.lat,
-          longitude: editingListing.location?.longitude || editingListing.location?.coordinates?.lng,
-          phone: editingListing.contactInfo?.phone || editingListing.contact?.phone || '',
-          mobile: editingListing.contact?.mobile || '',
-          email: editingListing.contactInfo?.email || editingListing.contact?.email || '',
-          website: editingListing.contactInfo?.website || editingListing.contact?.website || '',
-          facebook: editingListing.contact?.socials?.facebook || '',
-          instagram: editingListing.contact?.socials?.instagram || '',
-          twitter: editingListing.contact?.socials?.twitter || '',
-          linkedin: editingListing.contact?.socials?.linkedin || '',
-          priceType: (editingListing.priceType || 'free') as 'free' | 'paid' | 'donation',
-          price: editingListing.price?.toString() || '',
-          tags: editingListing.tags?.join(', ') || '',
-          status: (editingListing.status || 'active') as 'active' | 'inactive' | 'pending' | 'rejected',
-          hideAddress: (editingListing as any)?.hideAddress || false
-        });
+        console.log('🔄 Progressively updating form with complete listing data');
+
+        // Update form data incrementally to avoid blocking UI
+        setFormData(prevData => ({
+          ...prevData,
+          // Core fields (already loaded for instant opening)
+          title: editingListing.title || prevData.title,
+          description: editingListing.description || prevData.description,
+          category: editingListing.category || prevData.category,
+
+          // Location fields (progressive loading)
+          street: editingListing.location?.street || prevData.street,
+          houseNumber: editingListing.location?.houseNumber || prevData.houseNumber,
+          city: editingListing.location?.city || prevData.city,
+          region: editingListing.location?.region || prevData.region,
+          country: editingListing.location?.country || prevData.country,
+          postalCode: editingListing.location?.postalCode || prevData.postalCode,
+          latitude: editingListing.location?.latitude || editingListing.location?.coordinates?.lat || prevData.latitude,
+          longitude: editingListing.location?.longitude || editingListing.location?.coordinates?.lng || prevData.longitude,
+
+          // Contact fields (loaded on demand)
+          phone: editingListing.contactInfo?.phone || editingListing.contact?.phone || prevData.phone,
+          mobile: editingListing.contact?.mobile || prevData.mobile,
+          email: editingListing.contactInfo?.email || editingListing.contact?.email || prevData.email,
+          website: editingListing.contactInfo?.website || editingListing.contact?.website || prevData.website,
+          facebook: editingListing.contact?.socials?.facebook || prevData.facebook,
+          instagram: editingListing.contact?.socials?.instagram || prevData.instagram,
+          twitter: editingListing.contact?.socials?.twitter || prevData.twitter,
+          linkedin: editingListing.contact?.socials?.linkedin || prevData.linkedin,
+
+          // Pricing and metadata (loaded on demand)
+          priceType: (editingListing.priceType || prevData.priceType) as 'free' | 'paid' | 'donation',
+          price: editingListing.price?.toString() || prevData.price,
+          tags: editingListing.tags?.join(', ') || prevData.tags,
+          status: (editingListing.status || prevData.status) as 'active' | 'inactive' | 'pending' | 'rejected',
+          hideAddress: (editingListing as any)?.hideAddress ?? prevData.hideAddress
+        }));
       }
     }, [editingListing, isLoadingCompleteData]);
 
@@ -1172,8 +1170,8 @@ const MyListingsPage: React.FC = () => {
                               region: locationData.region || '',
                               country: locationData.country,
                               postalCode: locationData.postalCode || '',
-                              latitude: locationData.latitude,
-                              longitude: locationData.longitude
+                              latitude: locationData.latitude as number | undefined,
+                              longitude: locationData.longitude as number | undefined
                             });
                           }}
 

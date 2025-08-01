@@ -62,7 +62,7 @@ export class PostalCodeService {
   ): Promise<LocationSearchResult[]> {
     const {
       country = 'DE',
-      maxResults = 20,
+      maxResults = 8, // Reduced default for faster performance
       fuzzySearch = true
     } = options;
 

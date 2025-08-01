@@ -51,8 +51,17 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
   const cityInputRef = useRef<HTMLInputElement>(null);
   const postalInputRef = useRef<HTMLInputElement>(null);
 
-  // UNIFIED LOOKUP SYSTEM - respects country selection
-  const performUnifiedLookup = useCallback(async (query: string, type: 'city' | 'postal') => {
+  // Debounce timers for performance optimization
+  const debounceTimerRef = useRef<{ [key: string]: NodeJS.Timeout }>({});
+
+  // OPTIMIZED DEBOUNCED LOOKUP SYSTEM - fast and efficient
+  const performUnifiedLookup = useCallback((query: string, type: 'city' | 'postal') => {
+    // Clear existing timer for this type
+    if (debounceTimerRef.current[type]) {
+      clearTimeout(debounceTimerRef.current[type]);
+    }
+
+    // For very short queries, clear suggestions immediately
     if (!query || query.length < 2) {
       if (type === 'city') {
         setCitySuggestions([]);
@@ -64,6 +73,17 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
       return;
     }
 
+    // Debounce the actual lookup to reduce API calls
+    debounceTimerRef.current[type] = setTimeout(() => {
+      performActualLookup(query, type);
+    }, 300); // 300ms debounce for optimal UX
+  }, [value.country]);
+
+  // Actual lookup function (separated for debouncing)
+  const performActualLookup = useCallback(async (query: string, type: 'city' | 'postal') => {
+    // Early validation
+    if (!query || query.length < 2) return;
+
     // COUNTRY MUST BE SELECTED FIRST
     if (!value.country) {
       console.warn('⚠️ Country must be selected before performing location lookup');
@@ -73,16 +93,20 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
     const isLoading = type === 'city' ? setIsLoadingCities : setIsLoadingPostal;
     isLoading(true);
 
+    // Performance optimization: limit results for faster response
+    const maxResults = 8; // Reduced from default for faster loading
+
     try {
+      const startTime = performance.now();
       const countryCode = PostalCodeLookupService.getCountryCode(value.country);
-      console.log(`🔍 Performing ${type} lookup for "${query}" in country: ${value.country} (${countryCode})`);
+      console.log(`⚡ Fast ${type} lookup: "${query}" in ${value.country}`);
 
       if (type === 'city') {
-        // City lookup - returns cities with postal code information
+        // OPTIMIZED CITY LOOKUP - faster processing with early limits
         const results = await PostalCodeLookupService.lookupByCity(query, countryCode);
 
-        // Convert to city suggestions format
-        const citySuggestions = results.map(result => ({
+        // Fast conversion with minimal processing - limit results early
+        const citySuggestions = results.slice(0, maxResults).map(result => ({
           name: result.city,
           displayName: result.displayName,
           coordinates: result.coordinates,
@@ -106,15 +130,18 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
         setCitySuggestions(citySuggestions);
         setShowCitySuggestions(citySuggestions.length > 0);
 
+        const endTime = performance.now();
+        console.log(`✅ City lookup completed in ${(endTime - startTime).toFixed(0)}ms - ${citySuggestions.length} results`);
+
       } else {
-        // Postal code lookup
+        // OPTIMIZED POSTAL CODE LOOKUP - faster with early limits
         const isNumeric = /^\d+/.test(query);
 
         if (isNumeric) {
-          // Numeric postal code lookup
+          // Fast numeric postal code lookup
           const results = await PostalCodeLookupService.lookupByPostalCode(query, countryCode);
 
-          const postalSuggestions = results.map(result => ({
+          const postalSuggestions = results.slice(0, maxResults).map(result => ({
             name: result.city,
             displayName: `${result.postalCode} ${result.city}, ${result.region}`,
             coordinates: result.coordinates,
@@ -133,29 +160,38 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
           setPostalSuggestions(postalSuggestions);
           setShowPostalSuggestions(postalSuggestions.length > 0);
         } else {
-          // Text-based city lookup for postal field
+          // Fast text-based city lookup for postal field - limit early
           const results = await PostalCodeLookupService.lookupByCity(query, countryCode);
 
-          const postalSuggestions = results.flatMap(result =>
-            result.postalCodes.map(postalCode => ({
-              name: result.city,
-              displayName: `${postalCode} ${result.city}, ${result.region}`,
-              coordinates: result.coordinates,
-              hierarchy: {
-                country: value.country, // Use selected country
-                countryCode: countryCode,
-                region: result.region,
-                district: '',
-                city: result.city,
-                postalCode: postalCode,
-                coordinates: result.coordinates,
-                locationType: 'city' as const
-              }
-            }))
-          );
+          // Optimize: limit postal codes per city and total results for speed
+          const postalSuggestions = results
+            .slice(0, 4) // Limit cities for faster processing
+            .flatMap(result =>
+              result.postalCodes
+                .slice(0, 3) // Max 3 postal codes per city for speed
+                .map(postalCode => ({
+                  name: result.city,
+                  displayName: `${postalCode} ${result.city}, ${result.region}`,
+                  coordinates: result.coordinates,
+                  hierarchy: {
+                    country: value.country, // Use selected country
+                    countryCode: countryCode,
+                    region: result.region,
+                    district: '',
+                    city: result.city,
+                    postalCode: postalCode,
+                    coordinates: result.coordinates,
+                    locationType: 'city' as const
+                  }
+                }))
+            )
+            .slice(0, maxResults); // Final limit for performance
 
           setPostalSuggestions(postalSuggestions);
           setShowPostalSuggestions(postalSuggestions.length > 0);
+
+          const endTime = performance.now();
+          console.log(`✅ Postal lookup completed in ${(endTime - startTime).toFixed(0)}ms - ${postalSuggestions.length} results`);
         }
       }
     } catch (error) {
@@ -164,6 +200,15 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
       isLoading(false);
     }
   }, [value.country]);
+
+  // Cleanup debounce timers on unmount
+  React.useEffect(() => {
+    return () => {
+      Object.values(debounceTimerRef.current).forEach(timer => {
+        if (timer) clearTimeout(timer);
+      });
+    };
+  }, []);
 
   // OLD LOOKUP FUNCTIONS REMOVED - using unified system
 
@@ -374,10 +419,11 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
             required={required}
           />
           
-          {/* Loading indicator */}
+          {/* Fast loading indicator */}
           {isLoadingCities && (
-            <div className="absolute right-3 top-9">
+            <div className="absolute right-3 top-9 flex items-center space-x-1">
               <div className="animate-spin w-4 h-4 border-2 border-gray-300 border-t-green-500 rounded-full"></div>
+              <span className="text-xs text-gray-500">⚡</span>
             </div>
           )}
           
@@ -456,16 +502,17 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
             className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
           />
 
-          {/* Loading indicator */}
+          {/* Fast loading indicator */}
           {isLoadingPostal && (
-            <div className="absolute right-3 top-9">
+            <div className="absolute right-3 top-9 flex items-center space-x-1">
               <div className="animate-spin w-4 h-4 border-2 border-gray-300 border-t-green-500 rounded-full"></div>
+              <span className="text-xs text-gray-500">⚡</span>
             </div>
           )}
 
           {/* Helper text */}
           <p className="text-xs text-gray-500 mt-1">
-            💡 Type a postal code or city name - multiple postal codes will appear here
+            ⚡ Fast lookup: Type postal code or city name - suggestions appear instantly
           </p>
 
           {/* Postal Code Suggestions */}

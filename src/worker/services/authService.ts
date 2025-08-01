@@ -408,8 +408,42 @@ export class AuthService {
         return null;
       }
 
-      // Check if user still exists and is active
-      const user = this.users.get(payload.sub);
+      // Check if user still exists and is active (check both memory and database)
+      let user = this.users.get(payload.sub);
+
+      if (!user) {
+        // Check database users if not found in memory
+        try {
+          const dbUser = await this.databaseService.getUserById(payload.sub);
+          if (dbUser) {
+            // Convert database user to User format and store in memory for future requests
+            user = {
+              id: dbUser.id,
+              email: dbUser.email,
+              firstName: dbUser.firstName,
+              lastName: dbUser.lastName,
+              role: dbUser.role as UserRole,
+              password: dbUser.password_hash,
+              isActive: Boolean(dbUser.isActive),
+              emailVerified: Boolean(dbUser.emailVerified),
+              createdAt: dbUser.createdAt,
+              updatedAt: dbUser.updatedAt
+            };
+
+            // Store in memory for future requests
+            this.users.set(user.id, user);
+            console.log('✅ Database user loaded by token verification and stored in memory:', {
+              id: user.id,
+              email: user.email,
+              emailVerified: user.emailVerified,
+              isActive: user.isActive
+            });
+          }
+        } catch (error) {
+          console.error('Error loading database user during token verification:', error);
+        }
+      }
+
       if (!user || !user.isActive) {
         console.log('User not found or inactive:', { userId: payload.sub, userExists: !!user, isActive: user?.isActive });
         return null;

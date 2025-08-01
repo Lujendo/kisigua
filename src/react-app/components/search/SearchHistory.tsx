@@ -53,19 +53,6 @@ const SearchHistory: React.FC<SearchHistoryProps> = ({
     loadData();
   }, []);
 
-  // Add search to history
-  const addToHistory = (item: Omit<SearchHistoryItem, 'id' | 'timestamp'>) => {
-    const newItem: SearchHistoryItem = {
-      ...item,
-      id: Date.now().toString(),
-      timestamp: new Date().toISOString()
-    };
-
-    const updatedHistory = [newItem, ...searchHistory.filter(h => h.query !== item.query)].slice(0, 20);
-    setSearchHistory(updatedHistory);
-    localStorage.setItem('kisigua_search_history', JSON.stringify(updatedHistory));
-  };
-
   // Save search
   const saveSearch = (item: SearchHistoryItem, name: string) => {
     const savedSearch: SavedSearch = {

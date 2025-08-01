@@ -38,9 +38,12 @@ const LocationFilters: React.FC<LocationFiltersProps> = ({
   }, [filters.region]);
 
   // Handle filter changes
-  const handleFilterChange = (key: keyof LocationFiltersType, value: any) => {
+  const handleFilterChange = <K extends keyof LocationFiltersType>(
+    key: K,
+    value: LocationFiltersType[K]
+  ) => {
     const newFilters = { ...filters, [key]: value };
-    
+
     // Clear dependent filters when parent changes
     if (key === 'country' && value !== filters.country) {
       newFilters.region = undefined;
@@ -48,7 +51,7 @@ const LocationFilters: React.FC<LocationFiltersProps> = ({
     } else if (key === 'region' && value !== filters.region) {
       newFilters.city = undefined;
     }
-    
+
     onFiltersChange(newFilters);
   };
 
@@ -168,18 +171,18 @@ const LocationFilters: React.FC<LocationFiltersProps> = ({
             </label>
             <div className="space-y-2">
               {[
-                { value: 'city', label: '🏙️ Cities', description: 'Major urban areas' },
-                { value: 'town', label: '🏘️ Towns', description: 'Smaller urban areas' },
-                { value: 'village', label: '🏡 Villages', description: 'Rural communities' }
+                { value: 'city' as const, label: '🏙️ Cities', description: 'Major urban areas' },
+                { value: 'town' as const, label: '🏘️ Towns', description: 'Smaller urban areas' },
+                { value: 'village' as const, label: '🏡 Villages', description: 'Rural communities' }
               ].map(type => (
                 <label key={type.value} className="flex items-center space-x-3 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={filters.locationType?.includes(type.value as any) || false}
+                    checked={filters.locationType?.includes(type.value) || false}
                     onChange={(e) => {
                       const currentTypes = filters.locationType || [];
                       const newTypes = e.target.checked
-                        ? [...currentTypes, type.value as any]
+                        ? [...currentTypes, type.value]
                         : currentTypes.filter(t => t !== type.value);
                       handleFilterChange('locationType', newTypes.length > 0 ? newTypes : undefined);
                     }}

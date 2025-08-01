@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import ListingImageUpload from './ListingImageUpload';
 import RichTextEditor from '../RichTextEditor';
 import ListingDetail from './ListingDetail';
+import LocationInputWithPostalCode from './LocationInputWithPostalCode';
 
 interface Listing {
   id: string;
@@ -15,6 +16,7 @@ interface Listing {
     city: string;
     region?: string;
     country: string;
+    postalCode?: string;
     coordinates?: {
       lat: number;
       lng: number;
@@ -441,12 +443,31 @@ const MyListingsPage: React.FC = () => {
         <p className="text-gray-600 text-sm mb-3 line-clamp-2">{listing.description}</p>
         
         <div className="flex items-center justify-between mb-3">
+          {/* Enhanced Location Display */}
           <div className="flex items-center text-sm text-gray-500">
             <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            {listing.location.city}
+            <div className="flex items-center space-x-2">
+              {/* Country Flag */}
+              <span className="text-base">
+                {listing.location.country === 'Germany' || listing.location.country === 'DE' ? '🇩🇪' :
+                 listing.location.country === 'Italy' || listing.location.country === 'IT' ? '🇮🇹' :
+                 listing.location.country === 'Spain' || listing.location.country === 'ES' ? '🇪🇸' :
+                 listing.location.country === 'France' || listing.location.country === 'FR' ? '🇫🇷' : '🌍'}
+              </span>
+
+              {/* Postal Code */}
+              {listing.location.postalCode && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                  {listing.location.postalCode}
+                </span>
+              )}
+
+              {/* City */}
+              <span>{listing.location.city}</span>
+            </div>
           </div>
           
           {listing.priceType === 'paid' && listing.price && (
@@ -576,6 +597,9 @@ const MyListingsPage: React.FC = () => {
       city: editingListing?.location?.city || '',
       region: editingListing?.location?.region || '',
       country: editingListing?.location?.country || '',
+      postalCode: editingListing?.location?.postalCode || '',
+      latitude: editingListing?.location?.latitude || editingListing?.location?.coordinates?.lat,
+      longitude: editingListing?.location?.longitude || editingListing?.location?.coordinates?.lng,
       phone: editingListing?.contactInfo?.phone || editingListing?.contact?.phone || '',
       mobile: editingListing?.contact?.mobile || '',
       email: editingListing?.contactInfo?.email || editingListing?.contact?.email || '',
@@ -603,28 +627,7 @@ const MyListingsPage: React.FC = () => {
       }
     }, [editingListing]);
 
-    const countries = [
-      'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Australia', 'Austria',
-      'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belgium', 'Belize', 'Benin', 'Bhutan',
-      'Bolivia', 'Bosnia and Herzegovina', 'Botswana', 'Brazil', 'Brunei', 'Bulgaria', 'Burkina Faso', 'Burundi', 'Cabo Verde', 'Cambodia',
-      'Cameroon', 'Canada', 'Central African Republic', 'Chad', 'Chile', 'China', 'Colombia', 'Comoros', 'Congo', 'Costa Rica',
-      'Croatia', 'Cuba', 'Cyprus', 'Czech Republic', 'Democratic Republic of the Congo', 'Denmark', 'Djibouti', 'Dominica', 'Dominican Republic', 'Ecuador',
-      'Egypt', 'El Salvador', 'Equatorial Guinea', 'Eritrea', 'Estonia', 'Eswatini', 'Ethiopia', 'Fiji', 'Finland', 'France',
-      'Gabon', 'Gambia', 'Georgia', 'Germany', 'Ghana', 'Greece', 'Grenada', 'Guatemala', 'Guinea', 'Guinea-Bissau',
-      'Guyana', 'Haiti', 'Honduras', 'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran', 'Iraq', 'Ireland',
-      'Israel', 'Italy', 'Jamaica', 'Japan', 'Jordan', 'Kazakhstan', 'Kenya', 'Kiribati', 'Kuwait', 'Kyrgyzstan',
-      'Laos', 'Latvia', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Liechtenstein', 'Lithuania', 'Luxembourg', 'Madagascar',
-      'Malawi', 'Malaysia', 'Maldives', 'Mali', 'Malta', 'Marshall Islands', 'Mauritania', 'Mauritius', 'Mexico', 'Micronesia',
-      'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Morocco', 'Mozambique', 'Myanmar', 'Namibia', 'Nauru', 'Nepal',
-      'Netherlands', 'New Zealand', 'Nicaragua', 'Niger', 'Nigeria', 'North Korea', 'North Macedonia', 'Norway', 'Oman', 'Pakistan',
-      'Palau', 'Palestine', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Poland', 'Portugal', 'Qatar',
-      'Romania', 'Russia', 'Rwanda', 'Saint Kitts and Nevis', 'Saint Lucia', 'Saint Vincent and the Grenadines', 'Samoa', 'San Marino', 'Sao Tome and Principe', 'Saudi Arabia',
-      'Senegal', 'Serbia', 'Seychelles', 'Sierra Leone', 'Singapore', 'Slovakia', 'Slovenia', 'Solomon Islands', 'Somalia', 'South Africa',
-      'South Korea', 'South Sudan', 'Spain', 'Sri Lanka', 'Sudan', 'Suriname', 'Sweden', 'Switzerland', 'Syria', 'Taiwan',
-      'Tajikistan', 'Tanzania', 'Thailand', 'Timor-Leste', 'Togo', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey', 'Turkmenistan',
-      'Tuvalu', 'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom', 'United States', 'Uruguay', 'Uzbekistan', 'Vanuatu', 'Vatican City',
-      'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe'
-    ];
+    // Countries list - now handled by LocationInputWithPostalCode component
 
     // Load categories from API
     useEffect(() => {
@@ -711,15 +714,15 @@ const MyListingsPage: React.FC = () => {
           description: formData.description,
           category: formData.category,
           location: {
-            latitude: 52.5200, // Default coordinates - in a real app, you'd geocode the address
-            longitude: 13.4050,
-            address: `${formData.street} ${formData.houseNumber}`.trim(),
+            latitude: formData.latitude || 52.5200, // Use form coordinates or default
+            longitude: formData.longitude || 13.4050,
+            address: `${formData.street || ''} ${formData.houseNumber || ''}`.trim(),
             street: formData.street || undefined,
             houseNumber: formData.houseNumber || undefined,
             city: formData.city,
             region: formData.region || undefined,
             country: formData.country,
-            postalCode: undefined // Could be added as a form field later
+            postalCode: formData.postalCode || undefined
           },
           contactInfo: {
             email: formData.email || undefined,
@@ -961,88 +964,46 @@ const MyListingsPage: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Location Tab */}
+                  {/* Enhanced Location Tab with Postal Code Integration */}
                   {activeTab === 'location' && (
                     <div className="max-w-4xl mx-auto">
                       <div className="bg-white rounded-xl shadow-sm p-6 space-y-8">
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                          <div className="lg:col-span-2">
-                            <label className="block text-sm font-semibold text-gray-800 mb-3">
-                              Street Address *
-                              <span className="text-gray-500 font-normal ml-2">The main street or road</span>
-                            </label>
-                            <input
-                              type="text"
-                              value={formData.street}
-                              onChange={(e) => setFormData({ ...formData, street: e.target.value })}
-                              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                              placeholder="e.g., Main Street, Oak Avenue, Rural Road"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-semibold text-gray-800 mb-3">
-                              Number *
-                              <span className="text-gray-500 font-normal ml-2">House/building number</span>
-                            </label>
-                            <input
-                              type="text"
-                              value={formData.houseNumber}
-                              onChange={(e) => setFormData({ ...formData, houseNumber: e.target.value })}
-                              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                              placeholder="123, A, B-12"
-                              required
-                            />
-                          </div>
+                        <div className="mb-6">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">Location Information</h3>
+                          <p className="text-sm text-gray-600">
+                            Enter your location details. Our system will help you find the exact postal code and coordinates.
+                          </p>
                         </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                          <div>
-                            <label className="block text-sm font-semibold text-gray-800 mb-3">
-                              City *
-                              <span className="text-gray-500 font-normal ml-2">The city or town</span>
-                            </label>
-                            <input
-                              type="text"
-                              value={formData.city}
-                              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                              placeholder="e.g., Berlin, Munich, Hamburg"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-semibold text-gray-800 mb-3">
-                              Region/State
-                              <span className="text-gray-500 font-normal ml-2">State, province, or region</span>
-                            </label>
-                            <input
-                              type="text"
-                              value={formData.region}
-                              onChange={(e) => setFormData({ ...formData, region: e.target.value })}
-                              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                              placeholder="e.g., Bavaria, North Rhine-Westphalia"
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-800 mb-3">
-                            Country *
-                            <span className="text-gray-500 font-normal ml-2">Select your country</span>
-                          </label>
-                          <select
-                            value={formData.country}
-                            onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                            required
-                          >
-                            <option value="">Select a country</option>
-                            {countries.map(country => (
-                              <option key={country} value={country}>{country}</option>
-                            ))}
-                          </select>
-                      </div>
+                        {/* Enhanced Location Input with Postal Code Integration */}
+                        <LocationInputWithPostalCode
+                          value={{
+                            street: formData.street,
+                            houseNumber: formData.houseNumber,
+                            city: formData.city,
+                            region: formData.region,
+                            country: formData.country,
+                            postalCode: formData.postalCode,
+                            latitude: formData.latitude,
+                            longitude: formData.longitude
+                          }}
+                          onChange={(locationData) => {
+                            setFormData({
+                              ...formData,
+                              street: locationData.street || '',
+                              houseNumber: locationData.houseNumber || '',
+                              city: locationData.city,
+                              region: locationData.region || '',
+                              country: locationData.country,
+                              postalCode: locationData.postalCode || '',
+                              latitude: locationData.latitude,
+                              longitude: locationData.longitude
+                            });
+                          }}
+                          countries={['DE', 'IT', 'ES', 'FR']}
+                          required={true}
+                          className="w-full"
+                        />
 
                       {/* Privacy Settings */}
                       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
@@ -1694,12 +1655,31 @@ const MyListingsPage: React.FC = () => {
                           </svg>
                           {listing.inquiries} inquiries
                         </div>
+                        {/* Enhanced Location Display */}
                         <div className="flex items-center">
                           <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                           </svg>
-                          {listing.location.city}
+                          <div className="flex items-center space-x-2">
+                            {/* Country Flag */}
+                            <span className="text-base">
+                              {listing.location.country === 'Germany' || listing.location.country === 'DE' ? '🇩🇪' :
+                               listing.location.country === 'Italy' || listing.location.country === 'IT' ? '🇮🇹' :
+                               listing.location.country === 'Spain' || listing.location.country === 'ES' ? '🇪🇸' :
+                               listing.location.country === 'France' || listing.location.country === 'FR' ? '🇫🇷' : '🌍'}
+                            </span>
+
+                            {/* Postal Code */}
+                            {listing.location.postalCode && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                                {listing.location.postalCode}
+                              </span>
+                            )}
+
+                            {/* City */}
+                            <span>{listing.location.city}</span>
+                          </div>
                         </div>
                       </div>
                     </div>

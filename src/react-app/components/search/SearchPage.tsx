@@ -272,12 +272,31 @@ const SearchPage = () => {
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">{listing.title}</h3>
                   <p className="text-gray-600 text-sm mb-3 line-clamp-2">{listing.description}</p>
                   
+                  {/* Enhanced Location Display */}
                   <div className="flex items-center text-sm text-gray-500 mb-3">
                     <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    {listing.location.city}, {listing.location.country}
+                    <div className="flex items-center space-x-2">
+                      {/* Country Flag */}
+                      <span className="text-base">
+                        {listing.location.country === 'Germany' || listing.location.country === 'DE' ? '🇩🇪' :
+                         listing.location.country === 'Italy' || listing.location.country === 'IT' ? '🇮🇹' :
+                         listing.location.country === 'Spain' || listing.location.country === 'ES' ? '🇪🇸' :
+                         listing.location.country === 'France' || listing.location.country === 'FR' ? '🇫🇷' : '🌍'}
+                      </span>
+
+                      {/* Postal Code */}
+                      {listing.location.postalCode && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                          {listing.location.postalCode}
+                        </span>
+                      )}
+
+                      {/* City and Country */}
+                      <span>{listing.location.city}, {listing.location.country}</span>
+                    </div>
                   </div>
 
                   {listing.priceRange && (

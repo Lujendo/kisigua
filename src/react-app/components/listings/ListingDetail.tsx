@@ -20,6 +20,7 @@ interface Listing {
     city: string;
     region?: string;
     country: string;
+    postalCode?: string;
     coordinates?: {
       lat: number;
       lng: number;
@@ -446,7 +447,7 @@ const ListingDetail: React.FC<ListingDetailProps> = ({ listingId, onClose, onEdi
                   </div>
                 )}
 
-                {/* Location */}
+                {/* Enhanced Location */}
                 <div className="bg-white rounded-xl shadow-sm p-6">
                   <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                     <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -455,12 +456,44 @@ const ListingDetail: React.FC<ListingDetailProps> = ({ listingId, onClose, onEdi
                     </svg>
                     Location
                   </h3>
+
+                  {/* Enhanced Location Display */}
                   <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl p-4 mb-4 border border-gray-200">
-                    <p className="text-gray-800 font-medium">
-                      {listing.location.address ||
-                       `${listing.location.street || ''} ${listing.location.houseNumber || ''}`.trim()}<br />
-                      {listing.location.city}, {listing.location.region && `${listing.location.region}, `}{listing.location.country}
-                    </p>
+                    <div className="flex items-start space-x-3">
+                      {/* Country Flag */}
+                      <div className="flex-shrink-0 text-2xl">
+                        {listing.location.country === 'Germany' || listing.location.country === 'DE' ? '🇩🇪' :
+                         listing.location.country === 'Italy' || listing.location.country === 'IT' ? '🇮🇹' :
+                         listing.location.country === 'Spain' || listing.location.country === 'ES' ? '🇪🇸' :
+                         listing.location.country === 'France' || listing.location.country === 'FR' ? '🇫🇷' : '🌍'}
+                      </div>
+
+                      <div className="flex-1">
+                        {/* Street Address */}
+                        {(listing.location.address || listing.location.street) && (
+                          <div className="text-gray-800 font-medium mb-1">
+                            {listing.location.address ||
+                             `${listing.location.street || ''} ${listing.location.houseNumber || ''}`.trim()}
+                          </div>
+                        )}
+
+                        {/* City with Postal Code */}
+                        <div className="flex items-center space-x-2 mb-1">
+                          {listing.location.postalCode && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              📮 {listing.location.postalCode}
+                            </span>
+                          )}
+                          <span className="text-gray-800 font-medium">{listing.location.city}</span>
+                        </div>
+
+                        {/* Region and Country */}
+                        <div className="text-gray-600 text-sm">
+                          {listing.location.region && `${listing.location.region}, `}
+                          {listing.location.country}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 {(listing.location.coordinates || (listing.location.latitude && listing.location.longitude)) && (
                   <Map

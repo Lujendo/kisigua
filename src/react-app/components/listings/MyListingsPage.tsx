@@ -67,6 +67,11 @@ const MyListingsPage: React.FC = () => {
   const [showDropdownId, setShowDropdownId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Global categories cache - shared across all form instances
+  const [globalCategories, setGlobalCategories] = useState<Array<{ id: string; label: string; color?: string; icon?: string }>>([]);
+  const [categoriesLoaded, setCategoriesLoaded] = useState(false);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState<{
     duplicates: Array<{
       id: string;
@@ -77,6 +82,83 @@ const MyListingsPage: React.FC = () => {
     }>;
     message: string;
   } | null>(null);
+
+  // Preload categories function - optimized with caching and localStorage
+  const preloadCategories = async () => {
+    if (categoriesLoaded || categoriesLoading) {
+      return globalCategories; // Return cached categories immediately
+    }
+
+    // Try to load from localStorage first for instant loading
+    try {
+      const cachedCategories = localStorage.getItem('kisigua_categories');
+      const cacheTimestamp = localStorage.getItem('kisigua_categories_timestamp');
+      const cacheAge = Date.now() - (parseInt(cacheTimestamp || '0'));
+      const maxCacheAge = 10 * 60 * 1000; // 10 minutes
+
+      if (cachedCategories && cacheAge < maxCacheAge) {
+        const parsedCategories = JSON.parse(cachedCategories);
+        setGlobalCategories(parsedCategories);
+        setCategoriesLoaded(true);
+        console.log('⚡ Categories loaded from cache instantly:', parsedCategories.length, 'categories');
+        return parsedCategories;
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to load categories from cache:', error);
+    }
+
+    setCategoriesLoading(true);
+    try {
+      console.log('🔄 Fetching fresh categories from API...');
+      const response = await fetch('/api/categories');
+      if (response.ok) {
+        const data = await response.json();
+        const formattedCategories = data.categories.map((cat: { id: string; name: string; color: string; icon: string }) => ({
+          id: cat.id,
+          label: cat.name,
+          color: cat.color,
+          icon: cat.icon
+        }));
+
+        // Cache in localStorage for next time
+        localStorage.setItem('kisigua_categories', JSON.stringify(formattedCategories));
+        localStorage.setItem('kisigua_categories_timestamp', Date.now().toString());
+
+        setGlobalCategories(formattedCategories);
+        setCategoriesLoaded(true);
+        console.log('✅ Categories fetched and cached:', formattedCategories.length, 'categories');
+        return formattedCategories;
+      } else {
+        console.warn('⚠️ Failed to load categories from API, using fallback');
+        const fallbackCategories = [
+          { id: 'organic_farm', label: 'Organic Farm' },
+          { id: 'local_product', label: 'Local Product' },
+          { id: 'water_source', label: 'Water Source' },
+          { id: 'vending_machine', label: 'Vending Machine' },
+          { id: 'craft', label: 'Craft & Handmade' },
+          { id: 'sustainable_good', label: 'Sustainable Good' }
+        ];
+        setGlobalCategories(fallbackCategories);
+        setCategoriesLoaded(true);
+        return fallbackCategories;
+      }
+    } catch (error) {
+      console.error('❌ Error fetching categories:', error);
+      const fallbackCategories = [
+        { id: 'organic_farm', label: 'Organic Farm' },
+        { id: 'local_product', label: 'Local Product' },
+        { id: 'water_source', label: 'Water Source' },
+        { id: 'vending_machine', label: 'Vending Machine' },
+        { id: 'craft', label: 'Craft & Handmade' },
+        { id: 'sustainable_good', label: 'Sustainable Good' }
+      ];
+      setGlobalCategories(fallbackCategories);
+      setCategoriesLoaded(true);
+      return fallbackCategories;
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
 
   // Helper function to get status badge colors
   const getStatusColor = (status: string) => {
@@ -93,6 +175,29 @@ const MyListingsPage: React.FC = () => {
         return 'bg-gray-100 text-gray-800';
     }
   };
+
+  // Initialize categories from cache immediately on mount
+  useEffect(() => {
+    const initializeCategories = () => {
+      try {
+        const cachedCategories = localStorage.getItem('kisigua_categories');
+        const cacheTimestamp = localStorage.getItem('kisigua_categories_timestamp');
+        const cacheAge = Date.now() - (parseInt(cacheTimestamp || '0'));
+        const maxCacheAge = 10 * 60 * 1000; // 10 minutes
+
+        if (cachedCategories && cacheAge < maxCacheAge) {
+          const parsedCategories = JSON.parse(cachedCategories);
+          setGlobalCategories(parsedCategories);
+          setCategoriesLoaded(true);
+          console.log('⚡ Categories initialized from cache on mount:', parsedCategories.length, 'categories');
+        }
+      } catch (error) {
+        console.warn('⚠️ Failed to initialize categories from cache:', error);
+      }
+    };
+
+    initializeCategories();
+  }, []);
 
   // Fetch user's listings from API
   useEffect(() => {
@@ -189,6 +294,9 @@ const MyListingsPage: React.FC = () => {
     };
 
     fetchUserListings();
+
+    // Preload categories in parallel for faster form loading
+    preloadCategories();
   }, [token]);
 
   // Check for edit location ID from localStorage (from Dashboard navigation)
@@ -615,8 +723,9 @@ const MyListingsPage: React.FC = () => {
       hideAddress: (editingListing as any)?.hideAddress || false
     });
     const [images, setImages] = useState<string[]>([]);
-    const [categories, setCategories] = useState<Array<{ id: string; label: string; color?: string; icon?: string }>>([]);
-    const [loadingCategories, setLoadingCategories] = useState(true);
+    // Use global categories cache instead of local state
+    const categories = globalCategories;
+    const loadingCategories = !categoriesLoaded;
 
     // Initialize images when editingListing changes
     useEffect(() => {
@@ -629,50 +738,13 @@ const MyListingsPage: React.FC = () => {
 
     // Countries list - now handled by LocationInputWithPostalCode component
 
-    // Load categories from API
+    // Ensure categories are loaded when form opens
     useEffect(() => {
-      const loadCategories = async () => {
-        try {
-          const response = await fetch('/api/categories');
-          if (response.ok) {
-            const data = await response.json();
-            const formattedCategories = data.categories.map((cat: { id: string; name: string; color: string; icon: string }) => ({
-              id: cat.id,
-              label: cat.name,
-              color: cat.color,
-              icon: cat.icon
-            }));
-            setCategories(formattedCategories);
-          } else {
-            console.error('Failed to load categories');
-            // Fallback to hardcoded categories (using API format)
-            setCategories([
-              { id: 'organic_farm', label: 'Organic Farm' },
-              { id: 'local_product', label: 'Local Product' },
-              { id: 'water_source', label: 'Water Source' },
-              { id: 'vending_machine', label: 'Vending Machine' },
-              { id: 'craft', label: 'Craft & Handmade' },
-              { id: 'sustainable_good', label: 'Sustainable Good' }
-            ]);
-          }
-        } catch (error) {
-          console.error('Error loading categories:', error);
-          // Fallback to hardcoded categories (using API format)
-          setCategories([
-            { id: 'organic_farm', label: 'Organic Farm' },
-            { id: 'local_product', label: 'Local Product' },
-            { id: 'water_source', label: 'Water Source' },
-            { id: 'vending_machine', label: 'Vending Machine' },
-            { id: 'craft', label: 'Craft & Handmade' },
-            { id: 'sustainable_good', label: 'Sustainable Good' }
-          ]);
-        } finally {
-          setLoadingCategories(false);
-        }
-      };
-
-      loadCategories();
-    }, []);
+      if (!categoriesLoaded && !categoriesLoading) {
+        console.log('🔄 Form opened, ensuring categories are loaded...');
+        preloadCategories();
+      }
+    }, [categoriesLoaded, categoriesLoading]);
 
 
 
@@ -921,22 +993,33 @@ const MyListingsPage: React.FC = () => {
                           <label className="block text-sm font-semibold text-gray-800 mb-3">
                             Category *
                             <span className="text-gray-500 font-normal ml-2">Choose the best category for your listing</span>
+                            {loadingCategories && (
+                              <span className="ml-2 text-blue-600 text-xs">
+                                <span className="animate-spin inline-block w-3 h-3 border border-blue-600 border-t-transparent rounded-full mr-1"></span>
+                                Loading...
+                              </span>
+                            )}
                           </label>
                           <select
                             value={formData.category}
                             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 text-lg"
+                            className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 text-lg ${
+                              loadingCategories ? 'bg-gray-50 cursor-wait' : ''
+                            }`}
                             required
                             disabled={loadingCategories}
                           >
                             <option value="">
                               {loadingCategories ? 'Loading categories...' : 'Select a category'}
                             </option>
-                          {categories.map(category => (
-                            <option key={category.id} value={category.id}>
-                              {category.icon ? `${category.icon} ` : ''}{category.label}
-                            </option>
-                          ))}
+                            {!loadingCategories && categories.map(category => (
+                              <option key={category.id} value={category.id}>
+                                {category.icon ? `${category.icon} ` : ''}{category.label}
+                              </option>
+                            ))}
+                            {loadingCategories && (
+                              <option disabled>⏳ Loading categories...</option>
+                            )}
                         </select>
                           {loadingCategories && (
                             <div className="mt-2 text-sm text-gray-500 flex items-center bg-yellow-50 p-3 rounded-lg">

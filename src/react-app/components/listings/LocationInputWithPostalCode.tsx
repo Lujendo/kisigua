@@ -201,6 +201,13 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
     }
   }, [value.country]);
 
+  // Sync input fields with value prop changes
+  React.useEffect(() => {
+    setCityQuery(value.city || '');
+    setPostalQuery(value.postalCode || '');
+    setRegionQuery(value.region || '');
+  }, [value.city, value.postalCode, value.region]);
+
   // Cleanup debounce timers on unmount
   React.useEffect(() => {
     return () => {
@@ -222,6 +229,12 @@ const LocationInputWithPostalCode: React.FC<LocationInputWithPostalCodeProps> = 
 
     setCityQuery(suggestion.name);
     setShowCitySuggestions(false);
+
+    // IMPORTANT: Update region field when city is selected
+    if (suggestion.hierarchy.region) {
+      setRegionQuery(suggestion.hierarchy.region);
+      console.log(`🏛️ Auto-filled region: ${suggestion.hierarchy.region} for city: ${suggestion.name}`);
+    }
 
     // If city has multiple postal codes, show them in postal code field
     if (enhancedData?.postalCodes?.length > 1) {

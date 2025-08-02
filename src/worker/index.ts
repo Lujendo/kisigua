@@ -656,27 +656,68 @@ app.post("/api/auth/register", async (c) => {
       if (result.requiresEmailVerification && result.email) {
         console.log('📧 Sending verification email to:', result.email);
 
-        // Create a temporary user object for email sending
-        const tempUser = {
-          id: 'temp-' + Date.now(),
-          email: result.email,
-          firstName: body.firstName,
-          lastName: body.lastName,
-          role: 'user' as const,
-          password: '',
-          isActive: true,
-          emailVerified: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
+        // Get the real user from database to use correct user ID
+        try {
+          const realUser = await services.databaseService.getUserByEmail(result.email);
 
-        const emailResult = await services.emailVerificationService.sendEmailVerification(tempUser);
+          if (realUser) {
+            console.log('✅ Found real user in database for email verification:', realUser.id);
 
-        if (!emailResult.success) {
-          console.error('❌ Failed to send verification email:', emailResult.error);
-          // Don't fail registration if email fails, just log it
-        } else {
-          console.log('✅ Verification email sent successfully');
+            // Create user object with REAL user ID from database
+            const userForEmail = {
+              id: realUser.id as string,  // ✅ REAL USER ID!
+              email: realUser.email as string,
+              firstName: realUser.first_name as string,
+              lastName: realUser.last_name as string,
+              role: (realUser.role as string) as 'user' | 'admin' | 'premium' | 'supporter',
+              password: realUser.password_hash as string,
+              isActive: Boolean(realUser.is_active),
+              emailVerified: false,
+              createdAt: realUser.created_at as string,
+              updatedAt: realUser.updated_at as string
+            };
+
+            const emailResult = await services.emailVerificationService.sendEmailVerification(userForEmail);
+
+            if (!emailResult.success) {
+              console.error('❌ Failed to send verification email:', emailResult.error);
+              // Don't fail registration if email fails, just log it
+            } else {
+              console.log('✅ Verification email sent successfully with real user ID');
+            }
+          } else {
+            console.error('❌ Could not find user in database after registration for email:', result.email);
+            // Fallback: still try to send email but this might fail verification
+            const tempUser = {
+              id: 'temp-' + Date.now(),
+              email: result.email,
+              firstName: body.firstName,
+              lastName: body.lastName,
+              role: 'user' as const,
+              password: '',
+              isActive: true,
+              emailVerified: false,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            };
+            await services.emailVerificationService.sendEmailVerification(tempUser);
+          }
+        } catch (dbError) {
+          console.error('❌ Database error when looking up user for email verification:', dbError);
+          // Fallback to temp user (old behavior)
+          const tempUser = {
+            id: 'temp-' + Date.now(),
+            email: result.email,
+            firstName: body.firstName,
+            lastName: body.lastName,
+            role: 'user' as const,
+            password: '',
+            isActive: true,
+            emailVerified: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          await services.emailVerificationService.sendEmailVerification(tempUser);
         }
       } else if (result.user && result.token) {
         console.log('✅ Test user or admin registered and logged in automatically');
